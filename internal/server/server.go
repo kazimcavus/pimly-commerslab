@@ -10,14 +10,16 @@ import (
 	"github.com/kazimcavus/pimly/internal/platform/db"
 	"github.com/kazimcavus/pimly/internal/platform/flags"
 	"github.com/kazimcavus/pimly/internal/platform/httpx"
+	"github.com/kazimcavus/pimly/internal/platform/storage"
 	"github.com/kazimcavus/pimly/internal/platform/tenant"
 )
 
 // Deps are the dependencies required to build the router.
 type Deps struct {
-	DB    *db.DB
-	Auth  *auth.Service
-	Flags flags.Checker
+	DB      *db.DB
+	Auth    *auth.Service
+	Flags   flags.Checker
+	Storage *storage.Client // may be nil if media storage is not configured
 }
 
 // New builds the top-level HTTP handler.
@@ -41,7 +43,7 @@ func New(deps Deps) http.Handler {
 	authed := deps.Auth.Authenticate
 	mux.Handle("GET /me", authed(http.HandlerFunc(meHandler)))
 
-	pimH := pimhttp.NewHandler(deps.DB)
+	pimH := pimhttp.NewHandler(deps.DB, deps.Storage)
 	pimH.RegisterRoutes(mux, authed)
 
 	// Global middleware (outermost first).

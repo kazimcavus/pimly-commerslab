@@ -69,4 +69,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	route("GET", "/variants/{id}", h.GetVariant)
 	route("PATCH", "/variants/{id}", h.UpdateVariant)
 	route("DELETE", "/variants/{id}", h.DeleteVariant)
+
+	// Media — product-level, with bulk-by-SKU and rare variant override
+	route("POST", "/products/{id}/media", h.UploadProductMedia)
+	route("GET", "/products/{id}/media", h.ListProductMedia)
+	route("POST", "/variants/{id}/media", h.UploadVariantMedia)
+	route("POST", "/media:bulk", h.BulkUploadMedia)
+	route("DELETE", "/media/{id}", h.DeleteMedia)
 }

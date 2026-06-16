@@ -10,17 +10,22 @@ import (
 
 	"github.com/kazimcavus/pimly/internal/platform/db"
 	"github.com/kazimcavus/pimly/internal/platform/db/tenantdb"
+	"github.com/kazimcavus/pimly/internal/platform/storage"
 	"github.com/kazimcavus/pimly/internal/platform/tenant"
 	"github.com/kazimcavus/pimly/internal/shared/apperr"
 )
 
-// Handler holds the PIM module dependencies.
+// Handler holds the PIM module dependencies. storage may be nil if media storage
+// is not configured, in which case media endpoints return an error.
 type Handler struct {
-	db *db.DB
+	db      *db.DB
+	storage *storage.Client
 }
 
 // NewHandler builds a PIM HTTP handler.
-func NewHandler(database *db.DB) *Handler { return &Handler{db: database} }
+func NewHandler(database *db.DB, store *storage.Client) *Handler {
+	return &Handler{db: database, storage: store}
+}
 
 // withTenant runs fn against the request's tenant schema in a transaction.
 func (h *Handler) withTenant(r *http.Request, fn func(*tenantdb.Queries) error) error {

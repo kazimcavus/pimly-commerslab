@@ -24,6 +24,7 @@ import (
 	"github.com/kazimcavus/pimly/internal/platform/flags"
 	"github.com/kazimcavus/pimly/internal/platform/migrate"
 	"github.com/kazimcavus/pimly/internal/platform/provision"
+	"github.com/kazimcavus/pimly/internal/platform/storage"
 	"github.com/kazimcavus/pimly/internal/platform/tenant"
 	"github.com/kazimcavus/pimly/internal/server"
 )
@@ -237,10 +238,28 @@ func runServe(ctx context.Context, cfg *config.Config) error {
 		slog.Warn("PIMLY_JWT_SECRET is not set; using an insecure dev secret")
 	}
 	authService := auth.NewService(database, secret, cfg.JWTTTL)
+
+	var store *storage.Client
+	if s, err := storage.New(storage.Config{
+		Endpoint:      cfg.S3Endpoint,
+		AccessKey:     cfg.S3AccessKey,
+		SecretKey:     cfg.S3SecretKey,
+		Bucket:        cfg.S3Bucket,
+		UseSSL:        cfg.S3UseSSL,
+		PublicBaseURL: cfg.S3PublicBaseURL,
+	}); err != nil {
+		slog.Warn("media storage unavailable; media endpoints disabled", "err", err)
+	} else if err := s.EnsureBucket(ctx); err != nil {
+		slog.Warn("media bucket unavailable; media endpoints disabled", "err", err)
+	} else {
+		store = s
+	}
+
 	handler := server.New(server.Deps{
-		DB:    database,
-		Auth:  authService,
-		Flags: flags.AlwaysOn{},
+		DB:      database,
+		Auth:    authService,
+		Flags:   flags.AlwaysOn{},
+		Storage: store,
 	})
 
 	srv := &http.Server{
