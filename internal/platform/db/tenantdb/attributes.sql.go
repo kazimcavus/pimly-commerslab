@@ -61,6 +61,18 @@ func (q *Queries) CreateAttribute(ctx context.Context, arg CreateAttributeParams
 	return i, err
 }
 
+const deleteAttribute = `-- name: DeleteAttribute :execrows
+DELETE FROM attributes WHERE id = $1
+`
+
+func (q *Queries) DeleteAttribute(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteAttribute, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getAttributeByID = `-- name: GetAttributeByID :one
 SELECT id, key, label, data_type, value_source, metaobject_definition_id, inline_options, validation, binding_level, is_global, created_at FROM attributes WHERE id = $1
 `
@@ -141,4 +153,53 @@ func (q *Queries) ListAttributes(ctx context.Context) ([]Attribute, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateAttribute = `-- name: UpdateAttribute :one
+UPDATE attributes
+SET label = $2, data_type = $3, value_source = $4, metaobject_definition_id = $5,
+    inline_options = $6, validation = $7, binding_level = $8, is_global = $9
+WHERE id = $1
+RETURNING id, key, label, data_type, value_source, metaobject_definition_id, inline_options, validation, binding_level, is_global, created_at
+`
+
+type UpdateAttributeParams struct {
+	ID                     uuid.UUID       `json:"id"`
+	Label                  string          `json:"label"`
+	DataType               string          `json:"data_type"`
+	ValueSource            string          `json:"value_source"`
+	MetaobjectDefinitionID *uuid.UUID      `json:"metaobject_definition_id"`
+	InlineOptions          json.RawMessage `json:"inline_options"`
+	Validation             json.RawMessage `json:"validation"`
+	BindingLevel           string          `json:"binding_level"`
+	IsGlobal               bool            `json:"is_global"`
+}
+
+func (q *Queries) UpdateAttribute(ctx context.Context, arg UpdateAttributeParams) (Attribute, error) {
+	row := q.db.QueryRow(ctx, updateAttribute,
+		arg.ID,
+		arg.Label,
+		arg.DataType,
+		arg.ValueSource,
+		arg.MetaobjectDefinitionID,
+		arg.InlineOptions,
+		arg.Validation,
+		arg.BindingLevel,
+		arg.IsGlobal,
+	)
+	var i Attribute
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.Label,
+		&i.DataType,
+		&i.ValueSource,
+		&i.MetaobjectDefinitionID,
+		&i.InlineOptions,
+		&i.Validation,
+		&i.BindingLevel,
+		&i.IsGlobal,
+		&i.CreatedAt,
+	)
+	return i, err
 }

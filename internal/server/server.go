@@ -42,7 +42,7 @@ func New(deps Deps) http.Handler {
 	mux.Handle("GET /me", authed(http.HandlerFunc(meHandler)))
 
 	pimH := pimhttp.NewHandler(deps.DB)
-	mux.Handle("GET /metaobject-definitions", authed(http.HandlerFunc(pimH.ListMetaobjectDefinitions)))
+	pimH.RegisterRoutes(mux, authed)
 
 	// Global middleware (outermost first).
 	return httpx.Recover(httpx.RequestID(httpx.Logger(mux)))

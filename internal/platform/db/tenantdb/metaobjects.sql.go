@@ -90,6 +90,42 @@ func (q *Queries) CreateMetaobjectField(ctx context.Context, arg CreateMetaobjec
 	return i, err
 }
 
+const deleteMetaobjectDefinition = `-- name: DeleteMetaobjectDefinition :execrows
+DELETE FROM metaobject_definitions WHERE id = $1
+`
+
+func (q *Queries) DeleteMetaobjectDefinition(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMetaobjectDefinition, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteMetaobjectEntry = `-- name: DeleteMetaobjectEntry :execrows
+DELETE FROM metaobject_entries WHERE id = $1
+`
+
+func (q *Queries) DeleteMetaobjectEntry(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMetaobjectEntry, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteMetaobjectField = `-- name: DeleteMetaobjectField :execrows
+DELETE FROM metaobject_fields WHERE id = $1
+`
+
+func (q *Queries) DeleteMetaobjectField(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMetaobjectField, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getMetaobjectDefinitionByID = `-- name: GetMetaobjectDefinitionByID :one
 SELECT id, key, label, created_at FROM metaobject_definitions WHERE id = $1
 `
@@ -225,4 +261,25 @@ func (q *Queries) ListMetaobjectFields(ctx context.Context, definitionID uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateMetaobjectEntry = `-- name: UpdateMetaobjectEntry :one
+UPDATE metaobject_entries SET values = $2 WHERE id = $1 RETURNING id, definition_id, values, created_at
+`
+
+type UpdateMetaobjectEntryParams struct {
+	ID     uuid.UUID       `json:"id"`
+	Values json.RawMessage `json:"values"`
+}
+
+func (q *Queries) UpdateMetaobjectEntry(ctx context.Context, arg UpdateMetaobjectEntryParams) (MetaobjectEntry, error) {
+	row := q.db.QueryRow(ctx, updateMetaobjectEntry, arg.ID, arg.Values)
+	var i MetaobjectEntry
+	err := row.Scan(
+		&i.ID,
+		&i.DefinitionID,
+		&i.Values,
+		&i.CreatedAt,
+	)
+	return i, err
 }
