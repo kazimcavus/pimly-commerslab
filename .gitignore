@@ -1,0 +1,18 @@
+# Binaries
+/pimly
+/bin/
+*.exe
+
+# Env / secrets
+.env
+*.local
+
+# Go
+*.test
+*.out
+/vendor/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

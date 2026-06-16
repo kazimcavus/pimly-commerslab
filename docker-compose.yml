@@ -1,0 +1,41 @@
+# Local development dependencies for pimly: PostgreSQL + MinIO.
+# Usage: docker compose up -d
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pimly-postgres
+    environment:
+      POSTGRES_USER: pimly
+      POSTGRES_PASSWORD: pimly
+      POSTGRES_DB: pimly
+    ports:
+      - "5432:5432"
+    volumes:
+      - pimly_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pimly -d pimly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: pimly-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: pimly
+      MINIO_ROOT_PASSWORD: pimly-secret
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - pimly_miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pimly_pgdata:
+  pimly_miniodata:
