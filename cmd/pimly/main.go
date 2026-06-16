@@ -17,12 +17,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/kazimcavus/pimly/internal/platform/auth"
 	"github.com/kazimcavus/pimly/internal/platform/config"
 	"github.com/kazimcavus/pimly/internal/platform/db"
 	"github.com/kazimcavus/pimly/internal/platform/db/globaldb"
+	"github.com/kazimcavus/pimly/internal/platform/flags"
 	"github.com/kazimcavus/pimly/internal/platform/migrate"
 	"github.com/kazimcavus/pimly/internal/platform/provision"
 	"github.com/kazimcavus/pimly/internal/platform/tenant"
+	"github.com/kazimcavus/pimly/internal/server"
 )
 
 func main() {
@@ -228,21 +231,21 @@ func runServe(ctx context.Context, cfg *config.Config) error {
 	}
 	defer database.Close()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("ok"))
-	})
-	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-		if err := database.Ping(r.Context()); err != nil {
-			http.Error(w, "db unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		_, _ = w.Write([]byte("ready"))
+	secret := cfg.JWTSecret
+	if secret == "" {
+		secret = "pimly-insecure-dev-secret"
+		slog.Warn("PIMLY_JWT_SECRET is not set; using an insecure dev secret")
+	}
+	authService := auth.NewService(database, secret, cfg.JWTTTL)
+	handler := server.New(server.Deps{
+		DB:    database,
+		Auth:  authService,
+		Flags: flags.AlwaysOn{},
 	})
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
