@@ -72,10 +72,11 @@ func Slugify(name string) string {
 // Tenant is the request-scoped tenant context populated by auth middleware (M2)
 // and read by handlers to scope DB access.
 type Tenant struct {
-	ID         uuid.UUID
-	Slug       string
-	SchemaName string
-	Role       string
+	ID          uuid.UUID
+	Slug        string
+	SchemaName  string
+	Role        string
+	BarcodeCode int32 // per-tenant code embedded in generated EAN-13 barcodes
 }
 
 type ctxKey struct{}

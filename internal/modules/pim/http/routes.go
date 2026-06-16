@@ -56,4 +56,17 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	route("POST", "/categories/{id}/marketplace-attribute-map", h.UpsertMarketplaceAttributeMap)
 	route("GET", "/categories/{id}/marketplace-attribute-map", h.ListMarketplaceAttributeMaps)
 	route("DELETE", "/marketplace-attribute-map/{id}", h.DeleteMarketplaceAttributeMap)
+
+	// Products — single write path + groups/products/variants
+	route("POST", "/products:batch", h.CreateProductsBatch)
+	route("GET", "/groups", h.ListGroups)
+	route("GET", "/groups/{id}", h.GetGroup)
+	route("PATCH", "/groups/{id}", h.UpdateGroup)
+	route("DELETE", "/groups/{id}", h.DeleteGroup)
+	route("GET", "/products/{id}", h.GetProduct)
+	route("PATCH", "/products/{id}", h.UpdateProduct)
+	route("DELETE", "/products/{id}", h.DeleteProduct)
+	route("GET", "/variants/{id}", h.GetVariant)
+	route("PATCH", "/variants/{id}", h.UpdateVariant)
+	route("DELETE", "/variants/{id}", h.DeleteVariant)
 }

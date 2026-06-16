@@ -19,10 +19,11 @@ import (
 // membership at login and embedded here (signed), so each request carries its
 // tenant without an extra lookup.
 type Claims struct {
-	TenantID   uuid.UUID `json:"tid"`
-	TenantSlug string    `json:"tslug"`
-	SchemaName string    `json:"schema"`
-	Role       string    `json:"role"`
+	TenantID    uuid.UUID `json:"tid"`
+	TenantSlug  string    `json:"tslug"`
+	SchemaName  string    `json:"schema"`
+	Role        string    `json:"role"`
+	BarcodeCode int32     `json:"bcode"`
 	jwt.RegisteredClaims
 }
 
@@ -99,7 +100,7 @@ func (s *Service) Login(ctx context.Context, email, password, tenantSlug string)
 		role = m.Role
 	}
 
-	t := tenant.Tenant{ID: tnt.ID, Slug: tnt.Slug, SchemaName: tnt.SchemaName, Role: role}
+	t := tenant.Tenant{ID: tnt.ID, Slug: tnt.Slug, SchemaName: tnt.SchemaName, Role: role, BarcodeCode: tnt.BarcodeTenantCode}
 	token, exp, err := s.Issue(user.ID, t)
 	if err != nil {
 		return nil, apperr.Internal(err)
@@ -112,10 +113,11 @@ func (s *Service) Issue(userID uuid.UUID, t tenant.Tenant) (string, time.Time, e
 	now := time.Now()
 	exp := now.Add(s.ttl)
 	claims := Claims{
-		TenantID:   t.ID,
-		TenantSlug: t.Slug,
-		SchemaName: t.SchemaName,
-		Role:       t.Role,
+		TenantID:    t.ID,
+		TenantSlug:  t.Slug,
+		SchemaName:  t.SchemaName,
+		Role:        t.Role,
+		BarcodeCode: t.BarcodeCode,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),

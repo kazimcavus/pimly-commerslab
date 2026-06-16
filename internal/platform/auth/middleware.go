@@ -45,10 +45,11 @@ func (s *Service) Authenticate(next http.Handler) http.Handler {
 			return
 		}
 		t := tenant.Tenant{
-			ID:         claims.TenantID,
-			Slug:       claims.TenantSlug,
-			SchemaName: claims.SchemaName,
-			Role:       claims.Role,
+			ID:          claims.TenantID,
+			Slug:        claims.TenantSlug,
+			SchemaName:  claims.SchemaName,
+			Role:        claims.Role,
+			BarcodeCode: claims.BarcodeCode,
 		}
 		if err := tenant.ValidateSchemaName(t.SchemaName); err != nil {
 			httpx.Error(w, r, apperr.Unauthorized("invalid tenant in token"))

@@ -4,6 +4,7 @@ package validation
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/kazimcavus/pimly/internal/shared/apperr"
 )
@@ -88,6 +89,41 @@ func ValidateMetaobjectEntry(values map[string]json.RawMessage, fieldKeys []stri
 		}
 	}
 	return nil
+}
+
+// AttrMeta describes a tenant attribute for value validation.
+type AttrMeta struct {
+	BindingLevel string
+}
+
+// ValidateAttributeValues checks that every key in values is a known attribute
+// bound at the given level. When enforceRequired is true (e.g. transitioning to
+// active), each key in requiredKeys must be present and non-empty; draft is
+// lenient about required attributes.
+func ValidateAttributeValues(level string, values map[string]json.RawMessage, attrsByKey map[string]AttrMeta, requiredKeys []string, enforceRequired bool) error {
+	for k := range values {
+		meta, ok := attrsByKey[k]
+		if !ok {
+			return apperr.Validation("unknown attribute %q", k)
+		}
+		if meta.BindingLevel != level {
+			return apperr.Validation("attribute %q is bound at %q, not %q", k, meta.BindingLevel, level)
+		}
+	}
+	if enforceRequired {
+		for _, rk := range requiredKeys {
+			val, ok := values[rk]
+			if !ok || isEmptyValue(val) {
+				return apperr.Validation("required attribute %q is missing", rk)
+			}
+		}
+	}
+	return nil
+}
+
+func isEmptyValue(raw json.RawMessage) bool {
+	s := strings.TrimSpace(string(raw))
+	return s == "" || s == "null" || s == `""`
 }
 
 func hasJSON(raw json.RawMessage) bool {

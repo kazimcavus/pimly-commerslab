@@ -1,8 +1,10 @@
 package pimhttp
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -54,6 +56,39 @@ func textPtr(s *string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: *s, Valid: true}
+}
+
+// textOrNull converts a string to a nullable pgtype.Text (empty → NULL).
+func textOrNull(s string) pgtype.Text {
+	if s == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: s, Valid: true}
+}
+
+// normalizeJSON returns a non-null JSONB value for an attribute_values payload.
+func normalizeJSON(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 || string(raw) == "null" {
+		return json.RawMessage("{}")
+	}
+	return raw
+}
+
+// numeric converts a float to a pgtype.Numeric.
+func numeric(f float64) (pgtype.Numeric, error) {
+	var n pgtype.Numeric
+	if err := n.Scan(strconv.FormatFloat(f, 'f', -1, 64)); err != nil {
+		return n, apperr.Validation("invalid numeric value %v", f)
+	}
+	return n, nil
+}
+
+// nullableNumeric converts an optional float to a nullable pgtype.Numeric.
+func nullableNumeric(f *float64) (pgtype.Numeric, error) {
+	if f == nil {
+		return pgtype.Numeric{}, nil
+	}
+	return numeric(*f)
 }
 
 // dbErr maps storage/query errors to the typed taxonomy. Existing apperr values
