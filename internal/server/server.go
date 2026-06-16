@@ -5,6 +5,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/kazimcavus/pimly/internal/modules/admin"
 	pimhttp "github.com/kazimcavus/pimly/internal/modules/pim/http"
 	"github.com/kazimcavus/pimly/internal/platform/auth"
 	"github.com/kazimcavus/pimly/internal/platform/db"
@@ -16,10 +17,11 @@ import (
 
 // Deps are the dependencies required to build the router.
 type Deps struct {
-	DB      *db.DB
-	Auth    *auth.Service
-	Flags   flags.Checker
-	Storage *storage.Client // may be nil if media storage is not configured
+	DB         *db.DB
+	Auth       *auth.Service
+	Flags      flags.Checker
+	Storage    *storage.Client // may be nil if media storage is not configured
+	AdminToken string
 }
 
 // New builds the top-level HTTP handler.
@@ -45,6 +47,12 @@ func New(deps Deps) http.Handler {
 
 	pimH := pimhttp.NewHandler(deps.DB, deps.Storage)
 	pimH.RegisterRoutes(mux, authed)
+
+	// Example module-gated endpoint: requires the integration module flag.
+	mux.Handle("GET /integration/status", authed(flags.RequireModule(deps.Flags, flags.ModuleIntegration)(http.HandlerFunc(integrationStatus))))
+
+	// Platform admin routes (guarded by the admin token).
+	admin.NewHandler(deps.DB, deps.AdminToken).RegisterRoutes(mux)
 
 	// Global middleware (outermost first).
 	return httpx.Recover(httpx.RequestID(httpx.Logger(mux)))
@@ -76,6 +84,10 @@ func loginHandler(a *auth.Service) http.HandlerFunc {
 			},
 		})
 	}
+}
+
+func integrationStatus(w http.ResponseWriter, _ *http.Request) {
+	httpx.JSON(w, http.StatusOK, map[string]any{"module": "integration", "status": "ok"})
 }
 
 func meHandler(w http.ResponseWriter, r *http.Request) {

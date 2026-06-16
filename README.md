@@ -5,8 +5,9 @@ e-commerce sellers. Sellers build their own *canonical* product catalog, which i
 later mapped and pushed to marketplaces (Trendyol first). This repository is the
 **core PIM v1 backend** (no UI — the UI is a separate project).
 
-> Status: **M1 complete** (skeleton, DB, multi-tenant provisioning). M2–M6 in
-> progress. See [Roadmap](#roadmap).
+> Status: **v1 complete** (M1–M6). Core PIM: multi-tenant provisioning, auth,
+> definition/setup APIs, product core with `products:batch` + code generation,
+> media, feature flags, and platform admin. See [Roadmap](#roadmap).
 
 ## Architecture at a glance
 
@@ -91,9 +92,10 @@ directory is loaded automatically (without overriding the real environment). See
 | `PIMLY_HTTP_ADDR` | `:8080` | HTTP listen address |
 | `PIMLY_DATABASE_URL` | `postgres://pimly:pimly@localhost:5432/pimly?sslmode=disable` | Postgres DSN |
 | `PIMLY_DB_MAX_CONNS` / `PIMLY_DB_MIN_CONNS` | `8` / `1` | Pool sizing |
-| `PIMLY_JWT_SECRET` | _(empty)_ | HS256 signing secret (required for auth, M2) |
+| `PIMLY_JWT_SECRET` | _(empty)_ | HS256 signing secret (required for auth) |
 | `PIMLY_JWT_TTL` | `24h` | Access token lifetime |
-| `PIMLY_S3_*` | see `.env.example` | MinIO/S3 media storage (M5) |
+| `PIMLY_ADMIN_TOKEN` | _(empty)_ | Token for `/admin/*` endpoints (empty disables them) |
+| `PIMLY_S3_*` | see `.env.example` | MinIO/S3 media storage |
 | `PIMLY_LOG_LEVEL` / `PIMLY_LOG_FORMAT` | `info` / `text` | Logging |
 
 ## CLI
@@ -161,17 +163,36 @@ Pragmatic choices made during the build (the spec invites reasonable defaults):
 - **Internal EAN-13 barcodes** (M4) will use the GS1 restricted-distribution
   prefix band (`29…`) plus a per-tenant code and serial — these are **not
   GS1-registered**; sellers needing real retail EANs supply their own.
-- **JWT** (M2) uses HS256 with a config secret, behind an interface so the
-  algorithm can change.
+- **JWT** uses HS256 with a config secret, behind an interface so the algorithm
+  can change.
+- **Admin endpoints** are guarded by a static `X-Admin-Token` (config) rather
+  than a platform-admin user model, which v1's schema doesn't include. Empty
+  token disables `/admin/*` entirely.
+
+## API surface (v1)
+
+All routes below `/login` require a bearer token and are scoped to the caller's
+tenant; `/admin/*` routes require the `X-Admin-Token` header.
+
+- **Auth**: `POST /login`, `GET /me`
+- **Setup**: `/categories`, `/attributes`, `/metaobject-definitions` (+ `/fields`,
+  `/entries`), `/categories/{id}/attributes`, `/categories/{id}/marketplace-*-map`
+- **Products**: `POST /products:batch` (single write path), `/groups`,
+  `/products/{id}`, `/variants/{id}`
+- **Media**: `POST /products/{id}/media`, `POST /media:bulk` (filename = SKU),
+  `POST /variants/{id}/media`, `GET /products/{id}/media`
+- **Gated**: `GET /integration/status` (requires the `integration` module flag)
+- **Admin**: `/admin/applications` (+ `/{id}/approve` → provisions a tenant),
+  `/admin/tenants`, `POST /admin/tenants/{id}/modules/{module}`
 
 ## Roadmap
 
 - **M1 ✅** Skeleton + DB + provisioning
-- **M2** Auth (login, JWT) + tenant-routing middleware
-- **M3** Setup APIs (categories, attributes, metaobjects, category attributes, marketplace maps)
-- **M4** Product core (groups/products/variants, `products:batch`, SKU/EAN-13 codegen)
-- **M5** Media (MinIO single + bulk-by-SKU upload)
-- **M6** Feature flags enforcement + platform admin (application approval → provisioning)
+- **M2 ✅** Auth (login, JWT) + tenant-routing middleware
+- **M3 ✅** Setup APIs (categories, attributes, metaobjects, category attributes, marketplace maps)
+- **M4 ✅** Product core (groups/products/variants, `products:batch`, SKU/EAN-13 codegen)
+- **M5 ✅** Media (MinIO single + bulk-by-SKU upload)
+- **M6 ✅** Feature flags enforcement + platform admin (application approval → provisioning)
 
 **Out of scope for v1** (seams are in place): UI, Excel import, MCP ingestion,
 the v2 Integration module (Trendyol sync). The single write API, marketplace

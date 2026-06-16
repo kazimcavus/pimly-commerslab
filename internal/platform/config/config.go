@@ -23,6 +23,8 @@ type Config struct {
 	JWTSecret string
 	JWTTTL    time.Duration
 
+	AdminToken string
+
 	S3Endpoint      string
 	S3AccessKey     string
 	S3SecretKey     string
@@ -45,6 +47,7 @@ func Load() (*Config, error) {
 		DBMinConns:      int32(getEnvInt("PIMLY_DB_MIN_CONNS", 1)),
 		JWTSecret:       getEnv("PIMLY_JWT_SECRET", ""),
 		JWTTTL:          getEnvDuration("PIMLY_JWT_TTL", 24*time.Hour),
+		AdminToken:      getEnv("PIMLY_ADMIN_TOKEN", ""),
 		S3Endpoint:      getEnv("PIMLY_S3_ENDPOINT", "localhost:9000"),
 		S3AccessKey:     getEnv("PIMLY_S3_ACCESS_KEY", "pimly"),
 		S3SecretKey:     getEnv("PIMLY_S3_SECRET_KEY", "pimly-secret"),

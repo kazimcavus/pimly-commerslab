@@ -255,11 +255,15 @@ func runServe(ctx context.Context, cfg *config.Config) error {
 		store = s
 	}
 
+	if cfg.AdminToken == "" {
+		slog.Warn("PIMLY_ADMIN_TOKEN is not set; admin endpoints are disabled")
+	}
 	handler := server.New(server.Deps{
-		DB:      database,
-		Auth:    authService,
-		Flags:   flags.AlwaysOn{},
-		Storage: store,
+		DB:         database,
+		Auth:       authService,
+		Flags:      flags.NewDBChecker(database),
+		Storage:    store,
+		AdminToken: cfg.AdminToken,
 	})
 
 	srv := &http.Server{
