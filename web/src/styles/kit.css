@@ -2,9 +2,9 @@
    Reusable primitives stay in the bundle; this is app-level scaffolding. */
 
 /* ---------- App shell ---------- */
-.app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; height: 100vh; background: var(--bg-app); overflow: hidden; }
-.app__main { display: flex; flex-direction: column; min-width: 0; }
-.app__content { flex: 1; overflow-y: auto; }
+.app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; grid-template-rows: 100vh; height: 100vh; background: var(--bg-app); overflow: hidden; }
+.app__main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.app__content { flex: 1; min-height: 0; overflow-y: auto; }
 .page { max-width: var(--content-max); margin: 0 auto; padding: 28px var(--page-gutter) 64px; }
 
 /* ---------- Sidebar ---------- */

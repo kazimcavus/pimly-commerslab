@@ -80,6 +80,7 @@ export const api = {
   deleteMetaDef: (id) => req('DELETE', `/metaobject-definitions/${id}`),
   listMetaFields: (id) => req('GET', `/metaobject-definitions/${id}/fields`),
   createMetaField: (id, b) => req('POST', `/metaobject-definitions/${id}/fields`, { body: b }),
+  deleteMetaField: (id) => req('DELETE', `/metaobject-fields/${id}`),
   listMetaEntries: (id) => req('GET', `/metaobject-definitions/${id}/entries`),
   createMetaEntry: (id, values) => req('POST', `/metaobject-definitions/${id}/entries`, { body: { values } }),
   deleteMetaEntry: (id) => req('DELETE', `/metaobject-entries/${id}`),
