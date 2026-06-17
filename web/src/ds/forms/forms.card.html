@@ -1,0 +1,61 @@
+<!-- @dsCard group="Components" viewport="700x440" name="Form controls" subtitle="Field, Input, Select, Checkbox, Radio, Switch — the dynamic attribute toolkit" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; padding: 22px; background: var(--bg-app); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; max-width: 640px; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { Field, Input, Select, Textarea, Checkbox, Radio, Switch } = window.PimlyDesignSystem_e88117;
+  const I = (n) => <i data-lucide={n}></i>;
+  function Demo() {
+    return (
+      <div className="grid">
+        <Field label="Başlık" required help="Pazaryerinde görünen ad">
+          <Input placeholder="Örn. Basic Tişört" defaultValue="Basic Tişört" />
+        </Field>
+        <Field label="SKU" auto="Boş bırakılırsa otomatik üretilecek">
+          <Input mono placeholder="TS-0001-R01" icon={I('hash')} />
+        </Field>
+        <Field label="Fiyat" required>
+          <Input mono suffix="₺" defaultValue="1.299,90" />
+        </Field>
+        <Field label="Kategori">
+          <Select placeholder="Seç…" defaultValue="" options={[{value:'tisort',label:'Tişört'},{value:'pantolon',label:'Pantolon'}]} />
+        </Field>
+        <Field label="Barkod" error="Bu barkod kullanımda">
+          <Input mono invalid defaultValue="2900000000017" />
+        </Field>
+        <Field label="Açıklama" optional>
+          <Textarea placeholder="Ürün açıklaması…" />
+        </Field>
+        <div className="stack">
+          <Checkbox label="Zorunlu alan" hint="Aktife geçerken doldurulmalı" defaultChecked />
+          <Checkbox label="Marketplace required" />
+        </div>
+        <div className="stack">
+          <Radio name="bl" label="Grup seviyesi" defaultChecked />
+          <Radio name="bl" label="Ürün seviyesi" />
+          <Radio name="bl" label="Varyant seviyesi" />
+          <Switch label="Aktif" defaultChecked />
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  setTimeout(() => window.lucide && window.lucide.createIcons(), 0);
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+/* ============================================================
+   pimly Design System — global stylesheet entry point.
+   Consumers link THIS file only. It is a list of @imports;
+   the @font-face import must come first.
+   ============================================================ */
+@import url('tokens/fonts.css');
+@import url('tokens/colors.css');
+@import url('tokens/typography.css');
+@import url('tokens/spacing.css');
+@import url('tokens/radius.css');
+@import url('tokens/base.css');
+@import url('tokens/components.css');

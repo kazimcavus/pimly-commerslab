@@ -1,0 +1,185 @@
+/* ============================================================
+   pimly — Color tokens
+   Clean cool-neutral gray foundation + emerald-jade accent + ink primary.
+   Base palette first, then semantic aliases. Light = :root,
+   dark = [data-theme="dark"].
+   ============================================================ */
+
+:root {
+  /* --- Base: neutral grays (clean, near-neutral; whiter backgrounds) --- */
+  --warm-0:   #ffffff;
+  --warm-50:  #fafafa;
+  --warm-100: #f5f5f6;
+  --warm-150: #ededef;
+  --warm-200: #e5e5e8;
+  --warm-300: #d6d6da;
+  --warm-400: #a6a6ad;
+  --warm-500: #74747c;
+  --warm-600: #54545c;
+  --warm-700: #3e3e45;
+  --warm-800: #29292e;
+  --warm-900: #1a1a1d;
+  --warm-950: #111113;
+
+  /* --- Base: emerald / jade accent --- */
+  --green-50:  #e7f6ef;
+  --green-100: #c5e9d6;
+  --green-200: #8fd7b4;
+  --green-300: #53c090;
+  --green-400: #23a974;
+  --green-500: #0f9d6b;   /* brand accent */
+  --green-600: #0b7e56;
+  --green-700: #0a6344;
+  --green-800: #0a4c37;
+  --green-900: #08382a;
+
+  /* --- Base: ink (neutral near-black, used for primary buttons) --- */
+  --ink:       #1a1a1d;
+  --ink-soft:  #29292e;
+  --ink-hover: #303035;
+
+  /* --- Base: status hues --- */
+  --amber-50:  #fbf1dd;  --amber-200: #eccf8e; --amber-500: #b67912; --amber-700: #855208;
+  --red-50:    #fcece9;  --red-200:   #f3b7af; --red-500:   #d7382b; --red-600:   #b92b20; --red-700: #8f211a;
+  --blue-50:   #e9f0fc;  --blue-200:  #b6cef4; --blue-500:  #2563c9; --blue-700:  #1a478f;
+
+  /* ===== Semantic aliases (light) ===== */
+  /* Surfaces */
+  --bg-app:        var(--warm-50);
+  --bg-canvas:     var(--warm-100);
+  --surface:       var(--warm-0);
+  --surface-subtle:var(--warm-50);
+  --surface-sunken:var(--warm-100);
+  --surface-hover: var(--warm-100);
+  --surface-selected: var(--green-50);
+
+  /* Text */
+  --text-strong:  var(--warm-950);
+  --text-default: var(--warm-800);
+  --text-muted:   var(--warm-600);
+  --text-subtle:  var(--warm-500);
+  --text-inverse: var(--warm-0);
+  --text-link:    var(--green-700);
+
+  /* Borders */
+  --border-subtle:  var(--warm-150);
+  --border-default: var(--warm-200);
+  --border-strong:  var(--warm-300);
+  --border-input:   var(--warm-300);
+
+  /* Accent */
+  --accent:        var(--green-500);
+  --accent-hover:  var(--green-600);
+  --accent-active: var(--green-700);
+  --accent-soft:   var(--green-50);
+  --accent-soft-border: var(--green-200);
+  --accent-text:   var(--green-700);
+  --on-accent:     var(--warm-0);
+
+  /* Primary action (ink) */
+  --primary:        var(--ink);
+  --primary-hover:  var(--ink-hover);
+  --primary-active: var(--warm-950);
+  --on-primary:     var(--warm-0);
+
+  /* Focus */
+  --focus-ring: var(--green-400);
+
+  /* Status — draft / active / archived / error / info */
+  --status-draft-fg:   var(--warm-700);
+  --status-draft-bg:   var(--warm-150);
+  --status-draft-dot:  var(--warm-400);
+
+  --status-active-fg:  var(--green-700);
+  --status-active-bg:  var(--green-50);
+  --status-active-dot: var(--green-500);
+
+  --status-archived-fg: var(--amber-700);
+  --status-archived-bg: var(--amber-50);
+  --status-archived-dot:var(--amber-500);
+
+  --danger:      var(--red-500);
+  --danger-hover:var(--red-600);
+  --danger-bg:   var(--red-50);
+  --danger-fg:   var(--red-700);
+
+  --info:    var(--blue-500);
+  --info-bg: var(--blue-50);
+  --info-fg: var(--blue-700);
+
+  --success:    var(--green-500);
+  --success-bg: var(--green-50);
+  --success-fg: var(--green-700);
+
+  /* Sidebar (slightly deeper warm panel) */
+  --sidebar-bg:       var(--warm-100);
+  --sidebar-fg:       var(--warm-700);
+  --sidebar-fg-active:var(--warm-950);
+  --sidebar-active-bg:var(--warm-0);
+  --sidebar-border:   var(--warm-200);
+}
+
+/* ===== Dark theme ===== */
+[data-theme="dark"] {
+  --bg-app:        var(--warm-950);
+  --bg-canvas:     #0c0c0e;
+  --surface:       var(--warm-900);
+  --surface-subtle:#1f1f23;
+  --surface-sunken:#0e0e10;
+  --surface-hover: var(--warm-800);
+  --surface-selected: #11261d;
+
+  --text-strong:  #f6f6f7;
+  --text-default: #dcdce0;
+  --text-muted:   #9d9da6;
+  --text-subtle:  #74747c;
+  --text-inverse: var(--warm-950);
+  --text-link:    var(--green-300);
+
+  --border-subtle:  #262629;
+  --border-default: #333338;
+  --border-strong:  #46464d;
+  --border-input:   #46464d;
+
+  --accent:        var(--green-400);
+  --accent-hover:  var(--green-300);
+  --accent-active: var(--green-200);
+  --accent-soft:   #11261d;
+  --accent-soft-border: #1c4634;
+  --accent-text:   var(--green-300);
+  --on-accent:     var(--warm-950);
+
+  --primary:        #f5f5f6;
+  --primary-hover:  #ffffff;
+  --primary-active: #dcdce0;
+  --on-primary:     var(--warm-950);
+
+  --focus-ring: var(--green-400);
+
+  --status-draft-fg:   #bcbcc4;
+  --status-draft-bg:   #29292e;
+  --status-draft-dot:  var(--warm-500);
+  --status-active-fg:  var(--green-300);
+  --status-active-bg:  #11261d;
+  --status-active-dot: var(--green-400);
+  --status-archived-fg:#e0b765;
+  --status-archived-bg:#2e2410;
+  --status-archived-dot:var(--amber-500);
+
+  --danger:      #e8584b;
+  --danger-hover:#ef6a5e;
+  --danger-bg:   #2e1411;
+  --danger-fg:   #f3b7af;
+  --info:    #5b8fe0;
+  --info-bg: #131f33;
+  --info-fg: #b6cef4;
+  --success:    var(--green-400);
+  --success-bg: #11261d;
+  --success-fg: var(--green-300);
+
+  --sidebar-bg:       #111113;
+  --sidebar-fg:       #9d9da6;
+  --sidebar-fg-active:#f6f6f7;
+  --sidebar-active-bg:var(--warm-900);
+  --sidebar-border:   #262629;
+}

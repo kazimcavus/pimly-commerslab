@@ -1,0 +1,9 @@
+/* App-level overrides on top of the design system. */
+
+/* Theme-aware logo swap (replaces the prototype's inline JS toggling). */
+.pim-dark-logo { display: none; }
+[data-theme='dark'] .pim-light-logo { display: none; }
+[data-theme='dark'] .pim-dark-logo { display: inline; }
+
+/* Full-height app root. */
+html, body, #root { height: 100%; margin: 0; }

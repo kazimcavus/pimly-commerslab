@@ -1,0 +1,282 @@
+/* ============================================================
+   pimly — component classes.
+   Token-driven styling for the reusable primitives. JSX
+   components render these classNames. Shipped to consumers as
+   part of the styles.css closure.
+   ============================================================ */
+
+/* ---------------- Button ---------------- */
+.pim-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  letter-spacing: var(--ls-snug);
+  height: var(--control-md);
+  padding: 0 var(--space-10);
+  border-radius: var(--radius-md);
+  border: var(--border-w) solid transparent;
+  background: transparent;
+  color: var(--text-default);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.pim-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.pim-btn[disabled], .pim-btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.pim-btn .pim-btn__icon { display: inline-flex; }
+.pim-btn .pim-btn__icon svg { width: 18px; height: 18px; }
+
+.pim-btn--sm { height: var(--control-sm); padding: 0 var(--space-6); font-size: var(--text-sm); gap: var(--space-3); }
+.pim-btn--sm .pim-btn__icon svg { width: 15px; height: 15px; }
+.pim-btn--lg { height: var(--control-lg); padding: 0 var(--space-12); font-size: var(--text-md); }
+.pim-btn--icon { padding: 0; width: var(--control-md); }
+.pim-btn--icon.pim-btn--sm { width: var(--control-sm); }
+.pim-btn--icon.pim-btn--lg { width: var(--control-lg); }
+.pim-btn--full { width: 100%; }
+
+.pim-btn--primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.pim-btn--primary:hover:not([disabled]) { background: var(--primary-hover); border-color: var(--primary-hover); }
+.pim-btn--primary:active:not([disabled]) { background: var(--primary-active); }
+
+.pim-btn--secondary { background: var(--surface); color: var(--text-strong); border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+.pim-btn--secondary:hover:not([disabled]) { background: var(--surface-hover); border-color: var(--border-strong); }
+.pim-btn--secondary:active:not([disabled]) { background: var(--surface-sunken); }
+
+.pim-btn--ghost { background: transparent; color: var(--text-default); border-color: transparent; }
+.pim-btn--ghost:hover:not([disabled]) { background: var(--surface-hover); color: var(--text-strong); }
+.pim-btn--ghost:active:not([disabled]) { background: var(--surface-sunken); }
+
+.pim-btn--accent { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.pim-btn--accent:hover:not([disabled]) { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.pim-btn--danger { background: var(--surface); color: var(--danger-fg); border-color: color-mix(in oklab, var(--danger) 38%, var(--border-strong)); box-shadow: var(--shadow-xs); }
+.pim-btn--danger:hover:not([disabled]) { background: var(--danger-bg); border-color: color-mix(in oklab, var(--danger) 55%, transparent); }
+.pim-btn--danger-solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+.pim-btn--danger-solid:hover:not([disabled]) { background: var(--danger-hover); border-color: var(--danger-hover); }
+
+.pim-btn__spinner { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: pim-spin 0.6s linear infinite; }
+@keyframes pim-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pim-btn__spinner { animation-duration: 1.4s; } }
+
+/* ---------------- Field / label / help / error ---------------- */
+.pim-field { display: flex; flex-direction: column; gap: var(--space-3); }
+.pim-field__label { font-size: var(--text-sm); font-weight: var(--fw-medium); color: var(--text-strong); display: inline-flex; align-items: center; gap: var(--space-3); }
+.pim-field__req { color: var(--danger); font-weight: var(--fw-semibold); }
+.pim-field__opt { color: var(--text-subtle); font-weight: var(--fw-regular); font-size: var(--text-xs); }
+.pim-field__help { font-size: var(--text-xs); color: var(--text-muted); }
+.pim-field__error { font-size: var(--text-xs); color: var(--danger-fg); display: flex; align-items: center; gap: var(--space-2); }
+.pim-field__auto { font-size: var(--text-xs); color: var(--text-subtle); font-style: italic; }
+
+/* ---------------- Input / textarea / select ---------------- */
+.pim-input, .pim-textarea, .pim-select {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--text-strong);
+  background: var(--surface);
+  border: var(--border-w) solid var(--border-input);
+  border-radius: var(--radius-md);
+  height: var(--control-md);
+  padding: 0 var(--space-8);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  appearance: none;
+}
+.pim-input::placeholder, .pim-textarea::placeholder { color: var(--text-subtle); }
+.pim-input:hover, .pim-textarea:hover, .pim-select:hover { border-color: var(--border-strong); }
+.pim-input:focus, .pim-textarea:focus, .pim-select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.pim-input:disabled, .pim-textarea:disabled, .pim-select:disabled { background: var(--surface-sunken); color: var(--text-subtle); cursor: not-allowed; }
+.pim-input--mono { font-family: var(--font-mono); font-feature-settings: "tnum"; }
+.pim-textarea { height: auto; min-height: 76px; padding: var(--space-5) var(--space-8); line-height: var(--lh-normal); resize: vertical; }
+.pim-input--invalid, .pim-textarea--invalid, .pim-select--invalid { border-color: var(--danger); }
+.pim-input--invalid:focus, .pim-textarea--invalid:focus, .pim-select--invalid:focus { box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 28%, transparent); }
+.pim-input--sm { height: var(--control-sm); font-size: var(--text-sm); padding: 0 var(--space-6); }
+
+/* input affix wrapper */
+.pim-input-group { position: relative; display: flex; align-items: center; }
+.pim-input-group .pim-input { padding-left: var(--space-16); }
+.pim-input-group__icon { position: absolute; left: var(--space-6); display: inline-flex; color: var(--text-subtle); pointer-events: none; }
+.pim-input-group__icon svg { width: 16px; height: 16px; }
+.pim-input-group__suffix { position: absolute; right: var(--space-8); font-size: var(--text-sm); color: var(--text-subtle); }
+
+/* select chevron */
+.pim-select-wrap { position: relative; display: block; }
+.pim-select { padding-right: var(--space-16); cursor: pointer; }
+.pim-select-wrap__chev { position: absolute; right: var(--space-6); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-muted); display: inline-flex; }
+.pim-select-wrap__chev svg { width: 16px; height: 16px; }
+
+/* ---------------- Checkbox / Radio ---------------- */
+.pim-check { display: inline-flex; align-items: flex-start; gap: var(--space-5); cursor: pointer; font-size: var(--text-base); color: var(--text-default); }
+.pim-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pim-check__box {
+  flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px;
+  border: var(--border-w-2) solid var(--border-strong);
+  border-radius: var(--radius-xs); background: var(--surface);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; transition: all var(--dur-fast) var(--ease-out);
+}
+.pim-check__box svg { width: 13px; height: 13px; opacity: 0; transform: scale(0.6); transition: all var(--dur-fast) var(--ease-out); }
+.pim-check input:checked + .pim-check__box { background: var(--accent); border-color: var(--accent); }
+.pim-check input:checked + .pim-check__box svg { opacity: 1; transform: scale(1); }
+.pim-check input:focus-visible + .pim-check__box { box-shadow: var(--ring); }
+.pim-check:hover .pim-check__box { border-color: var(--accent); }
+.pim-check--radio .pim-check__box { border-radius: var(--radius-pill); }
+.pim-check--radio .pim-check__dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; opacity: 0; transform: scale(0.4); transition: all var(--dur-fast) var(--ease-out); }
+.pim-check--radio input:checked + .pim-check__box { background: var(--accent); border-color: var(--accent); }
+.pim-check--radio input:checked + .pim-check__box .pim-check__dot { opacity: 1; transform: scale(1); }
+.pim-check input:disabled ~ * { opacity: 0.5; }
+.pim-check__text { display: flex; flex-direction: column; gap: 1px; }
+.pim-check__hint { font-size: var(--text-xs); color: var(--text-muted); }
+
+/* ---------------- Switch ---------------- */
+.pim-switch { display: inline-flex; align-items: center; gap: var(--space-6); cursor: pointer; }
+.pim-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pim-switch__track { width: 36px; height: 20px; border-radius: var(--radius-pill); background: var(--border-strong); position: relative; transition: background var(--dur-base) var(--ease-out); flex: 0 0 auto; }
+.pim-switch__thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--dur-base) var(--ease-out); }
+.pim-switch input:checked + .pim-switch__track { background: var(--accent); }
+.pim-switch input:checked + .pim-switch__track .pim-switch__thumb { transform: translateX(16px); }
+.pim-switch input:focus-visible + .pim-switch__track { box-shadow: var(--ring); }
+.pim-switch input:disabled + .pim-switch__track { opacity: 0.5; }
+.pim-switch__label { font-size: var(--text-base); color: var(--text-default); }
+
+/* ---------------- Badge / Status ---------------- */
+.pim-badge {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  font-size: var(--text-xs); font-weight: var(--fw-medium);
+  padding: 2px var(--space-5); border-radius: var(--radius-pill);
+  line-height: 1.4; white-space: nowrap;
+  background: var(--surface-sunken); color: var(--text-default);
+}
+.pim-badge__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.pim-badge--draft    { background: var(--status-draft-bg);    color: var(--status-draft-fg); }
+.pim-badge--draft    .pim-badge__dot { background: var(--status-draft-dot); }
+.pim-badge--active   { background: var(--status-active-bg);   color: var(--status-active-fg); }
+.pim-badge--active   .pim-badge__dot { background: var(--status-active-dot); }
+.pim-badge--archived { background: var(--status-archived-bg); color: var(--status-archived-fg); }
+.pim-badge--archived .pim-badge__dot { background: var(--status-archived-dot); }
+.pim-badge--danger   { background: var(--danger-bg); color: var(--danger-fg); }
+.pim-badge--danger   .pim-badge__dot { background: var(--danger); }
+.pim-badge--info     { background: var(--info-bg); color: var(--info-fg); }
+.pim-badge--info     .pim-badge__dot { background: var(--info); }
+.pim-badge--count    { background: var(--surface-sunken); color: var(--text-muted); font-family: var(--font-mono); font-feature-settings: "tnum"; padding: 1px var(--space-4); }
+
+/* ---------------- Tag (removable) ---------------- */
+.pim-tag {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  font-size: var(--text-sm); color: var(--text-default);
+  background: var(--surface); border: var(--border-w) solid var(--border-default);
+  border-radius: var(--radius-sm); padding: 2px var(--space-3) 2px var(--space-5); height: 24px;
+}
+.pim-tag__swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid color-mix(in oklab, var(--text-strong) 12%, transparent); flex: 0 0 auto; }
+.pim-tag__x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: var(--radius-xs); color: var(--text-subtle); cursor: pointer; border: none; background: transparent; }
+.pim-tag__x:hover { background: var(--surface-sunken); color: var(--text-strong); }
+.pim-tag__x svg { width: 12px; height: 12px; }
+
+/* ---------------- Avatar ---------------- */
+.pim-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--radius-pill);
+  background: var(--accent-soft); color: var(--accent-text);
+  font-size: var(--text-sm); font-weight: var(--fw-semibold);
+  overflow: hidden; flex: 0 0 auto; user-select: none;
+}
+.pim-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pim-avatar--sm { width: 24px; height: 24px; font-size: var(--text-xs); }
+.pim-avatar--lg { width: 40px; height: 40px; font-size: var(--text-md); }
+
+/* ---------------- Card ---------------- */
+.pim-card { background: var(--surface); border: var(--border-w) solid var(--border-default); border-radius: var(--radius-lg); }
+.pim-card--pad { padding: var(--space-12); }
+.pim-card__header { padding: var(--space-10) var(--space-12); border-bottom: var(--border-w) solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
+.pim-card__title { font-size: var(--text-md); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.pim-card__body { padding: var(--space-12); }
+
+/* ---------------- Banner ---------------- */
+.pim-banner { display: flex; gap: var(--space-6); padding: var(--space-8) var(--space-10); border-radius: var(--radius-md); border: var(--border-w) solid; font-size: var(--text-sm); align-items: flex-start; }
+.pim-banner__icon { flex: 0 0 auto; margin-top: 1px; }
+.pim-banner__icon svg { width: 18px; height: 18px; }
+.pim-banner__title { font-weight: var(--fw-semibold); color: var(--text-strong); margin-bottom: 2px; }
+.pim-banner__body { color: var(--text-default); }
+.pim-banner--info    { background: var(--info-bg);    border-color: color-mix(in oklab, var(--info) 30%, transparent); }
+.pim-banner--info    .pim-banner__icon { color: var(--info); }
+.pim-banner--success { background: var(--success-bg); border-color: color-mix(in oklab, var(--success) 30%, transparent); }
+.pim-banner--success .pim-banner__icon { color: var(--success); }
+.pim-banner--warning { background: var(--status-archived-bg); border-color: color-mix(in oklab, var(--amber-500) 32%, transparent); }
+.pim-banner--warning .pim-banner__icon { color: var(--amber-500); }
+.pim-banner--danger  { background: var(--danger-bg); border-color: color-mix(in oklab, var(--danger) 32%, transparent); }
+.pim-banner--danger  .pim-banner__icon { color: var(--danger); }
+
+/* ---------------- Tooltip ---------------- */
+.pim-tooltip-wrap { position: relative; display: inline-flex; }
+.pim-tooltip {
+  position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%) translateY(3px);
+  background: var(--ink); color: var(--warm-0); font-size: var(--text-xs); font-weight: var(--fw-medium);
+  padding: var(--space-3) var(--space-5); border-radius: var(--radius-sm); white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  z-index: 60; box-shadow: var(--shadow-md);
+}
+[data-theme="dark"] .pim-tooltip { background: var(--warm-700); }
+.pim-tooltip-wrap:hover .pim-tooltip, .pim-tooltip-wrap:focus-within .pim-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------------- Tabs ---------------- */
+.pim-tabs { display: flex; gap: var(--space-2); border-bottom: var(--border-w) solid var(--border-default); }
+.pim-tab {
+  appearance: none; background: transparent; border: none; cursor: pointer;
+  font-family: var(--font-sans); font-size: var(--text-base); font-weight: var(--fw-medium);
+  color: var(--text-muted); padding: var(--space-6) var(--space-5) var(--space-8);
+  position: relative; display: inline-flex; align-items: center; gap: var(--space-4);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color var(--dur-fast) var(--ease-out);
+}
+.pim-tab:hover { color: var(--text-strong); }
+.pim-tab[aria-selected="true"] { color: var(--text-strong); border-bottom-color: var(--primary); font-weight: var(--fw-semibold); }
+.pim-tab svg { width: 16px; height: 16px; }
+
+/* ---------------- Dialog ---------------- */
+.pim-dialog__scrim { position: fixed; inset: 0; background: color-mix(in oklab, var(--warm-950) 45%, transparent); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: var(--space-16); z-index: 100; animation: pim-fade var(--dur-base) var(--ease-out); }
+.pim-dialog { background: var(--surface); border: var(--border-w) solid var(--border-default); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); width: 100%; max-width: 460px; animation: pim-pop var(--dur-base) var(--ease-out); }
+.pim-dialog__header { padding: var(--space-12) var(--space-12) var(--space-6); }
+.pim-dialog__title { font-size: var(--text-lg); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.pim-dialog__desc { font-size: var(--text-sm); color: var(--text-muted); margin-top: var(--space-3); }
+.pim-dialog__body { padding: var(--space-6) var(--space-12); }
+.pim-dialog__footer { padding: var(--space-10) var(--space-12) var(--space-12); display: flex; justify-content: flex-end; gap: var(--space-6); }
+@keyframes pim-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pim-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pim-dialog, .pim-dialog__scrim { animation: none; } }
+
+/* ---------------- Toast ---------------- */
+.pim-toast { display: flex; align-items: flex-start; gap: var(--space-6); background: var(--surface); border: var(--border-w) solid var(--border-default); border-left-width: 3px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: var(--space-8) var(--space-10); min-width: 280px; max-width: 380px; }
+.pim-toast__icon { flex: 0 0 auto; margin-top: 1px; }
+.pim-toast__icon svg { width: 18px; height: 18px; }
+.pim-toast__title { font-size: var(--text-sm); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.pim-toast__body { font-size: var(--text-xs); color: var(--text-muted); margin-top: 1px; }
+.pim-toast--success { border-left-color: var(--success); } .pim-toast--success .pim-toast__icon { color: var(--success); }
+.pim-toast--danger  { border-left-color: var(--danger);  } .pim-toast--danger  .pim-toast__icon { color: var(--danger); }
+.pim-toast--info    { border-left-color: var(--info);    } .pim-toast--info    .pim-toast__icon { color: var(--info); }
+
+/* ---------------- Empty state ---------------- */
+.pim-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-5); padding: var(--space-32) var(--space-16); }
+.pim-empty__icon { width: 44px; height: 44px; border-radius: var(--radius-lg); display: inline-flex; align-items: center; justify-content: center; background: var(--surface-sunken); color: var(--text-muted); }
+.pim-empty__icon svg { width: 22px; height: 22px; }
+.pim-empty__title { font-size: var(--text-md); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.pim-empty__desc { font-size: var(--text-sm); color: var(--text-muted); max-width: 320px; }
+
+/* ---------------- Data table ---------------- */
+.pim-table-wrap { border: var(--border-w) solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+.pim-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.pim-table thead th { text-align: left; font-size: var(--text-xs); font-weight: var(--fw-semibold); color: var(--text-muted); text-transform: none; padding: var(--space-6) var(--space-10); background: var(--surface-subtle); border-bottom: var(--border-w) solid var(--border-default); white-space: nowrap; }
+.pim-table tbody td { padding: var(--space-8) var(--space-10); border-bottom: var(--border-w) solid var(--border-subtle); color: var(--text-default); vertical-align: middle; }
+.pim-table tbody tr:last-child td { border-bottom: none; }
+.pim-table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+.pim-table tbody tr:hover { background: var(--surface-hover); }
+.pim-table tbody tr[data-selected="true"] { background: var(--surface-selected); }
+.pim-table .pim-td-mono { font-family: var(--font-mono); font-feature-settings: "tnum"; color: var(--text-muted); }
+.pim-table .pim-td-num { font-variant-numeric: tabular-nums; text-align: right; }
+.pim-table .pim-td-strong { color: var(--text-strong); font-weight: var(--fw-medium); }

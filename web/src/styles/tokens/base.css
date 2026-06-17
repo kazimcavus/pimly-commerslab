@@ -1,0 +1,78 @@
+/* ============================================================
+   pimly — base element styles & resets.
+   Minimal, token-driven. Sets the app canvas, typography
+   defaults, focus visibility, and a few helpers.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  color: var(--text-default);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-snug);
+}
+
+p { margin: 0; }
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* Numeric / code surfaces get tabular figures by default */
+.pim-mono, code, kbd, samp {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+/* Tabular numbers helper for tables */
+.pim-tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* Eyebrow / overline label */
+.pim-eyebrow {
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* Keyboard focus ring (token-driven) */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Custom scrollbars — quiet, warm */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); background-clip: padding-box; }
+
+::selection { background: color-mix(in oklab, var(--accent) 28%, transparent); }

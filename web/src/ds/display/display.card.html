@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" viewport="700x180" name="Badges, tags & avatars" subtitle="Status pills (dot + word), metaobject tags, count badges, avatars" -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin: 0; padding: 22px; background: var(--bg-app); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .lbl { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-subtle); width: 100%; margin-bottom: -2px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { Badge, Tag, Avatar } = window.PimlyDesignSystem_e88117;
+  function Demo() {
+    return (
+      <div>
+        <div className="row"><span className="lbl">Status</span>
+          <Badge status="draft">Taslak</Badge>
+          <Badge status="active">Aktif</Badge>
+          <Badge status="archived">Arşiv</Badge>
+          <Badge status="danger">Hatalı</Badge>
+          <Badge status="info">Senkronize</Badge>
+          <Badge count>12 varyant</Badge>
+        </div>
+        <div className="row"><span className="lbl">Tags (metaobject values)</span>
+          <Tag swatch="#d7382b" onRemove={()=>{}}>Kırmızı</Tag>
+          <Tag swatch="#ffffff" onRemove={()=>{}}>Beyaz</Tag>
+          <Tag swatch="#1c1b19" onRemove={()=>{}}>Siyah</Tag>
+          <Tag>S</Tag><Tag>M</Tag><Tag>L</Tag><Tag>XL</Tag>
+        </div>
+        <div className="row"><span className="lbl">Avatars</span>
+          <Avatar name="Acme Owner" size="sm" />
+          <Avatar name="Acme Owner" />
+          <Avatar name="Zeynep Kaya" size="lg" />
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  setTimeout(() => window.lucide && window.lucide.createIcons(), 0);
+</script>
+</body>
+</html>
