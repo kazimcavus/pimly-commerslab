@@ -57,6 +57,10 @@ function safeParse(t) {
 export const api = {
   // --- auth ---
   login: (email, password, tenant_slug) => req('POST', '/login', { body: { email, password, tenant_slug } }),
+
+  // --- settings (sku generator, barcode config) ---
+  getSettings: () => req('GET', '/settings'),
+  putSetting: (key, value) => req('PUT', `/settings/${key}`, { body: value }),
   me: () => req('GET', '/me'),
 
   // --- categories ---
@@ -85,6 +89,16 @@ export const api = {
   createMetaEntry: (id, values) => req('POST', `/metaobject-definitions/${id}/entries`, { body: { values } }),
   deleteMetaEntry: (id) => req('DELETE', `/metaobject-entries/${id}`),
 
+  // --- variant types & values (option axes: Renk, Beden, Ölçü) ---
+  listVariantTypes: () => req('GET', '/variant-types'),
+  createVariantType: (b) => req('POST', '/variant-types', { body: b }),
+  updateVariantType: (id, b) => req('PATCH', `/variant-types/${id}`, { body: b }),
+  deleteVariantType: (id) => req('DELETE', `/variant-types/${id}`),
+  listVariantValues: (id) => req('GET', `/variant-types/${id}/values`),
+  createVariantValue: (id, b) => req('POST', `/variant-types/${id}/values`, { body: b }),
+  updateVariantValue: (id, b) => req('PATCH', `/variant-values/${id}`, { body: b }),
+  deleteVariantValue: (id) => req('DELETE', `/variant-values/${id}`),
+
   // --- products ---
   productsBatch: (b) => req('POST', '/products:batch', { body: b }),
   listGroups: () => req('GET', '/groups'),
@@ -108,6 +122,11 @@ export const api = {
     return req('POST', '/media:bulk', { form: fd })
   },
   deleteMedia: (id) => req('DELETE', `/media/${id}`),
+  uploadImage: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return req('POST', '/uploads', { form: fd })
+  },
 
   // --- admin (X-Admin-Token) ---
   adminListApplications: (status) =>

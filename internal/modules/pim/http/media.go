@@ -178,6 +178,35 @@ func (h *Handler) BulkUploadMedia(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"attached": ok2, "skipped": skips})
 }
 
+// UploadImage stores a single image to tenant storage and returns its URL,
+// without attaching it to any product. Used for standalone images such as
+// variant value swatches (Renk / Görsel).
+func (h *Handler) UploadImage(w http.ResponseWriter, r *http.Request) {
+	t, ok := h.requireStorage(w, r)
+	if !ok {
+		return
+	}
+	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+		httpx.Error(w, r, apperr.Validation("invalid multipart form"))
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		httpx.Error(w, r, apperr.Validation("file is required"))
+		return
+	}
+	defer file.Close()
+
+	url, err := h.storage.Upload(r.Context(),
+		objectKey(t.SchemaName, "uploads", header.Filename),
+		file, header.Size, header.Header.Get("Content-Type"))
+	if err != nil {
+		httpx.Error(w, r, apperr.Internal(err))
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]string{"url": url})
+}
+
 // ListProductMedia returns a product's media (variants inherit product media).
 func (h *Handler) ListProductMedia(w http.ResponseWriter, r *http.Request) {
 	productID, err := pathUUID(r, "id")

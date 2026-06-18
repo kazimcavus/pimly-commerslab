@@ -1,6 +1,6 @@
 -- name: CreateProduct :one
-INSERT INTO products (group_id, product_sku, grouping_value_entry_id, title, attribute_values, status)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO products (group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, variant_types)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetProduct :one

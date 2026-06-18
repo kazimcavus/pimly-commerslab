@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { Toast } from './ds'
-import { renderIcons } from './lib/icons.js'
 import { api, setToken, getToken } from './lib/api.js'
 import { AppShell } from './screens/Shell.jsx'
 import { Login } from './screens/Login.jsx'
@@ -11,8 +10,10 @@ import { GroupDetail } from './screens/GroupDetail.jsx'
 import { Categories } from './screens/Categories.jsx'
 import { Attributes } from './screens/Attributes.jsx'
 import { Metaobjects } from './screens/Metaobjects.jsx'
+import { Variants } from './screens/Variants.jsx'
 import { Media } from './screens/Media.jsx'
 import { Admin } from './screens/Admin.jsx'
+import { Settings } from './screens/Settings.jsx'
 
 export function App() {
   const [session, setSession] = useState(null) // { tenant: {slug, role, ...} }
@@ -22,9 +23,6 @@ export function App() {
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(false)
   const [booting, setBooting] = useState(true)
-
-  // Re-render Lucide icons after every commit (mirrors the prototype).
-  useEffect(() => { renderIcons() })
 
   // Restore a session from a stored token on first load.
   useEffect(() => {
@@ -66,7 +64,6 @@ export function App() {
   const toggleTheme = () => {
     const el = document.documentElement
     el.setAttribute('data-theme', el.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
-    setTimeout(renderIcons, 0)
   }
 
   if (booting) return null
@@ -83,8 +80,10 @@ export function App() {
     categories: <Categories onToast={showToast} />,
     attributes: <Attributes onToast={showToast} />,
     metaobjects: <Metaobjects onToast={showToast} />,
+    variants: <Variants onToast={showToast} />,
     media: <Media onToast={showToast} />,
     admin: <Admin onToast={showToast} />,
+    settings: <Settings onToast={showToast} />,
   }
   const navRoute = route === 'builder' || route === 'group' ? 'products' : route
 

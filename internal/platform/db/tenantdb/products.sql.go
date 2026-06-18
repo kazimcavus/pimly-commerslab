@@ -13,9 +13,9 @@ import (
 )
 
 const createProduct = `-- name: CreateProduct :one
-INSERT INTO products (group_id, product_sku, grouping_value_entry_id, title, attribute_values, status)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at
+INSERT INTO products (group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, variant_types)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at, variant_types
 `
 
 type CreateProductParams struct {
@@ -25,6 +25,7 @@ type CreateProductParams struct {
 	Title                string          `json:"title"`
 	AttributeValues      json.RawMessage `json:"attribute_values"`
 	Status               string          `json:"status"`
+	VariantTypes         json.RawMessage `json:"variant_types"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -35,6 +36,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		arg.Title,
 		arg.AttributeValues,
 		arg.Status,
+		arg.VariantTypes,
 	)
 	var i Product
 	err := row.Scan(
@@ -47,6 +49,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VariantTypes,
 	)
 	return i, err
 }
@@ -64,7 +67,7 @@ func (q *Queries) DeleteProduct(ctx context.Context, id uuid.UUID) (int64, error
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at FROM products WHERE id = $1
+SELECT id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at, variant_types FROM products WHERE id = $1
 `
 
 func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (Product, error) {
@@ -80,12 +83,13 @@ func (q *Queries) GetProduct(ctx context.Context, id uuid.UUID) (Product, error)
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VariantTypes,
 	)
 	return i, err
 }
 
 const getProductBySku = `-- name: GetProductBySku :one
-SELECT id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at FROM products WHERE product_sku = $1
+SELECT id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at, variant_types FROM products WHERE product_sku = $1
 `
 
 func (q *Queries) GetProductBySku(ctx context.Context, productSku string) (Product, error) {
@@ -101,12 +105,13 @@ func (q *Queries) GetProductBySku(ctx context.Context, productSku string) (Produ
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VariantTypes,
 	)
 	return i, err
 }
 
 const listProductsByGroup = `-- name: ListProductsByGroup :many
-SELECT id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at FROM products WHERE group_id = $1 ORDER BY created_at
+SELECT id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at, variant_types FROM products WHERE group_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListProductsByGroup(ctx context.Context, groupID uuid.UUID) ([]Product, error) {
@@ -128,6 +133,7 @@ func (q *Queries) ListProductsByGroup(ctx context.Context, groupID uuid.UUID) ([
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VariantTypes,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +160,7 @@ const updateProduct = `-- name: UpdateProduct :one
 UPDATE products
 SET title = $2, status = $3, attribute_values = $4, grouping_value_entry_id = $5, updated_at = now()
 WHERE id = $1
-RETURNING id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at
+RETURNING id, group_id, product_sku, grouping_value_entry_id, title, attribute_values, status, created_at, updated_at, variant_types
 `
 
 type UpdateProductParams struct {
@@ -184,6 +190,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VariantTypes,
 	)
 	return i, err
 }

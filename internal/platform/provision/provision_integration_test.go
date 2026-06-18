@@ -12,6 +12,7 @@ import (
 	"github.com/kazimcavus/pimly/internal/platform/db/dbtest"
 	"github.com/kazimcavus/pimly/internal/platform/db/tenantdb"
 	"github.com/kazimcavus/pimly/internal/platform/provision"
+	"github.com/kazimcavus/pimly/internal/platform/tenant"
 )
 
 func TestCreateTenant_ProvisionsAndSeeds(t *testing.T) {
@@ -27,8 +28,13 @@ func TestCreateTenant_ProvisionsAndSeeds(t *testing.T) {
 	if res.Tenant.SchemaName != "tenant_acme_tekstil" {
 		t.Fatalf("schema = %q, want tenant_acme_tekstil", res.Tenant.SchemaName)
 	}
-	if res.AppliedMigrations != 1 {
-		t.Fatalf("applied migrations = %d, want 1", res.AppliedMigrations)
+	migs, err := tenant.LoadTemplateMigrations()
+	if err != nil {
+		t.Fatalf("load template migrations: %v", err)
+	}
+	wantMigs := len(migs)
+	if res.AppliedMigrations != wantMigs {
+		t.Fatalf("applied migrations = %d, want %d", res.AppliedMigrations, wantMigs)
 	}
 	if res.GeneratedPassword == "" {
 		t.Fatal("expected a generated password for a new owner")

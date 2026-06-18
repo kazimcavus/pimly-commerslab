@@ -7,11 +7,13 @@ const NAV = [
   { type: 'section', label: 'Tanımlar' },
   { type: 'item', id: 'categories', label: 'Kategoriler', icon: 'folder-tree' },
   { type: 'item', id: 'attributes', label: 'Özellikler', icon: 'tags' },
+  { type: 'item', id: 'variants', label: 'Varyantlar', icon: 'layers' },
   { type: 'item', id: 'metaobjects', label: "Metaobject'ler", icon: 'boxes' },
   { type: 'section', label: 'Katalog' },
   { type: 'item', id: 'products', label: 'Ürünler', icon: 'package' },
   { type: 'item', id: 'media', label: 'Medya', icon: 'image' },
   { type: 'section', label: 'Platform' },
+  { type: 'item', id: 'settings', label: 'Ayarlar', icon: 'settings' },
   { type: 'item', id: 'admin', label: 'Admin', icon: 'shield' },
 ]
 

@@ -60,6 +60,9 @@ func TestMediaUploadAndBulk(t *testing.T) {
 	}
 	token, _ := login(t, h, "m@x.test", "pw", "")
 
+	// Enable barcode generation (no silent fallback anymore).
+	request(t, h, "PUT", "/settings/barcode", token, map[string]any{"enabled": true, "start": 8440491})
+
 	// Create a product with a known SKU and one variant.
 	rec := request(t, h, "POST", "/products:batch", token, map[string]any{
 		"group": map[string]any{"group_code": "MED1"},

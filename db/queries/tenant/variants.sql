@@ -1,9 +1,12 @@
 -- name: CreateVariant :one
 INSERT INTO variants (
-    product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value,
-    price, compare_at_price, stock, attribute_values
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    product_id, sku, barcode, gtin, mpn, axis_value_entry_id, axis_value,
+    price, compare_at_price, stock, attribute_values, options
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *;
+
+-- name: VariantSkuExists :one
+SELECT EXISTS(SELECT 1 FROM variants WHERE sku = $1) AS exists;
 
 -- name: GetVariant :one
 SELECT * FROM variants WHERE id = $1;

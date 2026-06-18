@@ -12,7 +12,7 @@ export function Attributes({ onToast }) {
   const [rows, setRows] = useState([])
   const [open, setOpen] = useState(false)
   const load = () => api.listAttributes().then(setRows).catch(() => {})
-  useEffect(load, [])
+  useEffect(() => { load() }, [])
 
   return (
     <div className="page">

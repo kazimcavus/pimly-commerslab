@@ -15,14 +15,15 @@ import (
 
 const createVariant = `-- name: CreateVariant :one
 INSERT INTO variants (
-    product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value,
-    price, compare_at_price, stock, attribute_values
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at
+    product_id, sku, barcode, gtin, mpn, axis_value_entry_id, axis_value,
+    price, compare_at_price, stock, attribute_values, options
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at, options, sku
 `
 
 type CreateVariantParams struct {
 	ProductID        uuid.UUID       `json:"product_id"`
+	Sku              pgtype.Text     `json:"sku"`
 	Barcode          string          `json:"barcode"`
 	Gtin             pgtype.Text     `json:"gtin"`
 	Mpn              pgtype.Text     `json:"mpn"`
@@ -32,11 +33,13 @@ type CreateVariantParams struct {
 	CompareAtPrice   pgtype.Numeric  `json:"compare_at_price"`
 	Stock            int32           `json:"stock"`
 	AttributeValues  json.RawMessage `json:"attribute_values"`
+	Options          json.RawMessage `json:"options"`
 }
 
 func (q *Queries) CreateVariant(ctx context.Context, arg CreateVariantParams) (Variant, error) {
 	row := q.db.QueryRow(ctx, createVariant,
 		arg.ProductID,
+		arg.Sku,
 		arg.Barcode,
 		arg.Gtin,
 		arg.Mpn,
@@ -46,6 +49,7 @@ func (q *Queries) CreateVariant(ctx context.Context, arg CreateVariantParams) (V
 		arg.CompareAtPrice,
 		arg.Stock,
 		arg.AttributeValues,
+		arg.Options,
 	)
 	var i Variant
 	err := row.Scan(
@@ -62,6 +66,8 @@ func (q *Queries) CreateVariant(ctx context.Context, arg CreateVariantParams) (V
 		&i.AttributeValues,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Options,
+		&i.Sku,
 	)
 	return i, err
 }
@@ -79,7 +85,7 @@ func (q *Queries) DeleteVariant(ctx context.Context, id uuid.UUID) (int64, error
 }
 
 const getVariant = `-- name: GetVariant :one
-SELECT id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at FROM variants WHERE id = $1
+SELECT id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at, options, sku FROM variants WHERE id = $1
 `
 
 func (q *Queries) GetVariant(ctx context.Context, id uuid.UUID) (Variant, error) {
@@ -99,12 +105,14 @@ func (q *Queries) GetVariant(ctx context.Context, id uuid.UUID) (Variant, error)
 		&i.AttributeValues,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Options,
+		&i.Sku,
 	)
 	return i, err
 }
 
 const listVariantsByProduct = `-- name: ListVariantsByProduct :many
-SELECT id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at FROM variants WHERE product_id = $1 ORDER BY created_at
+SELECT id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at, options, sku FROM variants WHERE product_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListVariantsByProduct(ctx context.Context, productID uuid.UUID) ([]Variant, error) {
@@ -130,6 +138,8 @@ func (q *Queries) ListVariantsByProduct(ctx context.Context, productID uuid.UUID
 			&i.AttributeValues,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Options,
+			&i.Sku,
 		); err != nil {
 			return nil, err
 		}
@@ -157,7 +167,7 @@ UPDATE variants
 SET gtin = $2, mpn = $3, axis_value_entry_id = $4, axis_value = $5,
     price = $6, compare_at_price = $7, stock = $8, attribute_values = $9, updated_at = now()
 WHERE id = $1
-RETURNING id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at
+RETURNING id, product_id, barcode, gtin, mpn, axis_value_entry_id, axis_value, price, compare_at_price, stock, attribute_values, created_at, updated_at, options, sku
 `
 
 type UpdateVariantParams struct {
@@ -199,6 +209,8 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (V
 		&i.AttributeValues,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Options,
+		&i.Sku,
 	)
 	return i, err
 }
@@ -209,6 +221,17 @@ SELECT EXISTS(SELECT 1 FROM variants WHERE barcode = $1) AS exists
 
 func (q *Queries) VariantBarcodeExists(ctx context.Context, barcode string) (bool, error) {
 	row := q.db.QueryRow(ctx, variantBarcodeExists, barcode)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const variantSkuExists = `-- name: VariantSkuExists :one
+SELECT EXISTS(SELECT 1 FROM variants WHERE sku = $1) AS exists
+`
+
+func (q *Queries) VariantSkuExists(ctx context.Context, sku pgtype.Text) (bool, error) {
+	row := q.db.QueryRow(ctx, variantSkuExists, sku)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Icon } from '../../lib/icons.jsx';
 
 /**
  * pimly Tabs — underline tabs for section switching (e.g. group detail:
@@ -17,7 +18,7 @@ export function Tabs({ tabs = [], value, onChange, className = '' }) {
           className="pim-tab"
           onClick={() => onChange && onChange(t.value)}
         >
-          {t.icon && <i data-lucide={t.icon} />}
+          {t.icon && <Icon name={t.icon} />}
           {t.label}
           {t.count != null && <span className="pim-badge pim-badge--count">{t.count}</span>}
         </button>

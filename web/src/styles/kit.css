@@ -126,3 +126,60 @@
 .between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .divider { height: 1px; background: var(--border-subtle); margin: 4px 0; }
 .list-meta { font-size: 12px; color: var(--text-subtle); }
+
+/* Right-side drawer (create/edit flows) */
+.pim-drawer__scrim { position: fixed; inset: 0; background: color-mix(in oklab, var(--warm-950) 40%, transparent); backdrop-filter: blur(2px); z-index: 120; display: flex; justify-content: flex-end; animation: pim-fade var(--dur-base) var(--ease-out); }
+.pim-drawer { width: 440px; max-width: 92vw; height: 100%; background: var(--surface); border-left: 1px solid var(--border-default); box-shadow: var(--shadow-xl); display: flex; flex-direction: column; animation: pim-slide-in var(--dur-base) var(--ease-out); }
+@keyframes pim-slide-in { from { transform: translateX(28px); opacity: .5 } to { transform: none; opacity: 1 } }
+.pim-drawer__header { padding: 16px 18px; border-bottom: 1px solid var(--border-subtle); flex: 0 0 auto; }
+.pim-drawer__title { font-weight: 650; color: var(--text-strong); font-size: 16px; }
+.pim-drawer__body { padding: 16px 18px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.pim-drawer__footer { padding: 12px 18px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 8px; flex: 0 0 auto; }
+@media (prefers-reduced-motion: reduce) { .pim-drawer, .pim-drawer__scrim { animation: none; } }
+
+/* Variant value rows in the drawer */
+.vrow { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface); }
+.vrow__label { flex: 1; color: var(--text-strong); font-size: 14px; }
+.swatch-btn { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border-default); cursor: pointer; flex: 0 0 auto; padding: 0; }
+
+/* Segmented style selector (two cards) */
+.style-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.style-card { border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 10px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; background: var(--surface); }
+.style-card[data-active="true"] { border-color: var(--accent); color: var(--text-strong); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+/* HSV color picker */
+.pim-cp { width: 100%; user-select: none; }
+.pim-cp__sv { position: relative; height: 140px; border-radius: var(--radius-md); cursor: crosshair; overflow: hidden; border: 1px solid var(--border-subtle); touch-action: none; }
+.pim-cp__thumb { position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.45); transform: translate(-50%,-50%); pointer-events: none; }
+.pim-cp__hue { position: relative; height: 12px; border-radius: 6px; margin-top: 12px; cursor: pointer; touch-action: none; background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.pim-cp__huethumb { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.3); transform: translate(-50%,-50%); pointer-events: none; }
+.pim-cp__hex { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.pim-cp__hex .pim-input { flex: 1; }
+
+/* Drag-and-drop reordering */
+.drag-handle { display: inline-flex; align-items: center; justify-content: center; width: 22px; color: var(--text-subtle); cursor: grab; flex: 0 0 auto; }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle svg { width: 16px; height: 16px; }
+[data-drag="true"] { opacity: .4; }
+[data-before="true"] { box-shadow: inset 0 3px 0 0 var(--accent); }
+[data-after="true"] { box-shadow: inset 0 -3px 0 0 var(--accent); }
+
+/* Variant type block in the product builder */
+.vtype { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; background: var(--surface-subtle); }
+.sizechip--add { border-style: dashed; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; }
+
+/* Value input with an "⏎ Enter" affordance shown only while typing */
+.enter-field { position: relative; }
+.enter-field .pim-input { padding-right: 78px; }
+.enter-hint { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-subtle); pointer-events: none; }
+
+/* Per-value color/image editor (Renk / Görsel tabs) — floating popover */
+.pim-pop__backdrop { position: fixed; inset: 0; z-index: 130; }
+.pim-pop { position: fixed; z-index: 131; background: var(--surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); padding: 14px; animation: pim-pop var(--dur-base) var(--ease-out); }
+.vrow-editor { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-top: 6px; background: var(--surface); }
+.vtabs { display: inline-flex; gap: 4px; padding: 3px; background: var(--surface-sunken); border-radius: var(--radius-md); margin-bottom: 12px; }
+.vtabs button { border: none; background: transparent; padding: 5px 14px; border-radius: 7px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+.vtabs button[data-active="true"] { background: var(--surface); color: var(--text-strong); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.vdrop { border: 1px dashed var(--border-default); border-radius: var(--radius-md); padding: 18px; text-align: center; color: var(--text-subtle); font-size: 13px; cursor: pointer; }
+.vdrop svg { width: 26px; height: 26px; color: var(--text-subtle); }
+.vdrop img { max-height: 120px; max-width: 100%; border-radius: var(--radius-sm); }

@@ -19,7 +19,7 @@ export function ProductList({ onNavigate, onToast }) {
       setCats(m)
     }).catch(() => {})
   }
-  useEffect(load, [])
+  useEffect(() => { load() }, [])
 
   const remove = async (e, id) => {
     e.stopPropagation()

@@ -67,7 +67,7 @@ export function Categories({ onToast }) {
                           <td><span className={`lvlchip lvl-${a.binding_level}`}>{LVL[a.binding_level] || a.binding_level}</span></td>
                           <td>{a.required ? I('check') : <span className="subtle">—</span>}</td>
                           <td>{a.marketplace_required ? I('check') : <span className="subtle">—</span>}</td>
-                          <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => { await api.deleteCategoryAttribute(a.category_attribute_id); setAttrs(attrs.filter((x) => x.category_attribute_id !== a.category_attribute_id)) }}>{I('x')}</button></div></td>
+                          <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => { await api.deleteCategoryAttribute(a.category_attribute_id); setAttrs(attrs.filter((x) => x.category_attribute_id !== a.category_attribute_id)) }}>{I('trash-2')}</button></div></td>
                         </tr>
                       ))}
                       {attrs.length === 0 && <tr><td colSpan={6} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}

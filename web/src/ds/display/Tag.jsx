@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 
 /**
  * pimly Tag — compact chip for metaobject values (Renk/Beden), selected
@@ -11,7 +12,7 @@ export function Tag({ children, swatch, onRemove, className = '' }) {
       {children}
       {onRemove && (
         <button type="button" className="pim-tag__x" onClick={onRemove} aria-label="Kaldır">
-          <i data-lucide="x" />
+          <X size={12} strokeWidth={2.5} />
         </button>
       )}
     </span>

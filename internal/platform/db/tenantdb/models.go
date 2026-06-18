@@ -133,6 +133,13 @@ type Product struct {
 	Status               string             `json:"status"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	VariantTypes         json.RawMessage    `json:"variant_types"`
+}
+
+type Setting struct {
+	Key       string             `json:"key"`
+	Value     json.RawMessage    `json:"value"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Variant struct {
@@ -149,4 +156,25 @@ type Variant struct {
 	AttributeValues  json.RawMessage    `json:"attribute_values"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Options          json.RawMessage    `json:"options"`
+	Sku              pgtype.Text        `json:"sku"`
+}
+
+type VariantType struct {
+	ID             uuid.UUID          `json:"id"`
+	Name           string             `json:"name"`
+	SelectionStyle string             `json:"selection_style"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type VariantValue struct {
+	ID            uuid.UUID          `json:"id"`
+	VariantTypeID uuid.UUID          `json:"variant_type_id"`
+	Label         string             `json:"label"`
+	Color         pgtype.Text        `json:"color"`
+	ImageUrl      pgtype.Text        `json:"image_url"`
+	SortOrder     int32              `json:"sort_order"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	Code          pgtype.Text        `json:"code"`
 }

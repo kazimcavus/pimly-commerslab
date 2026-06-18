@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -21,6 +22,8 @@ type Querier interface {
 	CreateMetaobjectField(ctx context.Context, arg CreateMetaobjectFieldParams) (MetaobjectField, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateVariant(ctx context.Context, arg CreateVariantParams) (Variant, error)
+	CreateVariantType(ctx context.Context, arg CreateVariantTypeParams) (VariantType, error)
+	CreateVariantValue(ctx context.Context, arg CreateVariantValueParams) (VariantValue, error)
 	DeleteAttribute(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteCategory(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteCategoryAttribute(ctx context.Context, id uuid.UUID) (int64, error)
@@ -33,6 +36,8 @@ type Querier interface {
 	DeleteMetaobjectField(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteProduct(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteVariant(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteVariantType(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteVariantValue(ctx context.Context, id uuid.UUID) (int64, error)
 	GetAttributeByID(ctx context.Context, id uuid.UUID) (Attribute, error)
 	GetAttributeByKey(ctx context.Context, key string) (Attribute, error)
 	GetCategory(ctx context.Context, id uuid.UUID) (Category, error)
@@ -45,8 +50,12 @@ type Querier interface {
 	GetMetaobjectEntryByID(ctx context.Context, id uuid.UUID) (MetaobjectEntry, error)
 	GetProduct(ctx context.Context, id uuid.UUID) (Product, error)
 	GetProductBySku(ctx context.Context, productSku string) (Product, error)
+	GetSetting(ctx context.Context, key string) (Setting, error)
 	GetVariant(ctx context.Context, id uuid.UUID) (Variant, error)
+	GetVariantTypeByID(ctx context.Context, id uuid.UUID) (VariantType, error)
+	GetVariantValueByID(ctx context.Context, id uuid.UUID) (VariantValue, error)
 	GroupCodeExists(ctx context.Context, groupCode string) (bool, error)
+	ListAllVariantValues(ctx context.Context) ([]VariantValue, error)
 	ListAttributes(ctx context.Context) ([]Attribute, error)
 	ListCategories(ctx context.Context) ([]Category, error)
 	ListCategoryAttributeDefs(ctx context.Context, categoryID uuid.UUID) ([]ListCategoryAttributeDefsRow, error)
@@ -59,6 +68,9 @@ type Querier interface {
 	ListMetaobjectEntries(ctx context.Context, definitionID uuid.UUID) ([]MetaobjectEntry, error)
 	ListMetaobjectFields(ctx context.Context, definitionID uuid.UUID) ([]MetaobjectField, error)
 	ListProductsByGroup(ctx context.Context, groupID uuid.UUID) ([]Product, error)
+	ListSettings(ctx context.Context) ([]Setting, error)
+	ListVariantTypes(ctx context.Context) ([]VariantType, error)
+	ListVariantValues(ctx context.Context, variantTypeID uuid.UUID) ([]VariantValue, error)
 	ListVariantsByProduct(ctx context.Context, productID uuid.UUID) ([]Variant, error)
 	NextBarcodeSerial(ctx context.Context) (int64, error)
 	NextMediaSortOrder(ctx context.Context, productID uuid.UUID) (int32, error)
@@ -70,9 +82,13 @@ type Querier interface {
 	UpdateMetaobjectEntry(ctx context.Context, arg UpdateMetaobjectEntryParams) (MetaobjectEntry, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateVariant(ctx context.Context, arg UpdateVariantParams) (Variant, error)
+	UpdateVariantType(ctx context.Context, arg UpdateVariantTypeParams) (VariantType, error)
+	UpdateVariantValue(ctx context.Context, arg UpdateVariantValueParams) (VariantValue, error)
 	UpsertMarketplaceAttributeMap(ctx context.Context, arg UpsertMarketplaceAttributeMapParams) (MarketplaceAttributeMap, error)
 	UpsertMarketplaceCategoryMap(ctx context.Context, arg UpsertMarketplaceCategoryMapParams) (MarketplaceCategoryMap, error)
+	UpsertSetting(ctx context.Context, arg UpsertSettingParams) (Setting, error)
 	VariantBarcodeExists(ctx context.Context, barcode string) (bool, error)
+	VariantSkuExists(ctx context.Context, sku pgtype.Text) (bool, error)
 }
 
 var _ Querier = (*Queries)(nil)

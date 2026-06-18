@@ -44,7 +44,8 @@ func New(cfg Config) (*Client, error) {
 	}, nil
 }
 
-// EnsureBucket creates the bucket if it does not already exist.
+// EnsureBucket creates the bucket if it does not already exist and applies a
+// public read-only policy so object URLs are fetchable directly by the browser.
 func (c *Client) EnsureBucket(ctx context.Context) error {
 	exists, err := c.mc.BucketExists(ctx, c.bucket)
 	if err != nil {
@@ -54,6 +55,19 @@ func (c *Client) EnsureBucket(ctx context.Context) error {
 		if err := c.mc.MakeBucket(ctx, c.bucket, minio.MakeBucketOptions{}); err != nil {
 			return fmt.Errorf("make bucket: %w", err)
 		}
+	}
+	// Anonymous read access for objects (media URLs are public, unguessable keys).
+	policy := fmt.Sprintf(`{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"AWS": ["*"]},
+    "Action": ["s3:GetObject"],
+    "Resource": ["arn:aws:s3:::%s/*"]
+  }]
+}`, c.bucket)
+	if err := c.mc.SetBucketPolicy(ctx, c.bucket, policy); err != nil {
+		return fmt.Errorf("set bucket policy: %w", err)
 	}
 	return nil
 }

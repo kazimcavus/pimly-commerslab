@@ -1,4 +1,6 @@
 import React from 'react'
+import { Icon } from '../lib/icons.jsx'
 
-// Lucide placeholder; renderIcons() (in App) swaps these for SVGs after commit.
-export const I = (n, extra) => <i data-lucide={n} {...(extra || {})} />
+// Render a Lucide glyph by kebab-case name as a real lucide-react component.
+// `extra` may carry size/strokeWidth/style/className, e.g. I('plus', { size: 18 }).
+export const I = (n, extra) => <Icon name={n} {...(extra || {})} />

@@ -47,6 +47,21 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	route("PATCH", "/metaobject-entries/{id}", h.UpdateMetaobjectEntry)
 	route("DELETE", "/metaobject-entries/{id}", h.DeleteMetaobjectEntry)
 
+	// Tenant settings (sku generator, barcode config, …)
+	route("GET", "/settings", h.ListSettings)
+	route("PUT", "/settings/{key}", h.PutSetting)
+
+	// Variant types & values (option axes: Renk, Beden, Ölçü)
+	route("POST", "/variant-types", h.CreateVariantType)
+	route("GET", "/variant-types", h.ListVariantTypes)
+	route("GET", "/variant-types/{id}", h.GetVariantType)
+	route("PATCH", "/variant-types/{id}", h.UpdateVariantType)
+	route("DELETE", "/variant-types/{id}", h.DeleteVariantType)
+	route("POST", "/variant-types/{id}/values", h.CreateVariantValue)
+	route("GET", "/variant-types/{id}/values", h.ListVariantValues)
+	route("PATCH", "/variant-values/{id}", h.UpdateVariantValue)
+	route("DELETE", "/variant-values/{id}", h.DeleteVariantValue)
+
 	// Marketplace category map
 	route("POST", "/categories/{id}/marketplace-category-map", h.UpsertMarketplaceCategoryMap)
 	route("GET", "/categories/{id}/marketplace-category-map", h.ListMarketplaceCategoryMaps)
@@ -75,5 +90,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, wrap func(http.Handler) htt
 	route("GET", "/products/{id}/media", h.ListProductMedia)
 	route("POST", "/variants/{id}/media", h.UploadVariantMedia)
 	route("POST", "/media:bulk", h.BulkUploadMedia)
+	route("POST", "/uploads", h.UploadImage)
 	route("DELETE", "/media/{id}", h.DeleteMedia)
 }

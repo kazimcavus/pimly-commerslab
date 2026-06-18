@@ -69,7 +69,7 @@ export function Metaobjects({ onToast }) {
                       onClick={async () => {
                         try { await api.deleteMetaField(f.id); loadFields(sel); onToast?.({ tone: 'success', title: 'Alan silindi' }) }
                         catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
-                      }}>{I('x')}</button>
+                      }}>{I('trash-2', { size: 13 })}</button>
                   </span>
                 ))}
                 {fields.length === 0 && <span>—</span>}

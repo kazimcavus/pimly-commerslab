@@ -52,11 +52,17 @@ func setupProductsTenant(t *testing.T) (http.Handler, string) {
 func TestProductsBatch(t *testing.T) {
 	h, token := setupProductsTenant(t)
 
+	// Enable the barcode generator so barcodes auto-generate (SKUs are explicit;
+	// there is no silent fallback generation anymore).
+	if rec := request(t, h, "PUT", "/settings/barcode", token, map[string]any{"enabled": true, "start": 8440491}); rec.Code != http.StatusOK {
+		t.Fatalf("set barcode cfg: code=%d body=%s", rec.Code, rec.Body)
+	}
+
 	body := map[string]any{
 		"group": map[string]any{"group_code": "22Y265024", "title": "Basic Tee", "status": "draft"},
 		"products": []map[string]any{
 			{
-				"code": "R01", "title": "Red",
+				"product_sku": "22Y265024R01", "title": "Red",
 				"variants": []map[string]any{
 					{"axis_value": "S", "price": 199.90, "stock": 5},
 					{"axis_value": "M", "price": 199.90, "stock": 8},
@@ -64,7 +70,7 @@ func TestProductsBatch(t *testing.T) {
 				},
 			},
 			{
-				"code": "R02", "title": "Blue",
+				"product_sku": "22Y265024R02", "title": "Blue",
 				"variants": []map[string]any{
 					{"axis_value": "M", "price": 209.90, "stock": 4},
 					{"axis_value": "L", "price": 209.90, "stock": 6},

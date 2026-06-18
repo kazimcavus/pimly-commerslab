@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertCircle } from 'lucide-react';
 
 /**
  * pimly Field — label + help/error/auto-generate scaffolding around any control.
@@ -30,7 +31,7 @@ export function Field({
       {help && !error && <span className="pim-field__help">{help}</span>}
       {error && (
         <span className="pim-field__error">
-          <i data-lucide="alert-circle" style={{ width: 13, height: 13 }} />
+          <AlertCircle size={13} />
           {error}
         </span>
       )}

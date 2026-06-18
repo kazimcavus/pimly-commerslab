@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 
 /**
  * pimly Select — native select with the brand chevron. Pass `options`
@@ -17,7 +18,7 @@ export function Select({ options, placeholder, invalid = false, className = '', 
           ? options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)
           : children}
       </select>
-      <span className="pim-select-wrap__chev"><i data-lucide="chevron-down" /></span>
+      <span className="pim-select-wrap__chev"><ChevronDown /></span>
     </div>
   );
 }

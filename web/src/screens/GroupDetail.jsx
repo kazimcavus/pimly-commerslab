@@ -5,6 +5,23 @@ import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
 import { trMoney } from '../lib/format.js'
 
+// Render a variant's option combination (Renk/Beden…) as badges, with a
+// color/image swatch where the type uses one. Falls back to legacy axis_value.
+function variantLabel(v) {
+  const opts = Array.isArray(v.options) ? v.options : []
+  if (opts.length === 0) return v.axis_value ? <span className="pim-badge">{v.axis_value}</span> : <span className="subtle">—</span>
+  return (
+    <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+      {opts.map((o, i) => (
+        <span key={i} className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {(o.color || o.image_url) && <span className="swatch-sm" style={o.image_url ? { backgroundImage: `url(${o.image_url})`, backgroundSize: 'cover' } : { background: o.color }} />}
+          {o.value_label}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export function GroupDetail({ groupId, onNavigate, onToast }) {
   const [g, setG] = useState(null)
   const [cats, setCats] = useState({})
@@ -21,7 +38,7 @@ export function GroupDetail({ groupId, onNavigate, onToast }) {
     }).catch((e) => onToast?.({ tone: 'danger', title: 'Yüklenemedi', body: e.message }))
     api.listCategories().then((cs) => { const m = {}; cs.forEach((c) => (m[c.id] = c.name)); setCats(m) }).catch(() => {})
   }
-  useEffect(load, [groupId])
+  useEffect(() => { load() }, [groupId])
 
   useEffect(() => {
     if (tab !== 'medya' || !g) return
@@ -75,7 +92,7 @@ export function GroupDetail({ groupId, onNavigate, onToast }) {
       {tab === 'urunler' && (
         <div className="pim-table-wrap">
           <table className="pim-table">
-            <thead><tr><th style={{ width: 40 }}></th><th>Ürün / Varyant</th><th>SKU / Barkod</th><th>Beden</th><th className="pim-td-num">Fiyat</th><th className="pim-td-num">Stok</th></tr></thead>
+            <thead><tr><th style={{ width: 40 }}></th><th>Ürün / Varyant</th><th>SKU / Barkod</th><th>Varyant</th><th className="pim-td-num">Fiyat</th><th className="pim-td-num">Stok</th></tr></thead>
             <tbody>
               {products.map((p) => (
                 <React.Fragment key={p.id}>
@@ -91,8 +108,8 @@ export function GroupDetail({ groupId, onNavigate, onToast }) {
                     <tr key={v.id}>
                       <td></td>
                       <td style={{ paddingLeft: 44 }}><span className="hstack list-meta">{I('corner-down-right')}<span className="lvlchip lvl-variant">variant</span></span></td>
-                      <td className="pim-td-mono">{v.barcode}</td>
-                      <td>{v.axis_value ? <span className="pim-badge">{v.axis_value}</span> : <span className="subtle">—</span>}</td>
+                      <td className="pim-td-mono"><div>{v.sku || '—'}</div><div className="subtle" style={{ fontSize: 11 }}>{v.barcode}</div></td>
+                      <td>{variantLabel(v)}</td>
                       <td className="pim-td-num mono">{trMoney(v.price)} ₺</td>
                       <td className="pim-td-num mono" style={{ color: v.stock === 0 ? 'var(--danger-fg)' : v.stock < 10 ? 'var(--status-archived-fg)' : 'var(--text-default)' }}>{v.stock}</td>
                     </tr>
