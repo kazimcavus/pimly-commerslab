@@ -1,0 +1,6 @@
+@Pimly.Api_HostAddress = http://localhost:7000
+
+GET {{Pimly.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

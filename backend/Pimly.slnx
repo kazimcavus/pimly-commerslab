@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Pimly.Api/Pimly.Api.csproj" />
+    <Project Path="src/Pimly.AspNetCore/Pimly.AspNetCore.csproj" />
+    <Project Path="src/SharedKernel/SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Catalog/">
+    <Project Path="src/Modules/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
+    <Project Path="src/Modules/Catalog/Catalog.Application/Catalog.Application.csproj" />
+    <Project Path="src/Modules/Catalog/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="src/Modules/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Catalog.Domain.UnitTests/Catalog.Domain.UnitTests.csproj" />
+    <Project Path="tests/Catalog.Application.UnitTests/Catalog.Application.UnitTests.csproj" />
+    <Project Path="tests/Catalog.IntegrationTests/Catalog.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

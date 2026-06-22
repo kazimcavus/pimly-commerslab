@@ -1,18 +1,30 @@
-# Binaries
-/pimly
-/bin/
-*.exe
-
-# Env / secrets
+# Secrets
 .env
-*.local
+.env.*
+!.env.example
 
 # Go
+/pimly
+bin/
+*.exe
 *.test
 *.out
-/vendor/
 
-# Editor / OS
+# .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+TestResults/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# OS / editor
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
