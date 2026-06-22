@@ -1,6 +1,10 @@
-// pimly API client. In dev, BASE defaults to "/api" which Vite proxies to the
-// Go backend on :8080 (see vite.config.js), keeping the browser same-origin.
-const BASE = import.meta.env.VITE_API_BASE || '/api'
+// pimly API client. Backend artık .NET (Pimly.Api). Uçlar modül başına
+// versiyonlu prefix altında: Identity → /api/v1/identity, Catalog → /api/v1/catalog.
+// Dev'de Vite, /api isteklerini .NET sunucusuna (:7000) proxy'ler (bkz. vite.config.js),
+// böylece tarayıcı same-origin kalır.
+const BASE = import.meta.env.VITE_API_BASE || ''
+const IDENTITY = '/api/v1/identity'
+const CATALOG = '/api/v1/catalog'
 
 let token = localStorage.getItem('pimly_token') || ''
 let adminToken = localStorage.getItem('pimly_admin_token') || ''
@@ -38,12 +42,24 @@ async function req(method, path, { body, form, admin } = {}) {
   const text = await res.text()
   const data = text ? safeParse(text) : null
   if (!res.ok) {
-    const err = new Error((data && data.error && data.error.message) || res.statusText)
-    err.code = (data && data.error && data.error.code) || 'error'
+    const err = new Error(errorMessage(data) || res.statusText)
+    err.code = errorCode(data)
     err.status = res.status
+    err.fields = data && data.errors // RFC7807 ProblemDetails alan hataları
     throw err
   }
   return data
+}
+
+// .NET RFC7807 ProblemDetails: { status, title, detail, errors }. Eski Go formatı
+// { error: { code, message } } için de geriye dönük destek.
+function errorMessage(data) {
+  if (!data) return ''
+  return (data.error && data.error.message) || data.detail || data.title || ''
+}
+function errorCode(data) {
+  if (!data) return 'error'
+  return (data.error && data.error.code) || data.title || 'error'
 }
 
 function safeParse(t) {
@@ -54,86 +70,102 @@ function safeParse(t) {
   }
 }
 
+// .NET liste uçları sayfalı zarf döndürür ({ items, page, total_count, ... });
+// frontend düz dizi bekliyor. Zarfı açıp diziyi döndür, değilse olduğu gibi bırak.
+async function reqList(path) {
+  const data = await req('GET', path)
+  if (data && Array.isArray(data.items)) return data.items
+  return Array.isArray(data) ? data : []
+}
+
+// Henüz .NET backend'e taşınmamış uçlar için açık hata döndüren yer tutucu.
+function pending(name) {
+  return Promise.reject(
+    Object.assign(new Error(`"${name}" özelliği henüz .NET backend'e taşınmadı`), {
+      code: 'not_migrated',
+      status: 501,
+    }),
+  )
+}
+
 export const api = {
-  // --- auth ---
-  login: (email, password, tenant_slug) => req('POST', '/login', { body: { email, password, tenant_slug } }),
+  // --- auth (Identity modülü) ---
+  // .NET LoginResult: { token, expiresAt, user: { id, email, name } }
+  login: (email, password) => req('POST', `${IDENTITY}/login`, { body: { email, password } }),
+  me: () => req('GET', `${IDENTITY}/me`),
 
-  // --- settings (sku generator, barcode config) ---
-  getSettings: () => req('GET', '/settings'),
-  putSetting: (key, value) => req('PUT', `/settings/${key}`, { body: value }),
-  me: () => req('GET', '/me'),
+  // --- categories (Catalog modülü) ---
+  listCategories: () => reqList(`${CATALOG}/categories`),
+  createCategory: (b) => req('POST', `${CATALOG}/categories`, { body: b }),
+  updateCategory: (id, b) => req('PATCH', `${CATALOG}/categories/${id}`, { body: b }),
+  deleteCategory: (id) => req('DELETE', `${CATALOG}/categories/${id}`),
+  listCategoryAttributes: (id) => reqList(`${CATALOG}/categories/${id}/attributes`),
+  assignCategoryAttribute: (id, b) => req('POST', `${CATALOG}/categories/${id}/attributes`, { body: b }),
+  updateCategoryAttribute: (id, b) => req('PATCH', `${CATALOG}/category-attributes/${id}`, { body: b }),
+  deleteCategoryAttribute: (id) => req('DELETE', `${CATALOG}/category-attributes/${id}`),
 
-  // --- categories ---
-  listCategories: () => req('GET', '/categories'),
-  createCategory: (b) => req('POST', '/categories', { body: b }),
-  updateCategory: (id, b) => req('PATCH', `/categories/${id}`, { body: b }),
-  deleteCategory: (id) => req('DELETE', `/categories/${id}`),
-  listCategoryAttributes: (id) => req('GET', `/categories/${id}/attributes`),
-  assignCategoryAttribute: (id, b) => req('POST', `/categories/${id}/attributes`, { body: b }),
-  deleteCategoryAttribute: (id) => req('DELETE', `/category-attributes/${id}`),
+  // --- attributes (Catalog modülü) ---
+  listAttributes: () => reqList(`${CATALOG}/attributes`),
+  createAttribute: (b) => req('POST', `${CATALOG}/attributes`, { body: b }),
+  updateAttribute: (id, b) => req('PATCH', `${CATALOG}/attributes/${id}`, { body: b }),
+  deleteAttribute: (id) => req('DELETE', `${CATALOG}/attributes/${id}`),
+  listAttributeValues: (id) => reqList(`${CATALOG}/attributes/${id}/values`),
+  createAttributeValue: (id, b) => req('POST', `${CATALOG}/attributes/${id}/values`, { body: b }),
+  updateAttributeValue: (id, b) => req('PATCH', `${CATALOG}/attribute-values/${id}`, { body: b }),
+  deleteAttributeValue: (id) => req('DELETE', `${CATALOG}/attribute-values/${id}`),
 
-  // --- attributes ---
-  listAttributes: () => req('GET', '/attributes'),
-  createAttribute: (b) => req('POST', '/attributes', { body: b }),
-  updateAttribute: (id, b) => req('PATCH', `/attributes/${id}`, { body: b }),
-  deleteAttribute: (id) => req('DELETE', `/attributes/${id}`),
+  // --- variant types & values (Catalog: option axes — Renk, Beden, Ölçü) ---
+  // .NET'te "variant type" route'u /variants altında yaşar.
+  listVariantTypes: () => reqList(`${CATALOG}/variants`),
+  createVariantType: (b) => req('POST', `${CATALOG}/variants`, { body: b }),
+  updateVariantType: (id, b) => req('PATCH', `${CATALOG}/variants/${id}`, { body: b }),
+  deleteVariantType: (id) => req('DELETE', `${CATALOG}/variants/${id}`),
+  listVariantValues: (id) => reqList(`${CATALOG}/variants/${id}/values`),
+  createVariantValue: (id, b) => req('POST', `${CATALOG}/variants/${id}/values`, { body: b }),
+  updateVariantValue: (id, b) => req('PATCH', `${CATALOG}/variant-values/${id}`, { body: b }),
+  deleteVariantValue: (id) => req('DELETE', `${CATALOG}/variant-values/${id}`),
 
-  // --- metaobjects ---
-  listMetaDefs: () => req('GET', '/metaobject-definitions'),
-  createMetaDef: (b) => req('POST', '/metaobject-definitions', { body: b }),
-  deleteMetaDef: (id) => req('DELETE', `/metaobject-definitions/${id}`),
-  listMetaFields: (id) => req('GET', `/metaobject-definitions/${id}/fields`),
-  createMetaField: (id, b) => req('POST', `/metaobject-definitions/${id}/fields`, { body: b }),
-  deleteMetaField: (id) => req('DELETE', `/metaobject-fields/${id}`),
-  listMetaEntries: (id) => req('GET', `/metaobject-definitions/${id}/entries`),
-  createMetaEntry: (id, values) => req('POST', `/metaobject-definitions/${id}/entries`, { body: { values } }),
-  deleteMetaEntry: (id) => req('DELETE', `/metaobject-entries/${id}`),
+  // --- products (Catalog modülü) ---
+  productsBatch: (b) => req('POST', `${CATALOG}/products:batch`, { body: b }),
+  listProducts: () => reqList(`${CATALOG}/products`),
+  getProduct: (id) => req('GET', `${CATALOG}/products/${id}`),
+  updateProduct: (id, b) => req('PATCH', `${CATALOG}/products/${id}`, { body: b }),
+  deleteProduct: (id) => req('DELETE', `${CATALOG}/products/${id}`),
+  // Go'daki "variant" ≈ .NET'teki "item" (ürün altı SKU satırı).
+  getItem: (id) => req('GET', `${CATALOG}/items/${id}`),
+  updateItem: (id, b) => req('PATCH', `${CATALOG}/items/${id}`, { body: b }),
+  deleteItem: (id) => req('DELETE', `${CATALOG}/items/${id}`),
+  getVariant: (id) => req('GET', `${CATALOG}/items/${id}`), // geriye dönük ad
 
-  // --- variant types & values (option axes: Renk, Beden, Ölçü) ---
-  listVariantTypes: () => req('GET', '/variant-types'),
-  createVariantType: (b) => req('POST', '/variant-types', { body: b }),
-  updateVariantType: (id, b) => req('PATCH', `/variant-types/${id}`, { body: b }),
-  deleteVariantType: (id) => req('DELETE', `/variant-types/${id}`),
-  listVariantValues: (id) => req('GET', `/variant-types/${id}/values`),
-  createVariantValue: (id, b) => req('POST', `/variant-types/${id}/values`, { body: b }),
-  updateVariantValue: (id, b) => req('PATCH', `/variant-values/${id}`, { body: b }),
-  deleteVariantValue: (id) => req('DELETE', `/variant-values/${id}`),
-
-  // --- products ---
-  productsBatch: (b) => req('POST', '/products:batch', { body: b }),
-  listGroups: () => req('GET', '/groups'),
-  getGroup: (id) => req('GET', `/groups/${id}`),
-  updateGroup: (id, b) => req('PATCH', `/groups/${id}`, { body: b }),
-  deleteGroup: (id) => req('DELETE', `/groups/${id}`),
-  getProduct: (id) => req('GET', `/products/${id}`),
-  getVariant: (id) => req('GET', `/variants/${id}`),
-
-  // --- media ---
-  listMedia: (productId) => req('GET', `/products/${productId}/media`),
-  uploadMedia: (productId, file, altText) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    if (altText) fd.append('alt_text', altText)
-    return req('POST', `/products/${productId}/media`, { form: fd })
-  },
-  bulkUploadMedia: (files) => {
-    const fd = new FormData()
-    for (const f of files) fd.append('files', f, f.name)
-    return req('POST', '/media:bulk', { form: fd })
-  },
-  deleteMedia: (id) => req('DELETE', `/media/${id}`),
-  uploadImage: (file) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    return req('POST', '/uploads', { form: fd })
-  },
-
-  // --- admin (X-Admin-Token) ---
-  adminListApplications: (status) =>
-    req('GET', '/admin/applications' + (status ? `?status=${status}` : ''), { admin: true }),
-  adminCreateApplication: (b) => req('POST', '/admin/applications', { body: b, admin: true }),
-  adminApprove: (id) => req('POST', `/admin/applications/${id}/approve`, { admin: true }),
-  adminListTenants: () => req('GET', '/admin/tenants', { admin: true }),
-  adminSetModule: (tenantId, module, enabled) =>
-    req('POST', `/admin/tenants/${tenantId}/modules/${module}`, { body: { enabled }, admin: true }),
+  // --- henüz .NET'e taşınmamış uçlar (adım adım eklenecek) ---
+  // settings
+  getSettings: () => pending('Ayarlar'),
+  putSetting: () => pending('Ayarlar'),
+  // metaobjects
+  listMetaDefs: () => pending('Metaobjeler'),
+  createMetaDef: () => pending('Metaobjeler'),
+  deleteMetaDef: () => pending('Metaobjeler'),
+  listMetaFields: () => pending('Metaobjeler'),
+  createMetaField: () => pending('Metaobjeler'),
+  deleteMetaField: () => pending('Metaobjeler'),
+  listMetaEntries: () => pending('Metaobjeler'),
+  createMetaEntry: () => pending('Metaobjeler'),
+  deleteMetaEntry: () => pending('Metaobjeler'),
+  // groups (Go ürün gruplama katmanı — .NET'te products/items modeli geliyor)
+  listGroups: () => pending('Ürün grupları'),
+  getGroup: () => pending('Ürün grupları'),
+  updateGroup: () => pending('Ürün grupları'),
+  deleteGroup: () => pending('Ürün grupları'),
+  // media
+  listMedia: () => pending('Medya'),
+  uploadMedia: () => pending('Medya'),
+  bulkUploadMedia: () => pending('Medya'),
+  deleteMedia: () => pending('Medya'),
+  uploadImage: () => pending('Medya'),
+  // admin
+  adminListApplications: () => pending('Yönetim'),
+  adminCreateApplication: () => pending('Yönetim'),
+  adminApprove: () => pending('Yönetim'),
+  adminListTenants: () => pending('Yönetim'),
+  adminSetModule: () => pending('Yönetim'),
 }

@@ -2,6 +2,7 @@ using Catalog.Domain;
 using Catalog.Domain.Products;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel;
 
 namespace Catalog.Infrastructure.Repositories;
 
@@ -12,6 +13,13 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
         await db.Products
             .Include(p => p.Items)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+    public async Task<PagedResult<Product>> ListAsync(Pagination pagination, CancellationToken cancellationToken = default) =>
+        await db.Products
+            .Include(p => p.Items)
+            .OrderBy(p => p.GroupId)
+            .ThenBy(p => p.Name)
+            .ToPagedResultAsync(pagination, cancellationToken);
 
     public async Task<Product?> GetByModelCodeAsync(string modelCode, CancellationToken cancellationToken = default)
     {

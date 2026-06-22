@@ -4,8 +4,6 @@ import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
 
-const LVL = { group: 'group', product: 'product', variant: 'variant' }
-
 export function Categories({ onToast }) {
   const [cats, setCats] = useState([])
   const [sel, setSel] = useState(null)
@@ -58,19 +56,18 @@ export function Categories({ onToast }) {
                 </div>
                 <div className="pim-table-wrap">
                   <table className="pim-table">
-                    <thead><tr><th>Özellik</th><th>Tip</th><th>Seviye</th><th>Zorunlu</th><th>MP zorunlu</th><th></th></tr></thead>
+                    <thead><tr><th>Özellik</th><th>Anahtar</th><th>Zorunlu</th><th>MP zorunlu</th><th></th></tr></thead>
                     <tbody>
                       {attrs.map((a) => (
                         <tr key={a.category_attribute_id}>
-                          <td className="pim-td-strong">{a.label}<div className="mono list-meta">{a.key}</div></td>
-                          <td><span className="typechip">{a.data_type}</span></td>
-                          <td><span className={`lvlchip lvl-${a.binding_level}`}>{LVL[a.binding_level] || a.binding_level}</span></td>
+                          <td className="pim-td-strong">{a.name}</td>
+                          <td className="pim-td-mono">{a.key}</td>
                           <td>{a.required ? I('check') : <span className="subtle">—</span>}</td>
                           <td>{a.marketplace_required ? I('check') : <span className="subtle">—</span>}</td>
                           <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => { await api.deleteCategoryAttribute(a.category_attribute_id); setAttrs(attrs.filter((x) => x.category_attribute_id !== a.category_attribute_id)) }}>{I('trash-2')}</button></div></td>
                         </tr>
                       ))}
-                      {attrs.length === 0 && <tr><td colSpan={6} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
+                      {attrs.length === 0 && <tr><td colSpan={5} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -119,7 +116,7 @@ function AssignAttrDialog({ open, onClose, onAssign, attrs }) {
     <Dialog open={open} title="Özellik ata" confirmLabel="Ata" cancelLabel="İptal" onClose={onClose}
       onConfirm={() => attrId && onAssign({ attribute_id: attrId, required, marketplace_required: mpReq, sort_order: 0 })}>
       <Field label="Özellik" required>
-        <Select value={attrId} placeholder="Seç…" onChange={(e) => setAttrId(e.target.value)} options={attrs.map((a) => ({ value: a.id, label: `${a.label} (${a.binding_level})` }))} />
+        <Select value={attrId} placeholder="Seç…" onChange={(e) => setAttrId(e.target.value)} options={attrs.map((a) => ({ value: a.id, label: a.name }))} />
       </Field>
       <div style={{ display: 'flex', gap: 18, marginTop: 4 }}>
         <Checkbox label="Zorunlu" checked={required} onChange={(e) => setRequired(e.target.checked)} />

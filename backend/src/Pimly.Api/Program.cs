@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Text.Json;
 using Catalog.Api;
 using Catalog.Application;
 using Catalog.Infrastructure;
@@ -21,10 +22,19 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Web istemcisiyle (snake_case) uyumlu tel formatı. Minimal API endpoint'lerinin
+// JSON serileştirmesini hem istek hem yanıt için snake_case'e ayarlar; modüllerdeki
+// mevcut [JsonPropertyName("...")] öznitelikleriyle de tutarlıdır.
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
+});
+
 var jwtSecret = builder.Configuration["Identity:Jwt:Secret"];
 if (string.IsNullOrWhiteSpace(jwtSecret))
 {
-    jwtSecret = "pimly-insecure-dev-secret";
+    jwtSecret = "pimly-insecure-dev-secret-min-32-bytes-long";
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -52,6 +62,7 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
+    await app.Services.SeedIdentityDevUserAsync();
     app.UseSwagger();
     app.UseSwaggerUI();
 }

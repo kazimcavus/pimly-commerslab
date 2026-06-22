@@ -3,6 +3,7 @@ using Catalog.Application.Products.CreateProduct;
 using Catalog.Application.Products.CreateProductsBatch;
 using Catalog.Application.Products.DeleteProduct;
 using Catalog.Application.Products.GetProduct;
+using Catalog.Application.Products.ListProducts;
 using Catalog.Application.Products.UpdateProduct;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -27,6 +28,15 @@ internal static class ProductEndpoints
                 MapBatchItems(request.Products)));
 
             return result.ToCreatedResult(r => $"/api/v1/catalog/products/{r.Products[0].Id}");
+        });
+
+        group.MapGet("/products", async (
+            IListProductsHandler handler,
+            int page = 0,
+            int page_size = 0) =>
+        {
+            var result = await handler.ExecuteAsync(new ListProductsQuery(page, page_size));
+            return result.ToHttpResult();
         });
 
         group.MapGet("/products/{id:guid}", async (Guid id, IGetProductHandler handler) =>

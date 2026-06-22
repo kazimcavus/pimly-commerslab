@@ -1,4 +1,5 @@
 using Catalog.Domain.Products;
+using SharedKernel;
 
 namespace Catalog.Domain;
 
@@ -7,6 +8,8 @@ namespace Catalog.Domain;
 public interface IProductRepository
 {
     Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<PagedResult<Product>> ListAsync(Pagination pagination, CancellationToken cancellationToken = default);
 
     Task<Product?> GetByModelCodeAsync(string modelCode, CancellationToken cancellationToken = default);
 

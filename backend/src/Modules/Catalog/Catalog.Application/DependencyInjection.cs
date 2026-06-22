@@ -22,6 +22,7 @@ using Catalog.Application.Products.DeleteProduct;
 using Catalog.Application.Products.DeleteProductItem;
 using Catalog.Application.Products.GetProduct;
 using Catalog.Application.Products.GetProductItem;
+using Catalog.Application.Products.ListProducts;
 using Catalog.Application.Products.UpdateProduct;
 using Catalog.Application.Products.UpdateProductItem;
 using Catalog.Application.Variants.AddVariantValue;
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<ICreateProductHandler, CreateProductHandler>();
         services.AddScoped<ICreateProductsBatchHandler, CreateProductsBatchHandler>();
         services.AddScoped<IGetProductHandler, GetProductHandler>();
+        services.AddScoped<IListProductsHandler, ListProductsHandler>();
         services.AddScoped<IUpdateProductHandler, UpdateProductHandler>();
         services.AddScoped<IDeleteProductHandler, DeleteProductHandler>();
         services.AddScoped<IGetProductItemHandler, GetProductItemHandler>();

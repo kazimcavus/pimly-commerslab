@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Button, Drawer, Field, Input, ColorPicker } from '../ds'
+import { Button, Drawer, Field, Input, ColorPicker, Switch } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
@@ -36,11 +36,11 @@ export function Variants({ onToast }) {
     } catch (e) { onToast?.({ tone: 'danger', title: 'Açılamadı', body: e.message }) }
   }
 
-  const submit = async ({ name, style, rows }) => {
+  const submit = async ({ name, style, slicer, rows }) => {
     let typeId
     const body = (r, i) => ({ label: r.label, color: style === 'color' ? r.color : null, image_url: style === 'color' ? (r.image_url || null) : null, code: r.code ? r.code.trim() : null, sort_order: i })
     if (editing) {
-      await api.updateVariantType(editing.id, { name, selection_style: style })
+      await api.updateVariantType(editing.id, { name, selection_style: style, slicer })
       typeId = editing.id
       const orig = editing._values || []
       for (const o of orig) if (!rows.some((r) => r.id === o.id)) await api.deleteVariantValue(o.id)
@@ -50,7 +50,7 @@ export function Variants({ onToast }) {
         else await api.createVariantValue(typeId, body(r, i))
       }
     } else {
-      const t = await api.createVariantType({ name, selection_style: style })
+      const t = await api.createVariantType({ name, selection_style: style, slicer })
       typeId = t.id
       for (let i = 0; i < rows.length; i++) await api.createVariantValue(typeId, body(rows[i], i))
     }
@@ -72,6 +72,7 @@ export function Variants({ onToast }) {
           {types.map((t) => (
             <div key={t.id} className="tree__node" data-active={sel === t.id} onClick={() => setSel(t.id)}>
               {I('layers')}<span>{t.name}</span>
+              {t.slicer && <span className="badge" title="Ürün ayracı — her değer ayrı ürün olur" style={{ marginLeft: 'auto', fontSize: 11 }}>{I('scissors', { size: 12 })} Ayraç</span>}
             </div>
           ))}
           {types.length === 0 && <div className="list-meta" style={{ padding: 12 }}>Varyant türü yok.</div>}
@@ -119,6 +120,7 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
   const keyRef = useRef(1)
   const [name, setName] = useState('')
   const [style, setStyle] = useState('list')
+  const [slicer, setSlicer] = useState(false)
   const [rows, setRows] = useState([])
   const [draft, setDraft] = useState('')
   const [editKey, setEditKey] = useState(null)
@@ -137,10 +139,11 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
     if (editing) {
       setName(editing.name)
       setStyle(editing.selection_style)
+      setSlicer(!!editing.slicer)
       setRows((editing._values || []).map((v) => ({ _k: keyRef.current++, id: v.id, label: v.label, color: v.color || '#d3ccc1', image_url: v.image_url || '', code: v.code || '' })))
       setManualOrder(true) // preserve saved order on edit
     } else {
-      setName(''); setStyle('list'); setRows([]); setManualOrder(false)
+      setName(''); setStyle('list'); setSlicer(false); setRows([]); setManualOrder(false)
     }
     setDraft(''); setEditKey(null); setEditLabelKey(null); setAnchor(null); setTab('color'); setDragIdx(null)
   }, [open, editing])
@@ -171,7 +174,7 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
   const save = async () => {
     if (!name.trim()) { onToast?.({ tone: 'danger', title: 'Ad gerekli' }); return }
     setBusy(true)
-    try { await onSubmit({ name: name.trim(), style, rows }) }
+    try { await onSubmit({ name: name.trim(), style, slicer, rows }) }
     catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
     finally { setBusy(false) }
   }
@@ -190,6 +193,11 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
           <div className="style-card" data-active={style === 'list'} onClick={() => setStyle('list')}>{I('list')} Liste</div>
           <div className="style-card" data-active={style === 'color'} onClick={() => setStyle('color')}>{I('palette')} Renk / Görsel</div>
         </div>
+      </Field>
+
+      <Field label="Ürün ayracı (slicer)" auto="Açıkken bu türün her değeri ayrı bir ürün/kart olur — örn. her renk ayrı ürün, ortak model kodu. Kapalıyken değerler tek ürünün varyantı kalır. Bir üründe yalnızca bir ayraç tür kullanılabilir.">
+        <Switch checked={slicer} onChange={(e) => setSlicer(e.target.checked)}
+          label={slicer ? 'Her değer ayrı ürün olur (örn. renk renk)' : 'Varyant olarak kalır (ayırma kapalı)'} />
       </Field>
 
       <Field label="Değerler" auto="Yaz ve Enter'a bas — istediğin kadar ekleyebilirsin">

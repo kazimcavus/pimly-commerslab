@@ -3,50 +3,46 @@ import { Button } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
-import { relativeTime } from '../lib/format.js'
 
+// Ürünler (.NET Catalog): her ürün bir "model" (group_id) altında yaşar. Slicer'lı
+// bir ürün renk renk ayrı ürünlere bölünür; burada aynı model_id altında gruplanır.
 export function ProductList({ onNavigate, onToast }) {
-  const [groups, setGroups] = useState([])
-  const [cats, setCats] = useState({})
+  const [products, setProducts] = useState([])
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
 
-  const load = () => {
-    api.listGroups().then(setGroups).catch(() => {})
-    api.listCategories().then((cs) => {
-      const m = {}
-      for (const c of cs) m[c.id] = c.name
-      setCats(m)
-    }).catch(() => {})
-  }
+  const load = () => { api.listProducts().then(setProducts).catch(() => {}) }
   useEffect(() => { load() }, [])
 
-  const remove = async (e, id) => {
+  const remove = async (e, id, name) => {
     e.stopPropagation()
-    if (!confirm('Bu grup ve tüm ürün/varyantları silinecek. Emin misin?')) return
-    try {
-      await api.deleteGroup(id)
-      onToast?.({ tone: 'success', title: 'Grup silindi' })
-      load()
-    } catch (err) {
-      onToast?.({ tone: 'danger', title: 'Silinemedi', body: err.message })
-    }
+    if (!confirm(`"${name}" ürünü ve tüm varyantları silinecek. Emin misin?`)) return
+    try { await api.deleteProduct(id); onToast?.({ tone: 'success', title: 'Ürün silindi' }); load() }
+    catch (err) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: err.message }) }
   }
 
-  let shown = filter === 'all' ? groups : groups.filter((g) => g.status === filter)
+  let shown = filter === 'all' ? products : products.filter((p) => p.status === filter)
   if (q.trim()) {
     const needle = q.trim().toLocaleLowerCase('tr')
-    shown = shown.filter((g) =>
-      (g.title || '').toLocaleLowerCase('tr').includes(needle) ||
-      (g.group_code || '').toLocaleLowerCase('tr').includes(needle))
+    shown = shown.filter((p) =>
+      (p.name || '').toLocaleLowerCase('tr').includes(needle) ||
+      (p.model_code || '').toLocaleLowerCase('tr').includes(needle))
   }
+
+  // Group split color-products under their shared model (group_id).
+  const byModel = new Map()
+  for (const p of shown) { if (!byModel.has(p.group_id)) byModel.set(p.group_id, []); byModel.get(p.group_id).push(p) }
+  const models = [...byModel.values()]
+
+  const colorLabel = (p) => { const parts = (p.name || '').split(' - '); return parts.length > 1 ? parts.slice(1).join(' - ') : null }
+  const modelTitle = (ps) => (ps[0].name || '').split(' - ')[0]
 
   return (
     <div className="page">
       <PageHeader
         eyebrow="Katalog"
         title="Ürünler"
-        sub="Grup → ürün → varyant ağacı. Tek formdan toplu oluştur."
+        sub="Model → renk → varyant. Tek formdan toplu oluştur; slicer'lı türler renk renk ayrı ürün olur."
         actions={<>
           <Button variant="secondary" iconLeft={I('upload')} disabled>İçe aktar</Button>
           <Button variant="accent" iconLeft={I('plus')} onClick={() => onNavigate('builder')}>Ürün Oluştur</Button>
@@ -62,38 +58,59 @@ export function ProductList({ onNavigate, onToast }) {
         <div style={{ width: 240 }}>
           <div className="pim-input-group">
             <span className="pim-input-group__icon">{I('search')}</span>
-            <input className="pim-input pim-input--sm" placeholder="Grup ara…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className="pim-input pim-input--sm" placeholder="Ürün ara…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         </div>
       </div>
       <div className="pim-table-wrap">
         <table className="pim-table">
           <thead><tr>
-            <th>Grup</th><th>Kod</th><th>Kategori</th><th>Durum</th><th>Güncellenme</th><th></th>
+            <th>Ürün / Renk</th><th>Model kodu</th><th>Durum</th><th>Varyant</th><th></th>
           </tr></thead>
           <tbody>
-            {shown.map((g) => (
-              <tr key={g.id} onClick={() => onNavigate('group', g.id)} style={{ cursor: 'pointer' }}>
-                <td><div className="cellrow"><span className="thumb">{I('package')}</span><span className="pim-td-strong">{g.title || '(başlıksız)'}</span></div></td>
-                <td className="pim-td-mono">{g.group_code}</td>
-                <td className="muted">{g.category_id ? (cats[g.category_id] || '—') : '—'}</td>
-                <td><StatusBadge status={g.status} /></td>
-                <td className="subtle">{relativeTime(g.updated_at)}</td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  <div className="rowact">
-                    <button className="tb__icon" title="Düzenle" style={{ width: 28, height: 28 }} onClick={() => onNavigate('group', g.id)}>{I('pencil')}</button>
-                    <button className="tb__icon" title="Sil" style={{ width: 28, height: 28 }} onClick={(e) => remove(e, g.id)}>{I('trash-2')}</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {models.map((ps) => {
+              const itemsTotal = ps.reduce((a, p) => a + (p.items?.length || 0), 0)
+              const split = ps.length > 1 || !!colorLabel(ps[0])
+              return (
+                <React.Fragment key={ps[0].group_id}>
+                  {split && (
+                    <tr>
+                      <td colSpan={5} style={{ background: 'var(--surface-subtle)' }}>
+                        <span className="hstack" style={{ gap: 8, fontWeight: 700, color: 'var(--text-strong)' }}>
+                          {I('package', { size: 15 })}{modelTitle(ps)}
+                          <span className="list-meta" style={{ fontWeight: 400 }}>· {ps.length} renk · {itemsTotal} varyant</span>
+                        </span>
+                      </td>
+                    </tr>
+                  )}
+                  {ps.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        <div className="cellrow" style={{ paddingLeft: split ? 14 : 0 }}>
+                          <span className="thumb">{I(split ? 'palette' : 'package')}</span>
+                          <span className="pim-td-strong">{split ? (colorLabel(p) || p.name) : p.name}</span>
+                        </div>
+                      </td>
+                      <td className="pim-td-mono">{p.model_code}</td>
+                      <td><StatusBadge status={p.status} /></td>
+                      <td className="muted">{p.items?.length || 0}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="rowact">
+                          <button className="tb__icon" title="Sil" style={{ width: 28, height: 28 }} onClick={(e) => remove(e, p.id, p.name)}>{I('trash-2')}</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              )
+            })}
             {shown.length === 0 && (
-              <tr><td colSpan={6} className="subtle" style={{ padding: 18 }}>Grup bulunamadı.</td></tr>
+              <tr><td colSpan={5} className="subtle" style={{ padding: 18 }}>Ürün bulunamadı. Sağ üstten “Ürün Oluştur” ile ekleyin.</td></tr>
             )}
           </tbody>
         </table>
       </div>
-      <div className="list-meta" style={{ marginTop: 12 }}>{shown.length} grup gösteriliyor · {groups.length} toplam</div>
+      <div className="list-meta" style={{ marginTop: 12 }}>{shown.length} ürün · {models.length} model gösteriliyor</div>
     </div>
   )
 }

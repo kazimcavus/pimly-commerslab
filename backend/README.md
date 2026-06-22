@@ -104,13 +104,22 @@ Base path: `/api/v1/catalog` — **JWT bearer token required** for all endpoints
 | Categories | `GET/POST /categories`, `GET/PATCH/DELETE /categories/{id}` |
 | Category attributes | `POST/GET /categories/{id}/attributes`, `PATCH/DELETE /category-attributes/{id}` |
 | Attributes | `GET/POST /attributes`, `GET/PATCH/DELETE /attributes/{id}` |
-| MetaObjects | `GET/POST/DELETE /metaobject-definitions`, `GET/POST/DELETE /metaobject-definitions/{id}/fields`, `GET/POST/PATCH/DELETE /metaobject-definitions/{id}/entries`, `DELETE /metaobject-fields/{id}`, `GET/PATCH/DELETE /metaobject-entries/{id}` |
-| Variant types | `GET/POST /variant-types`, `GET/PATCH/DELETE /variant-types/{id}` |
-| Variant values | `POST/GET /variant-types/{id}/values`, `PATCH/DELETE /variant-values/{id}` |
+| Attribute values | `POST/GET /attributes/{id}/values`, `PATCH/DELETE /attribute-values/{id}` |
+| Variant types | `GET/POST /variants`, `GET/PATCH/DELETE /variants/{id}` |
+| Variant values | `POST/GET /variants/{id}/values`, `PATCH/DELETE /variant-values/{id}` |
 | Products | `POST /products`, `POST /products:batch`, `GET/PATCH/DELETE /products/{id}` |
-| Product variants | `GET/PATCH/DELETE /variants/{id}` |
+| Product items | `GET/PATCH/DELETE /items/{id}` |
+
+> A "variant type" is an option axis (Renk, Beden) and lives under `/variants`;
+> a "product item" is a concrete SKU row under a product and lives under `/items`.
+> MetaObjects and marketplace-map endpoints are **not yet implemented** in .NET
+> (planned; present in the legacy Go backend).
 
 Health: `GET /healthz`
+
+> **Wire format:** the host serializes JSON as **snake_case** (request + response),
+> matching the web client. Single-word and compound property names alike are
+> emitted/accepted in snake_case (e.g. `selection_style`, `sort_order`, `parent_id`).
 
 ## Tests
 

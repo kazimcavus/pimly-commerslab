@@ -2,12 +2,34 @@
 
 **pimly** is a modular SaaS **PIM (Product Information Management)** platform for
 e-commerce sellers. Sellers build their own *canonical* product catalog, which is
-later mapped and pushed to marketplaces (Trendyol first). This repository is the
-**core PIM v1 backend** (no UI — the UI is a separate project).
+later mapped and pushed to marketplaces (Trendyol first).
 
-> Status: **v1 complete** (M1–M6). Core PIM: multi-tenant provisioning, auth,
-> definition/setup APIs, product core with `products:batch` + code generation,
-> media, feature flags, and platform admin. See [Roadmap](#roadmap).
+> ## ⚠️ Backend migration: Go → .NET
+>
+> The backend is being **rewritten in .NET** (ASP.NET Core modular monolith) and
+> now lives under [`backend/`](backend/) — see [`backend/README.md`](backend/README.md).
+> It listens on **`:7000`** and exposes versioned module APIs under
+> `/api/v1/identity` and `/api/v1/catalog`.
+>
+> The **web admin UI** ([`web/`](web/)) has been repointed to the .NET backend —
+> see [`web/README.md`](web/README.md) for run instructions and the per-endpoint
+> migration status.
+>
+> The **Go backend** (`cmd/`, `internal/`, `migrations/`, `db/`) documented below
+> is **legacy** and being retired. It is kept for reference while endpoints are
+> ported module by module. New work targets `backend/`.
+
+---
+
+## Legacy Go backend (reference)
+
+> Everything below describes the original Go implementation. It is no longer the
+> target runtime; consult it only while porting remaining modules to .NET.
+
+The Go service is the original **core PIM v1 backend** (no UI). Status when
+frozen: **v1 complete** (M1–M6) — multi-tenant provisioning, auth, definition/setup
+APIs, product core with `products:batch` + code generation, media, feature flags,
+and platform admin.
 
 ## Architecture at a glance
 
