@@ -93,11 +93,11 @@ Login response:
 }
 ```
 
-Catalog endpoints remain public in v1 (no auth required).
+All `/api/v1/catalog/*` endpoints require a valid JWT bearer token. Only `POST /api/v1/identity/login` and `GET /healthz` are public.
 
 ### Catalog
 
-Base path: `/api/v1/catalog`
+Base path: `/api/v1/catalog` — **JWT bearer token required** for all endpoints.
 
 | Resource | Endpoints |
 |---|---|

@@ -11,7 +11,9 @@ public static class CatalogEndpoints
     /// <returns>Kaydedilen route grubu.</returns>
     public static RouteGroupBuilder MapCatalogEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/catalog").WithTags("Catalog");
+        var group = app.MapGroup("/api/v1/catalog")
+            .WithTags("Catalog")
+            .RequireAuthorization();
 
         group.MapCategoryEndpoints();
         group.MapAttributeEndpoints();

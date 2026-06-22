@@ -9,6 +9,6 @@ public abstract class CatalogIntegrationTestBase(CatalogPostgresFixture fixture)
     private static HttpClient CreateClient(CatalogPostgresFixture fixture)
     {
         CatalogPostgresFixture.SkipIfUnavailable(fixture);
-        return fixture.Factory.CreateClient();
+        return IntegrationTestAuth.CreateAuthenticatedClient(fixture.Factory);
     }
 }

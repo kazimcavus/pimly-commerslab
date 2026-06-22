@@ -83,14 +83,14 @@ public class AuthApiTests(IdentityPostgresFixture fixture)
     }
 
     [SkippableFact]
-    public async Task CatalogCategories_WithoutToken_RemainsPublic()
+    public async Task CatalogCategories_WithoutToken_Returns401()
     {
         IdentityPostgresFixture.SkipIfUnavailable(fixture);
         var client = fixture.Factory.CreateClient();
 
         var response = await client.GetAsync("/api/v1/catalog/categories");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     private sealed record LoginResponse(

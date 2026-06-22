@@ -16,7 +16,11 @@ public sealed class CatalogWebApplicationFactory(string connectionString) : WebA
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Database"] = connectionString,
+                ["ConnectionStrings:Identity"] = connectionString,
                 ["Catalog:AutoMigrate"] = "true",
+                ["Identity:AutoMigrate"] = "true",
+                ["Identity:Jwt:Secret"] = "integration-test-secret",
+                ["Identity:Jwt:ExpirationHours"] = "1",
             });
         });
     }
