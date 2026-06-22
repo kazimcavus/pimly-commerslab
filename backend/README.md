@@ -1,6 +1,6 @@
 # Pimly .NET Backend
 
-Modular monolith ASP.NET Core API with DDD building blocks and the Catalog module (Categories, Attributes, MetaObjects, Variant Types/Values, Products).
+Modular monolith ASP.NET Core API with DDD building blocks, the Catalog module (Categories, Attributes, MetaObjects, Variant Types/Values, Products), and the Identity module (JWT auth).
 
 ## Prerequisites
 
@@ -17,13 +17,22 @@ dotnet ef database update \
   --project src/Modules/Catalog/Catalog.Infrastructure \
   --startup-project src/Pimly.Api
 
+dotnet ef database update \
+  --project src/Modules/Identity/Identity.Infrastructure \
+  --startup-project src/Pimly.Api
+
 # Run API
 dotnet run --project src/Pimly.Api
 ```
 
 API listens on `http://localhost:7000` (HTTPS: `https://localhost:7001`). Swagger UI is enabled in Development at `/swagger`.
 
-Connection string: `ConnectionStrings:Database` in `src/Pimly.Api/appsettings.Development.json` (default: `Host=localhost;Port=5432;Database=pimly;Username=pimly;Password=pimly`).
+Connection strings in `src/Pimly.Api/appsettings.Development.json`:
+
+- `ConnectionStrings:Database` — Catalog schema (`catalog`)
+- `ConnectionStrings:Identity` — Identity schema (`identity`)
+
+Default: `Host=localhost;Port=5432;Database=pimly;Username=pimly;Password=pimly`
 
 ## Solution layout
 
@@ -33,28 +42,62 @@ src/
   Pimly.Api/                    HTTP host (composition root)
   Modules/Catalog/
     Catalog.Domain/             Aggregates + repository interfaces
-      Categories/
-      Attributes/
-      MetaObjects/
-      Variants/
-      Products/                   Product aggregate + ProductVariant entity
     Catalog.Application/        Use cases (vertical slices) + FluentValidation
-      Categories/
-      Attributes/
-      MetaObjects/
-      Variants/
-      Products/
     Catalog.Infrastructure/     EF Core + PostgreSQL (schema: catalog)
     Catalog.Api/                Minimal API endpoints + request modelleri
+  Modules/Identity/
+    Identity.Domain/            User aggregate + repository interfaces
+    Identity.Application/       Login, GetMe use cases + FluentValidation
+    Identity.Infrastructure/    EF Core + PostgreSQL (schema: identity), JWT, PasswordHasher
+    Identity.Api/               Minimal API endpoints
 tests/
   Catalog.Domain.UnitTests/
   Catalog.Application.UnitTests/
   Catalog.IntegrationTests/
+  Identity.Application.UnitTests/
+  Identity.IntegrationTests/
 ```
+
+## Configuration
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `ConnectionStrings:Identity` | same as `Database` | PostgreSQL connection for `identity` schema |
+| `Identity:AutoMigrate` | `true` | Apply EF migrations on startup |
+| `Identity:Jwt:Secret` | `change-me-in-production` | HS256 signing secret |
+| `Identity:Jwt:ExpirationHours` | `24` | Access token lifetime |
 
 ## API (v1)
 
-Base path: `/api/v1`
+### Identity
+
+Base path: `/api/v1/identity`
+
+| Resource | Endpoints |
+|---|---|
+| Auth | `POST /login`, `GET /me` (Bearer token required) |
+
+Login request:
+
+```json
+{ "email": "user@example.com", "password": "secret" }
+```
+
+Login response:
+
+```json
+{
+  "token": "...",
+  "expiresAt": "...",
+  "user": { "id": "...", "email": "...", "name": "..." }
+}
+```
+
+Catalog endpoints remain public in v1 (no auth required).
+
+### Catalog
+
+Base path: `/api/v1/catalog`
 
 | Resource | Endpoints |
 |---|---|
@@ -75,6 +118,8 @@ Health: `GET /healthz`
 dotnet test backend/tests/Catalog.Domain.UnitTests
 dotnet test backend/tests/Catalog.Application.UnitTests
 dotnet test backend/tests/Catalog.IntegrationTests
+dotnet test backend/tests/Identity.Application.UnitTests
+dotnet test backend/tests/Identity.IntegrationTests
 ```
 
 ### Unit tests
@@ -90,6 +135,7 @@ Migrations are applied automatically when the fixture starts. If Docker is unava
 ## Notes
 
 - v1 is single-tenant (no schema-per-tenant yet).
+- Identity uses ASP.NET `PasswordHasher` and minimal JWT claims (`sub`, `email`). No role-based authorization in v1.
 - MetaObject CRUD is available (definitions, fields, entries). Attribute `value_source=metaobject` integration is Phase 2.
 - Products v1 accepts `GroupId` as a required FK reference without Group CRUD or category attribute validation.
 - Slicer variant types split into multiple products via `POST /products:batch`; `POST /products` creates exactly one product.

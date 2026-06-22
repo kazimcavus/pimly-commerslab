@@ -12,5 +12,7 @@ public sealed record Error(string Code, string Message, IReadOnlyList<Validation
 
     public static Error Conflict(string message) => new(ErrorCodes.Conflict, message);
 
+    public static Error Unauthorized(string message) => new(ErrorCodes.Unauthorized, message);
+
     public static Error Failure(string message) => new(ErrorCodes.Failure, message);
 }

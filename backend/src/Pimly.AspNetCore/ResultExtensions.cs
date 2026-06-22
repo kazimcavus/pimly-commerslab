@@ -44,6 +44,7 @@ public static class ResultExtensions
             ErrorCodes.Validation => StatusCodes.Status400BadRequest,
             ErrorCodes.NotFound => StatusCodes.Status404NotFound,
             ErrorCodes.Conflict => StatusCodes.Status409Conflict,
+            ErrorCodes.Unauthorized => StatusCodes.Status401Unauthorized,
             _ => StatusCodes.Status400BadRequest,
         };
 

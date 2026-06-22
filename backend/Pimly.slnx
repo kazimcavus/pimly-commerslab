@@ -11,9 +11,17 @@
     <Project Path="src/Modules/Catalog/Catalog.Api/Catalog.Api.csproj" />
     <Project Path="src/Modules/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/Identity.Domain/Identity.Domain.csproj" />
+    <Project Path="src/Modules/Identity/Identity.Application/Identity.Application.csproj" />
+    <Project Path="src/Modules/Identity/Identity.Api/Identity.Api.csproj" />
+    <Project Path="src/Modules/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Catalog.Domain.UnitTests/Catalog.Domain.UnitTests.csproj" />
     <Project Path="tests/Catalog.Application.UnitTests/Catalog.Application.UnitTests.csproj" />
     <Project Path="tests/Catalog.IntegrationTests/Catalog.IntegrationTests.csproj" />
+    <Project Path="tests/Identity.Application.UnitTests/Identity.Application.UnitTests.csproj" />
+    <Project Path="tests/Identity.IntegrationTests/Identity.IntegrationTests.csproj" />
   </Folder>
 </Solution>

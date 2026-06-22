@@ -8,4 +8,5 @@ public static class ErrorCodes
     public const string Conflict = "conflict";
     public const string Failure = "failure";
     public const string InternalError = "internal_error";
+    public const string Unauthorized = "unauthorized";
 }
