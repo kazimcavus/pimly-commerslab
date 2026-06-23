@@ -3,21 +3,24 @@ import { Button, Badge, Card, CardHeader, CardBody } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
-import { relativeTime } from '../lib/format.js'
 
-export function Dashboard({ onNavigate, tenant }) {
-  const [groups, setGroups] = useState([])
-  useEffect(() => { api.listGroups().then(setGroups).catch(() => {}) }, [])
+// Hafif panel — .NET Catalog ürün verisinden anlık durum (grup yok).
+export function Dashboard({ onNavigate, user }) {
+  const [products, setProducts] = useState([])
+  useEffect(() => { api.listProducts().then(setProducts).catch(() => {}) }, [])
 
-  const activePct = groups.length
-    ? Math.round((100 * groups.filter((g) => g.status === 'active').length) / groups.length)
-    : 0
-  const drafts = groups.filter((g) => g.status === 'draft').length
+  const count = (s) => products.filter((p) => p.status === s).length
+  const total = products.length
+  const active = count('active')
+  const drafts = count('draft')
+  const archived = count('archived')
+  const activePct = total ? Math.round((100 * active) / total) : 0
+
   const stats = [
-    { label: 'Ürün grubu', icon: 'folder', value: String(groups.length), delta: 'canlı katalog' },
-    { label: 'Aktif', icon: 'circle-check-big', value: String(groups.filter((g) => g.status === 'active').length), delta: `%${activePct} oran` },
+    { label: 'Ürün', icon: 'package', value: String(total), delta: 'canlı katalog' },
+    { label: 'Aktif', icon: 'circle-check-big', value: String(active), delta: `%${activePct} oran` },
     { label: 'Taslak', icon: 'file-pen-line', value: String(drafts), delta: 'yayına hazırlanıyor' },
-    { label: 'Arşiv', icon: 'archive', value: String(groups.filter((g) => g.status === 'archived').length), delta: '' },
+    { label: 'Arşiv', icon: 'archive', value: String(archived), delta: '' },
   ]
 
   return (
@@ -25,7 +28,7 @@ export function Dashboard({ onNavigate, tenant }) {
       <PageHeader
         eyebrow="Genel bakış"
         title="Panel"
-        sub={`${tenant || 'Mağaza'} kataloğunun anlık durumu.`}
+        sub={`${user?.name || 'Mağaza'} kataloğunun anlık durumu.`}
         actions={<Button variant="accent" iconLeft={I('plus')} onClick={() => onNavigate('builder')}>Ürün Oluştur</Button>}
       />
       <div className="stats">
@@ -39,21 +42,20 @@ export function Dashboard({ onNavigate, tenant }) {
       </div>
       <div className="cols">
         <Card>
-          <CardHeader title="Son eklenen gruplar" actions={<Button variant="ghost" size="sm" iconRight={I('arrow-right')} onClick={() => onNavigate('products')}>Tümü</Button>} />
+          <CardHeader title="Son eklenen ürünler" actions={<Button variant="ghost" size="sm" iconRight={I('arrow-right')} onClick={() => onNavigate('products')}>Tümü</Button>} />
           <div className="pim-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
             <table className="pim-table">
-              <thead><tr><th>Grup</th><th>Kod</th><th>Durum</th><th></th></tr></thead>
+              <thead><tr><th>Ürün</th><th>Model kodu</th><th>Durum</th></tr></thead>
               <tbody>
-                {groups.slice(0, 6).map((g) => (
-                  <tr key={g.id} onClick={() => onNavigate('group', g.id)} style={{ cursor: 'pointer' }}>
-                    <td><div className="cellrow"><span className="thumb">{I('package')}</span><span className="pim-td-strong">{g.title || '(başlıksız)'}</span></div></td>
-                    <td className="pim-td-mono">{g.group_code}</td>
-                    <td><StatusBadge status={g.status} /></td>
-                    <td className="subtle" style={{ textAlign: 'right' }}>{relativeTime(g.updated_at)}</td>
+                {products.slice(0, 6).map((p) => (
+                  <tr key={p.id} onClick={() => onNavigate('products')} style={{ cursor: 'pointer' }}>
+                    <td><div className="cellrow"><span className="thumb">{I('package')}</span><span className="pim-td-strong">{p.name || '(başlıksız)'}</span></div></td>
+                    <td className="pim-td-mono">{p.model_code}</td>
+                    <td><StatusBadge status={p.status} /></td>
                   </tr>
                 ))}
-                {groups.length === 0 && (
-                  <tr><td colSpan={4} className="subtle" style={{ padding: 18 }}>Henüz grup yok — “Ürün Oluştur” ile başla.</td></tr>
+                {total === 0 && (
+                  <tr><td colSpan={3} className="subtle" style={{ padding: 18 }}>Henüz ürün yok — “Ürün Oluştur” ile başla.</td></tr>
                 )}
               </tbody>
             </table>
@@ -65,8 +67,8 @@ export function Dashboard({ onNavigate, tenant }) {
             <CardBody>
               <Distribution rows={[
                 ['Aktif', activePct, 'var(--status-active-dot)'],
-                ['Taslak', groups.length ? Math.round((100 * drafts) / groups.length) : 0, 'var(--status-draft-dot)'],
-                ['Arşiv', groups.length ? Math.round((100 * groups.filter((g) => g.status === 'archived').length) / groups.length) : 0, 'var(--status-archived-dot)'],
+                ['Taslak', total ? Math.round((100 * drafts) / total) : 0, 'var(--status-draft-dot)'],
+                ['Arşiv', total ? Math.round((100 * archived) / total) : 0, 'var(--status-archived-dot)'],
               ]} />
             </CardBody>
           </Card>

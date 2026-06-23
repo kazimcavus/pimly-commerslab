@@ -3,44 +3,109 @@ import { Button, Badge, Dialog, Field, Input, Select, Checkbox } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { slugify } from '../lib/slug.js'
+
+const EXP_KEY = 'pimly_cat_expanded'
+const readExpanded = () => { try { return JSON.parse(localStorage.getItem(EXP_KEY) || '{}') || {} } catch { return {} } }
 
 export function Categories({ onToast }) {
   const [cats, setCats] = useState([])
   const [sel, setSel] = useState(null)
   const [attrs, setAttrs] = useState([])
   const [allAttrs, setAllAttrs] = useState([])
-  const [addOpen, setAddOpen] = useState(false)
+  const [dialog, setDialog] = useState(null) // { mode: 'add' | 'edit', initial }
   const [assignOpen, setAssignOpen] = useState(false)
+  const [expanded, setExpanded] = useState(readExpanded)
 
   const loadCats = () => api.listCategories().then((cs) => {
     setCats(cs)
-    if (!sel && cs.length) setSel(cs[0].id)
+    setSel((s) => s || (cs.length ? cs[0].id : null))
   }).catch(() => {})
   useEffect(() => { loadCats(); api.listAttributes().then(setAllAttrs).catch(() => {}) }, [])
   useEffect(() => { if (sel) api.listCategoryAttributes(sel).then(setAttrs).catch(() => setAttrs([])) }, [sel])
 
   const active = cats.find((c) => c.id === sel)
-  const childCount = (id) => cats.filter((c) => c.parent_id === id).length
-  const depthOf = (c) => {
-    let d = 0, cur = c
-    const byId = Object.fromEntries(cats.map((x) => [x.id, x]))
-    while (cur && cur.parent_id) { d++; cur = byId[cur.parent_id] }
-    return d
+  const childrenOf = (id) => cats.filter((c) => (c.parent_id || null) === (id || null))
+  const descendantsOf = (id) => {
+    const out = []
+    const walk = (pid) => cats.filter((c) => c.parent_id === pid).forEach((c) => { out.push(c.id); walk(c.id) })
+    walk(id)
+    return out
   }
+
+  const persistExpanded = (next) => { try { localStorage.setItem(EXP_KEY, JSON.stringify(next)) } catch {} ; return next }
+  const toggleNode = (id) => setExpanded((p) => persistExpanded({ ...p, [id]: p[id] === false ? true : false }))
+
+  // Bir kategoriyi seçerken üst zincirini otomatik aç (görünür kalsın).
+  const selectCat = (id) => {
+    setSel(id)
+    const byId = Object.fromEntries(cats.map((x) => [x.id, x]))
+    const anc = {}
+    let cur = byId[id]
+    while (cur && cur.parent_id) { anc[cur.parent_id] = true; cur = byId[cur.parent_id] }
+    if (Object.keys(anc).length) setExpanded((p) => persistExpanded({ ...p, ...anc }))
+  }
+
+  const isOpen = (id) => expanded[id] !== false
+
+  // Özyinelemeli ağaç çizimi — her düğüm çocuklarını altında çizer.
+  const renderNode = (c, depth) => {
+    const kids = childrenOf(c.id)
+    const open = isOpen(c.id)
+    const icon = kids.length ? (open ? 'folder-open' : 'folder') : 'tag'
+    return (
+      <React.Fragment key={c.id}>
+        <div className="tree__node" data-active={sel === c.id} onClick={() => selectCat(c.id)} style={{ paddingLeft: 8 + depth * 18 }}>
+          {kids.length > 0 ? (
+            <button className="tree__chev" data-open={open} title={open ? 'Kapat' : 'Aç'}
+              onClick={(e) => { e.stopPropagation(); toggleNode(c.id) }}>{I('chevron-right', { size: 14 })}</button>
+          ) : <span className="tree__chev-spacer" />}
+          {I(icon)}
+          <span className="tree__name">{c.name}</span>
+          {kids.length > 0 && <span className="sb__count">{kids.length} alt</span>}
+        </div>
+        {open && kids.map((k) => renderNode(k, depth + 1))}
+      </React.Fragment>
+    )
+  }
+
+  const removeCat = async () => {
+    if (!active) return
+    if (!confirm(`"${active.name}" kategorisi silinecek. Emin misin?`)) return
+    try {
+      await api.deleteCategory(active.id)
+      setSel(null)
+      await loadCats()
+      onToast?.({ tone: 'success', title: 'Kategori silindi' })
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+  }
+
+  const submitCategory = async (body) => {
+    try {
+      if (dialog?.mode === 'edit') {
+        await api.updateCategory(dialog.initial.id, body)
+        setDialog(null)
+        await loadCats()
+        onToast?.({ tone: 'success', title: 'Kategori güncellendi' })
+      } else {
+        const c = await api.createCategory(body)
+        setDialog(null)
+        await loadCats()
+        selectCat(c.id)
+        onToast?.({ tone: 'success', title: 'Kategori eklendi' })
+      }
+    } catch (e) { onToast?.({ tone: 'danger', title: dialog?.mode === 'edit' ? 'Güncellenemedi' : 'Eklenemedi', body: e.message }) }
+  }
+
+  const editExclude = dialog?.mode === 'edit' && dialog.initial ? [dialog.initial.id, ...descendantsOf(dialog.initial.id)] : []
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Tanımlar" title="Kategoriler" sub="Ağaç yapısı. Seç → atanmış özellikler ve pazaryeri eşlemesi."
-        actions={<Button variant="accent" iconLeft={I('plus')} onClick={() => setAddOpen(true)}>Kategori ekle</Button>} />
+      <PageHeader eyebrow="Tanımlar" title="Kategoriler" help="categories" sub="Ağaç yapısı. Seç → atanmış özellikler ve pazaryeri eşlemesi."
+        actions={<Button variant="accent" iconLeft={I('plus')} onClick={() => setDialog({ mode: 'add', initial: { parent_id: active?.id || null } })}>Kategori ekle</Button>} />
       <div className="split">
         <div className="tree">
-          {cats.map((c) => (
-            <div key={c.id} className="tree__node" data-active={sel === c.id} onClick={() => setSel(c.id)} style={{ paddingLeft: 9 + depthOf(c) * 18 }}>
-              {I(childCount(c.id) ? 'folder' : 'folder-open')}
-              <span>{c.name}</span>
-              {childCount(c.id) > 0 && <span className="sb__count">{childCount(c.id)} alt</span>}
-            </div>
-          ))}
+          {childrenOf(null).map((r) => renderNode(r, 0))}
           {cats.length === 0 && <div className="list-meta" style={{ padding: 12 }}>Henüz kategori yok.</div>}
         </div>
         <div className="stack">
@@ -48,6 +113,10 @@ export function Categories({ onToast }) {
             <div className="pim-card">
               <div className="pim-card__header">
                 <div className="hstack"><span className="pim-card__title">{active.name}</span>{active.code && <span className="typechip">{active.code}</span>}</div>
+                <div className="hstack">
+                  <Button variant="secondary" size="sm" iconLeft={I('pencil')} onClick={() => setDialog({ mode: 'edit', initial: active })}>Düzenle</Button>
+                  <button className="tb__icon" style={{ width: 30, height: 30 }} title="Kategoriyi sil" onClick={removeCat}>{I('trash-2')}</button>
+                </div>
               </div>
               <div className="pim-card__body">
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', marginBottom: 10 }} className="between">
@@ -81,8 +150,8 @@ export function Categories({ onToast }) {
         </div>
       </div>
 
-      <AddCategoryDialog open={addOpen} onClose={() => setAddOpen(false)} cats={cats}
-        onCreate={async (body) => { try { const c = await api.createCategory(body); setAddOpen(false); await loadCats(); setSel(c.id); onToast?.({ tone: 'success', title: 'Kategori eklendi' }) } catch (e) { onToast?.({ tone: 'danger', title: 'Eklenemedi', body: e.message }) } }} />
+      <CategoryDialog open={!!dialog} mode={dialog?.mode} initial={dialog?.initial} cats={cats} excludeIds={editExclude}
+        onClose={() => setDialog(null)} onSubmit={submitCategory} />
 
       <AssignAttrDialog open={assignOpen} onClose={() => setAssignOpen(false)} attrs={allAttrs.filter((a) => !attrs.some((x) => x.attribute_id === a.id))}
         onAssign={async (body) => { try { await api.assignCategoryAttribute(sel, body); setAssignOpen(false); api.listCategoryAttributes(sel).then(setAttrs); onToast?.({ tone: 'success', title: 'Özellik atandı' }) } catch (e) { onToast?.({ tone: 'danger', title: 'Atanamadı', body: e.message }) } }} />
@@ -90,18 +159,18 @@ export function Categories({ onToast }) {
   )
 }
 
-function AddCategoryDialog({ open, onClose, onCreate, cats }) {
+// Ekle + Düzenle ortak modali. Kod alanı yok — ad'dan otomatik türetilir (slugify).
+function CategoryDialog({ open, mode, initial, onClose, onSubmit, cats, excludeIds }) {
   const [name, setName] = useState('')
-  const [code, setCode] = useState('')
   const [parent, setParent] = useState('')
-  useEffect(() => { if (open) { setName(''); setCode(''); setParent('') } }, [open])
+  useEffect(() => { if (open) { setName(initial?.name || ''); setParent(initial?.parent_id || '') } }, [open, initial])
+  const parentOpts = cats.filter((c) => !(excludeIds || []).includes(c.id)).map((c) => ({ value: c.id, label: c.name }))
+  const submit = () => { const n = name.trim(); if (n) onSubmit({ name: n, code: slugify(n), parent_id: parent || null }) }
   return (
-    <Dialog open={open} title="Kategori ekle" confirmLabel="Ekle" cancelLabel="İptal" onClose={onClose}
-      onConfirm={() => name.trim() && onCreate({ name: name.trim(), code: code.trim() || null, parent_id: parent || null })}>
-      <Field label="Ad" required><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tişört" /></Field>
-      <Field label="Kod" optional><Input mono value={code} onChange={(e) => setCode(e.target.value)} placeholder="TS" /></Field>
+    <Dialog open={open} title={mode === 'edit' ? 'Kategori düzenle' : 'Kategori ekle'} confirmLabel={mode === 'edit' ? 'Kaydet' : 'Ekle'} cancelLabel="İptal" onClose={onClose} onConfirm={submit}>
+      <Field label="Ad" required help="Kod, ad'dan otomatik üretilir."><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tişört" /></Field>
       <Field label="Üst kategori" optional>
-        <Select value={parent} placeholder="(kök)" onChange={(e) => setParent(e.target.value)} options={cats.map((c) => ({ value: c.id, label: c.name }))} />
+        <Select value={parent} placeholder="(kök)" onChange={(e) => setParent(e.target.value)} options={parentOpts} />
       </Field>
     </Dialog>
   )

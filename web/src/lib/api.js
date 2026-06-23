@@ -1,5 +1,5 @@
-// pimly API client. Backend artık .NET (Pimly.Api). Uçlar modül başına
-// versiyonlu prefix altında: Identity → /api/v1/identity, Catalog → /api/v1/catalog.
+// pimly API client. Backend .NET (Pimly.Api). Uçlar modül başına versiyonlu
+// prefix altında: Identity → /api/v1/identity, Catalog → /api/v1/catalog.
 // Dev'de Vite, /api isteklerini .NET sunucusuna (:7000) proxy'ler (bkz. vite.config.js),
 // böylece tarayıcı same-origin kalır.
 const BASE = import.meta.env.VITE_API_BASE || ''
@@ -7,7 +7,6 @@ const IDENTITY = '/api/v1/identity'
 const CATALOG = '/api/v1/catalog'
 
 let token = localStorage.getItem('pimly_token') || ''
-let adminToken = localStorage.getItem('pimly_admin_token') || ''
 
 export function setToken(t) {
   token = t || ''
@@ -17,19 +16,10 @@ export function setToken(t) {
 export function getToken() {
   return token
 }
-export function setAdminToken(t) {
-  adminToken = t || ''
-  if (t) localStorage.setItem('pimly_admin_token', t)
-  else localStorage.removeItem('pimly_admin_token')
-}
-export function getAdminToken() {
-  return adminToken
-}
 
-async function req(method, path, { body, form, admin } = {}) {
+async function req(method, path, { body, form } = {}) {
   const headers = {}
   if (token) headers['Authorization'] = 'Bearer ' + token
-  if (admin && adminToken) headers['X-Admin-Token'] = adminToken
   let payload
   if (form) {
     payload = form // FormData — browser sets multipart boundary
@@ -43,7 +33,6 @@ async function req(method, path, { body, form, admin } = {}) {
   const data = text ? safeParse(text) : null
   if (!res.ok) {
     const err = new Error(errorMessage(data) || res.statusText)
-    err.code = errorCode(data)
     err.status = res.status
     err.fields = data && data.errors // RFC7807 ProblemDetails alan hataları
     throw err
@@ -51,15 +40,10 @@ async function req(method, path, { body, form, admin } = {}) {
   return data
 }
 
-// .NET RFC7807 ProblemDetails: { status, title, detail, errors }. Eski Go formatı
-// { error: { code, message } } için de geriye dönük destek.
+// .NET RFC7807 ProblemDetails: { status, title, detail, errors }.
 function errorMessage(data) {
   if (!data) return ''
-  return (data.error && data.error.message) || data.detail || data.title || ''
-}
-function errorCode(data) {
-  if (!data) return 'error'
-  return (data.error && data.error.code) || data.title || 'error'
+  return data.detail || data.title || ''
 }
 
 function safeParse(t) {
@@ -78,19 +62,9 @@ async function reqList(path) {
   return Array.isArray(data) ? data : []
 }
 
-// Henüz .NET backend'e taşınmamış uçlar için açık hata döndüren yer tutucu.
-function pending(name) {
-  return Promise.reject(
-    Object.assign(new Error(`"${name}" özelliği henüz .NET backend'e taşınmadı`), {
-      code: 'not_migrated',
-      status: 501,
-    }),
-  )
-}
-
 export const api = {
   // --- auth (Identity modülü) ---
-  // .NET LoginResult: { token, expiresAt, user: { id, email, name } }
+  // .NET LoginResult: { token, expires_at, user: { id, email, name } }
   login: (email, password) => req('POST', `${IDENTITY}/login`, { body: { email, password } }),
   me: () => req('GET', `${IDENTITY}/me`),
 
@@ -131,41 +105,16 @@ export const api = {
   getProduct: (id) => req('GET', `${CATALOG}/products/${id}`),
   updateProduct: (id, b) => req('PATCH', `${CATALOG}/products/${id}`, { body: b }),
   deleteProduct: (id) => req('DELETE', `${CATALOG}/products/${id}`),
-  // Go'daki "variant" ≈ .NET'teki "item" (ürün altı SKU satırı).
+  // .NET "item" — ürün altı SKU satırı.
   getItem: (id) => req('GET', `${CATALOG}/items/${id}`),
   updateItem: (id, b) => req('PATCH', `${CATALOG}/items/${id}`, { body: b }),
   deleteItem: (id) => req('DELETE', `${CATALOG}/items/${id}`),
-  getVariant: (id) => req('GET', `${CATALOG}/items/${id}`), // geriye dönük ad
 
-  // --- henüz .NET'e taşınmamış uçlar (adım adım eklenecek) ---
-  // settings
-  getSettings: () => pending('Ayarlar'),
-  putSetting: () => pending('Ayarlar'),
-  // metaobjects
-  listMetaDefs: () => pending('Metaobjeler'),
-  createMetaDef: () => pending('Metaobjeler'),
-  deleteMetaDef: () => pending('Metaobjeler'),
-  listMetaFields: () => pending('Metaobjeler'),
-  createMetaField: () => pending('Metaobjeler'),
-  deleteMetaField: () => pending('Metaobjeler'),
-  listMetaEntries: () => pending('Metaobjeler'),
-  createMetaEntry: () => pending('Metaobjeler'),
-  deleteMetaEntry: () => pending('Metaobjeler'),
-  // groups (Go ürün gruplama katmanı — .NET'te products/items modeli geliyor)
-  listGroups: () => pending('Ürün grupları'),
-  getGroup: () => pending('Ürün grupları'),
-  updateGroup: () => pending('Ürün grupları'),
-  deleteGroup: () => pending('Ürün grupları'),
-  // media
-  listMedia: () => pending('Medya'),
-  uploadMedia: () => pending('Medya'),
-  bulkUploadMedia: () => pending('Medya'),
-  deleteMedia: () => pending('Medya'),
-  uploadImage: () => pending('Medya'),
-  // admin
-  adminListApplications: () => pending('Yönetim'),
-  adminCreateApplication: () => pending('Yönetim'),
-  adminApprove: () => pending('Yönetim'),
-  adminListTenants: () => pending('Yönetim'),
-  adminSetModule: () => pending('Yönetim'),
+  // --- barkod serisi (Catalog modülü) ---
+  // BarcodeSequenceDto: { next_value, client_allocation_required, next_preview }.
+  // Seri yapılandırılmamışsa GET 404 döner; çağıran tarafta yakalanır.
+  getBarcodeSequence: () => req('GET', `${CATALOG}/barcode-sequence`),
+  putBarcodeSequence: (b) => req('PUT', `${CATALOG}/barcode-sequence`, { body: b }),
+  allocateBarcodes: (count) => req('POST', `${CATALOG}/barcodes:allocate`, { body: { count } }),
+  listBarcodeAllocations: () => reqList(`${CATALOG}/barcode-allocations`),
 }

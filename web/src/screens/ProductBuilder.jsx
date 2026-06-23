@@ -4,10 +4,11 @@ import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
 import { parseTrMoney } from '../lib/format.js'
+import { loadSkuConfig } from '../lib/skuConfig.js'
 
 const MAX_TYPES = 3
 const VAR_COLS = '1.5fr 0.9fr 0.9fr 0.6fr 1.1fr 1.1fr'
-const SEG_NAME = { fixed: 'Sabit', counter: 'Sıra', year: 'Yıl', manual: 'Değer', season: 'Sezon' }
+const SEG_NAME = { fixed: 'Sabit', counter: 'Sıra', year: 'Yıl', manual: 'Değer' }
 
 // Cartesian product of arrays-of-values → array of combos (each combo an array).
 function cartesian(arrays) {
@@ -37,7 +38,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   // Tenant settings: SKU generator + barcode config.
   const [skuCfg, setSkuCfg] = useState({ enabled: false, segments: [] })
   const [bcOn, setBcOn] = useState(false)
-  const [codeInputs, setCodeInputs] = useState({}) // { segIndex: value } for season/manual
+  const [codeInputs, setCodeInputs] = useState({}) // { segIndex: value } for manual
 
   // Category attributes: assigned attrs of the chosen category + their values + selection.
   const [allAttrs, setAllAttrs] = useState([])     // [{id,name,key}] — full attribute list
@@ -64,11 +65,14 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     }).catch(() => { if (alive) { setCatAttrs([]); setAttrVals({}) } })
     return () => { alive = false }
   }, [categoryId])
+  // SKU şablonu frontend-only (localStorage); barkod serisi .NET'ten.
   useEffect(() => {
-    api.getSettings().then((s) => {
-      if (s.sku?.enabled && (s.sku.segments || []).length) setSkuCfg({ enabled: true, segments: s.sku.segments })
-      if (s.barcode?.enabled && s.barcode.start) setBcOn(true)
-    }).catch(() => {})
+    const cfg = loadSkuConfig()
+    if (cfg.enabled && cfg.segments.length) setSkuCfg({ enabled: true, segments: cfg.segments })
+  }, [])
+  useEffect(() => {
+    // Seri yapılandırılmış ve istemci tahsisi gerekmiyorsa barkod otomatik atanır.
+    api.getBarcodeSequence().then((b) => { if (b && !b.client_allocation_required) setBcOn(true) }).catch(() => {})
   }, [])
   useEffect(() => {
     api.listVariantTypes().then(async (ts) => {
@@ -98,7 +102,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   const skuToken = (seg, i) => {
     switch (seg.type) {
       case 'fixed': return (seg.value || '').toUpperCase()
-      case 'season': case 'manual': return (codeInputs[i] || '').toUpperCase()
+      case 'manual': return (codeInputs[i] || '').toUpperCase()
       case 'counter': return String(seg.start ?? 1).padStart(seg.width || 4, '0')
       case 'year': { const yy = new Date().getFullYear(); return seg.digits === 4 ? String(yy) : String(yy % 100) }
       default: return ''
@@ -217,15 +221,15 @@ export function ProductBuilder({ onNavigate, onSaved }) {
         value: (attrVals[ca.attribute_id] || []).find((x) => x.id === attrPick[ca.attribute_id])?.name || null,
       }))
 
-    // SKU generator: send per-product season/manual inputs; require them.
+    // SKU generator: send per-product manual inputs; require them.
     if (skuOn) {
       for (let i = 0; i < skuCfg.segments.length; i++) {
         const s = skuCfg.segments[i]
-        if ((s.type === 'season' || s.type === 'manual') && !(codeInputs[i] || '').trim()) {
-          setError(`Ürün kodu için "${s.label || (s.type === 'season' ? 'Sezon' : 'değer')}" alanını doldur.`); return
+        if (s.type === 'manual' && !(codeInputs[i] || '').trim()) {
+          setError(`Ürün kodu için "${s.label || 'değer'}" alanını doldur.`); return
         }
       }
-      product.code_inputs = skuCfg.segments.map((s, i) => (s.type === 'season' || s.type === 'manual') ? (codeInputs[i] || '').trim() : '')
+      product.code_inputs = skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
 
       // Variant segments using "Kod" require a code on each selected value.
       if (mode === 'variant') {
@@ -287,6 +291,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
         crumbs={[{ label: 'Ürünler', onClick: () => onNavigate('products') }, { label: 'Ürün Oluştur' }]}
         eyebrow="Tek yazma yolu · products:batch"
         title="Ürün Oluştur"
+        help="product-builder"
         sub="Basit ürün ya da varyantlı ürün (Varyantlar'dan tür seç, kombinasyonlar otomatik üretilir)."
         actions={<>
           <Button variant="secondary" onClick={() => onNavigate('products')}>İptal</Button>
@@ -331,7 +336,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
                 <div className="hstack" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                   {skuCfg.segments.map((s, i) => {
                     if (isVarSeg(s.type)) return null
-                    const isManual = s.type === 'manual' || s.type === 'season'
+                    const isManual = s.type === 'manual'
                     const caption = s.label || SEG_NAME[s.type] || 'Segment'
                     return (
                       <div key={i} style={{ width: isManual ? 140 : 'auto' }}>

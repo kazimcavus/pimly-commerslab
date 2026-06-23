@@ -42,6 +42,7 @@ export function ProductList({ onNavigate, onToast }) {
       <PageHeader
         eyebrow="Katalog"
         title="Ürünler"
+        help="products"
         sub="Model → renk → varyant. Tek formdan toplu oluştur; slicer'lı türler renk renk ayrı ürün olur."
         actions={<>
           <Button variant="secondary" iconLeft={I('upload')} disabled>İçe aktar</Button>

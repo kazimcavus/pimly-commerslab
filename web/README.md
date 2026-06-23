@@ -1,29 +1,26 @@
-# pimly — web (admin UI)
+# pimly — web (yönetim arayüzü)
 
-React + Vite admin interface for the pimly PIM backend. The visual design is a
-faithful implementation of the **pimly Design System** handoff from Claude
-Design (tokens + primitives under `src/ds/`, screens under `src/screens/`),
-wired to the live API.
+pimly PIM backend'i için React + Vite yönetim arayüzü. Görsel tasarım, Claude
+Design'dan teslim alınan **pimly Tasarım Sistemi**nin birebir uygulamasıdır
+(token'lar ve primitive'ler `src/ds/` altında, ekranlar `src/screens/` altında),
+canlı .NET API'sine bağlıdır.
 
-> **Backend:** the API is now the **.NET** backend under [`../backend`](../backend)
-> (ASP.NET Core, listens on `:7000`). The legacy Go backend is being retired.
+> **Backend:** [`../backend`](../backend) altındaki **.NET** API (ASP.NET Core, `:7000`).
 
-## Run (local dev)
+## Çalıştırma (yerel geliştirme)
 
-Backend first (from the repo root):
+Önce backend (depo kökünden):
 
 ```bash
-docker compose up -d                       # postgres (+ minio)
+docker compose up -d                                  # postgres
 
 cd backend
-dotnet run --project src/Pimly.Api         # http://localhost:7000 (Swagger at /swagger)
+DOTNET_ROLL_FORWARD=Major dotnet run --project src/Pimly.Api   # http://localhost:7000
 ```
 
-You need a user to sign in with. Auth lives in the Identity module
-(`POST /api/v1/identity/login`); seed/create a user via the backend (see
-[`../backend/README.md`](../backend/README.md)).
+Development'ta varsayılan kullanıcı tohumlanır: **`owner@acme.test` / `demo1234`**.
 
-Then the frontend:
+Sonra frontend:
 
 ```bash
 cd web
@@ -31,42 +28,43 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Open http://localhost:5173 and sign in. The top-bar sun/moon button toggles
-light/dark.
+<http://localhost:5173> açıp giriş yapın. Üst bardaki güneş/ay düğmesi açık/koyu
+temayı değiştirir.
 
-## How it connects
+## Nasıl bağlanır
 
-- `vite.config.js` proxies `/api/*` → the .NET backend on `:7000` (override with
-  `PIMLY_API_TARGET`), forwarding the `/api/v1/...` prefix as-is, so the browser
-  stays same-origin (no CORS).
-- `src/lib/api.js` is the API client. It targets the versioned module prefixes
-  (`/api/v1/identity`, `/api/v1/catalog`), sends the JWT bearer token, and decodes
-  the RFC 7807 `ProblemDetails` error shape returned by the API.
-- The wire format is **snake_case** in both directions (the .NET host is
-  configured with a snake_case JSON naming policy), matching the client.
-- `src/ds/` are the design-system primitives (verbatim from the handoff);
-  `src/styles/` are the design tokens (CSS custom properties) + the UI-kit CSS.
+- `vite.config.js`, `/api/*` isteklerini `:7000`'deki .NET backend'e proxy'ler
+  (`PIMLY_API_TARGET` ile değiştirilebilir); `/api/v1/...` öneki olduğu gibi
+  iletilir, böylece tarayıcı same-origin kalır (CORS yok).
+- `src/lib/api.js` API istemcisidir: versiyonlu modül öneklerini
+  (`/api/v1/identity`, `/api/v1/catalog`) hedefler, JWT bearer token gönderir,
+  RFC 7807 `ProblemDetails` hata şeklini çözer.
+- Tel formatı her iki yönde **snake_case**'tir (.NET host snake_case JSON ile
+  yapılandırılmıştır).
+- `src/ds/` tasarım sistemi primitive'leri, `src/styles/` tasarım token'ları
+  (CSS değişkenleri) + UI-kit CSS'idir.
 
-## Migration status (Go → .NET)
+## Ekranlar
 
-The frontend has been repointed to the .NET backend. Endpoint coverage so far:
+| Ekran | Açıklama | Backend |
+|---|---|---|
+| Giriş | E-posta + şifre (JWT) | `/api/v1/identity` |
+| Panel | .NET ürün verisinden hafif özet | `/catalog/products` |
+| Kategoriler | Kategori + kategori-özellik atamaları | `/catalog/categories` |
+| Özellikler | Özellik tanımları + değerleri | `/catalog/attributes` |
+| Varyantlar | Varyant tipleri (Renk, Beden…) + değerleri | `/catalog/variants` |
+| Ürünler | Liste + tekli/varyantlı toplu oluşturma | `/catalog/products:batch` |
+| Ayarlar | Ürün kodu üretici + barkod serisi | aşağıya bakın |
 
-| Area | Status |
-|---|---|
-| Auth — login, me | ✅ wired (`/api/v1/identity`) |
-| Categories, Category attributes | ✅ wired (`/api/v1/catalog`) |
-| Attributes (+ values) | ✅ wired |
-| Variant types & values | ✅ wired (`/variant-types` → `/variants`) |
-| Products create (`products:batch`) | ⚠️ endpoint wired, **payload model differs** — see below |
-| Settings, MetaObjects, Media, Admin, Groups | ⏳ not yet on .NET — calls reject with a clear "not migrated" error (`code: not_migrated`) |
+### Ayarlar
 
-**Product model difference:** the frontend speaks *groups → products → variants*;
-the .NET Catalog speaks *products → items* and `products:batch` expects an
-existing `group_id`. Reconciling this is the next migration step, after which
-ProductBuilder save and the Group/Product list screens will work.
-
-Screens depending on not-yet-migrated endpoints are expected to surface the
-"henüz .NET backend'e taşınmadı" error until those modules land.
+- **Ürün Kodu (SKU) Oluşturucu** — frontend-only. Yapılandırma tarayıcı
+  `localStorage`'ında (`pimly_sku_config`) tutulur; backend yoktur. Segment
+  mantığı ileride .NET'e taşınmak üzere
+  [`../docs/product-code-generator.md`](../docs/product-code-generator.md)
+  içinde belgelenmiştir. (Ortak yardımcı: `src/lib/skuConfig.js`.)
+- **Barkod (EAN-13)** — gerçek .NET barkod serisine bağlıdır
+  (`/catalog/barcode-sequence`, `/catalog/barcodes:allocate`).
 
 ## Build
 

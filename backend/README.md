@@ -1,150 +1,122 @@
 # Pimly .NET Backend
 
-Modular monolith ASP.NET Core API with DDD building blocks, the Catalog module (Categories, Attributes, MetaObjects, Variant Types/Values, Products), and the Identity module (JWT auth).
+DDD yapı taşları üzerine kurulu, modüler monolit bir ASP.NET Core API. İki modül:
+**Catalog** (kategoriler, özellikler, varyant tipleri/değerleri, ürünler, ürün
+kalemleri, barkod serisi) ve **Identity** (JWT kimlik doğrulama).
 
-## Prerequisites
+## Gereksinimler
 
-- .NET 9 SDK
-- PostgreSQL (local Docker Compose from repo root: `docker compose up -d`)
+- .NET 9 SDK _(kurulu sürüm farklıysa çalıştırırken `DOTNET_ROLL_FORWARD=Major` kullanın)_
+- PostgreSQL — depo kökünden: `docker compose up -d`
 
-## Quick start
+## Hızlı başlangıç
 
 ```bash
 cd backend
-
-# Apply database migrations
-dotnet ef database update \
-  --project src/Modules/Catalog/Catalog.Infrastructure \
-  --startup-project src/Pimly.Api
-
-dotnet ef database update \
-  --project src/Modules/Identity/Identity.Infrastructure \
-  --startup-project src/Pimly.Api
-
-# Run API
-dotnet run --project src/Pimly.Api
+DOTNET_ROLL_FORWARD=Major dotnet run --project src/Pimly.Api
 ```
 
-API listens on `http://localhost:7000` (HTTPS: `https://localhost:7001`). Swagger UI is enabled in Development at `/swagger`.
+- API `http://localhost:7000` üzerinde dinler (HTTPS: `https://localhost:7001`).
+- Migration'lar açılışta **otomatik** uygulanır (`Catalog:AutoMigrate` ve
+  `Identity:AutoMigrate` = `true`).
+- Development'ta **varsayılan kullanıcı tohumlanır:** `owner@acme.test` / `demo1234`.
+- Swagger UI Development'ta `/swagger` altında açıktır.
 
-Connection strings in `src/Pimly.Api/appsettings.Development.json`:
+> EF migration'larını elle uygulamak isterseniz:
+> ```bash
+> dotnet ef database update --project src/Modules/Catalog/Catalog.Infrastructure  --startup-project src/Pimly.Api
+> dotnet ef database update --project src/Modules/Identity/Identity.Infrastructure --startup-project src/Pimly.Api
+> ```
 
-- `ConnectionStrings:Database` — Catalog schema (`catalog`)
-- `ConnectionStrings:Identity` — Identity schema (`identity`)
+Bağlantı dizeleri `src/Pimly.Api/appsettings.json` içinde
+(`Host=localhost;Port=5432;Database=pimly;Username=pimly;Password=pimly`).
 
-Default: `Host=localhost;Port=5432;Database=pimly;Username=pimly;Password=pimly`
-
-## Solution layout
+## Çözüm yapısı
 
 ```
 src/
   SharedKernel/                 Entity, AggregateRoot, ValueObject, DomainEvent, Result
   Pimly.Api/                    HTTP host (composition root)
+  Pimly.AspNetCore/             Ortak ASP.NET Core yardımcıları
   Modules/Catalog/
-    Catalog.Domain/             Aggregates + repository interfaces
-    Catalog.Application/        Use cases (vertical slices) + FluentValidation
+    Catalog.Domain/             Aggregate'ler + repository arayüzleri
+    Catalog.Application/        Use case'ler (dikey dilimler) + FluentValidation
     Catalog.Infrastructure/     EF Core + PostgreSQL (schema: catalog)
-    Catalog.Api/                Minimal API endpoints + request modelleri
+    Catalog.Api/                Minimal API endpoint'leri + request modelleri
   Modules/Identity/
-    Identity.Domain/            User aggregate + repository interfaces
-    Identity.Application/       Login, GetMe use cases + FluentValidation
+    Identity.Domain/            User aggregate + repository arayüzleri
+    Identity.Application/       Login, GetMe use case'leri + FluentValidation
     Identity.Infrastructure/    EF Core + PostgreSQL (schema: identity), JWT, PasswordHasher
-    Identity.Api/               Minimal API endpoints
+    Identity.Api/               Minimal API endpoint'leri
 tests/
-  Catalog.Domain.UnitTests/
-  Catalog.Application.UnitTests/
-  Catalog.IntegrationTests/
-  Identity.Application.UnitTests/
-  Identity.IntegrationTests/
+  Catalog.Domain.UnitTests/ · Catalog.Application.UnitTests/ · Catalog.IntegrationTests/
+  Identity.Application.UnitTests/ · Identity.IntegrationTests/
 ```
 
-## Configuration
+## Yapılandırma
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `ConnectionStrings:Identity` | same as `Database` | PostgreSQL connection for `identity` schema |
-| `Identity:AutoMigrate` | `true` | Apply EF migrations on startup |
-| `Identity:Jwt:Secret` | `change-me-in-production` | HS256 signing secret |
-| `Identity:Jwt:ExpirationHours` | `24` | Access token lifetime |
+| Anahtar | Varsayılan | Açıklama |
+|---|---|---|
+| `ConnectionStrings:Database` | `Host=localhost;...` | Catalog şeması bağlantısı |
+| `ConnectionStrings:Identity` | `Database` ile aynı | Identity şeması bağlantısı |
+| `Catalog:AutoMigrate` | `true` | Açılışta EF migration uygula |
+| `Identity:AutoMigrate` | `true` | Açılışta EF migration uygula |
+| `Identity:Jwt:Secret` | `change-me-in-production` | HS256 imzalama anahtarı |
+| `Identity:Jwt:ExpirationHours` | `24` | Erişim token'ı ömrü |
 
 ## API (v1)
 
-### Identity
+JSON **snake_case** (istek + yanıt). `POST /api/v1/identity/login` ve `GET /healthz`
+dışındaki tüm uçlar geçerli bir **JWT bearer token** ister.
 
-Base path: `/api/v1/identity`
+### Identity — `/api/v1/identity`
 
-| Resource | Endpoints |
+| Kaynak | Uçlar |
 |---|---|
-| Auth | `POST /login`, `GET /me` (Bearer token required) |
+| Auth | `POST /login`, `GET /me` (Bearer token) |
 
-Login request:
+Login isteği: `{ "email": "user@example.com", "password": "secret" }`
+Login yanıtı: `{ "token", "expires_at", "user": { "id", "email", "name" } }`
 
-```json
-{ "email": "user@example.com", "password": "secret" }
-```
+### Catalog — `/api/v1/catalog`
 
-Login response:
-
-```json
-{
-  "token": "...",
-  "expiresAt": "...",
-  "user": { "id": "...", "email": "...", "name": "..." }
-}
-```
-
-All `/api/v1/catalog/*` endpoints require a valid JWT bearer token. Only `POST /api/v1/identity/login` and `GET /healthz` are public.
-
-### Catalog
-
-Base path: `/api/v1/catalog` — **JWT bearer token required** for all endpoints.
-
-| Resource | Endpoints |
+| Kaynak | Uçlar |
 |---|---|
-| Categories | `GET/POST /categories`, `GET/PATCH/DELETE /categories/{id}` |
-| Category attributes | `POST/GET /categories/{id}/attributes`, `PATCH/DELETE /category-attributes/{id}` |
-| Attributes | `GET/POST /attributes`, `GET/PATCH/DELETE /attributes/{id}` |
-| Attribute values | `POST/GET /attributes/{id}/values`, `PATCH/DELETE /attribute-values/{id}` |
-| Variant types | `GET/POST /variants`, `GET/PATCH/DELETE /variants/{id}` |
-| Variant values | `POST/GET /variants/{id}/values`, `PATCH/DELETE /variant-values/{id}` |
-| Products | `POST /products`, `POST /products:batch`, `GET/PATCH/DELETE /products/{id}` |
-| Product items | `GET/PATCH/DELETE /items/{id}` |
+| Kategoriler | `GET/POST /categories`, `GET/PATCH/DELETE /categories/{id}` |
+| Kategori özellikleri | `POST/GET /categories/{id}/attributes`, `PATCH/DELETE /category-attributes/{id}` |
+| Özellikler | `GET/POST /attributes`, `GET/PATCH/DELETE /attributes/{id}` |
+| Özellik değerleri | `POST/GET /attributes/{id}/values`, `PATCH/DELETE /attribute-values/{id}` |
+| Varyant tipleri | `GET/POST /variants`, `GET/PATCH/DELETE /variants/{id}` |
+| Varyant değerleri | `POST/GET /variants/{id}/values`, `PATCH/DELETE /variant-values/{id}` |
+| Ürünler | `POST /products`, `POST /products:batch`, `GET/PATCH/DELETE /products/{id}` |
+| Ürün kalemleri | `GET/PATCH/DELETE /items/{id}` |
+| Barkod serisi | `GET/PUT /barcode-sequence`, `POST /barcodes:allocate`, `GET /barcode-allocations` |
 
-> A "variant type" is an option axis (Renk, Beden) and lives under `/variants`;
-> a "product item" is a concrete SKU row under a product and lives under `/items`.
-> MetaObjects and marketplace-map endpoints are **not yet implemented** in .NET
-> (planned; present in the legacy Go backend).
+Sağlık: `GET /healthz`
 
-Health: `GET /healthz`
+> "Varyant tipi" bir seçenek ekseni (Renk, Beden) olup `/variants` altında; "ürün
+> kalemi" bir ürünün altındaki somut SKU satırı olup `/items` altında yaşar.
 
-> **Wire format:** the host serializes JSON as **snake_case** (request + response),
-> matching the web client. Single-word and compound property names alike are
-> emitted/accepted in snake_case (e.g. `selection_style`, `sort_order`, `parent_id`).
-
-## Tests
+## Testler
 
 ```bash
-dotnet test backend/tests/Catalog.Domain.UnitTests
-dotnet test backend/tests/Catalog.Application.UnitTests
-dotnet test backend/tests/Catalog.IntegrationTests
-dotnet test backend/tests/Identity.Application.UnitTests
-dotnet test backend/tests/Identity.IntegrationTests
+dotnet test tests/Catalog.Domain.UnitTests
+dotnet test tests/Catalog.Application.UnitTests
+dotnet test tests/Catalog.IntegrationTests        # Docker gerekir (Testcontainers)
+dotnet test tests/Identity.Application.UnitTests
+dotnet test tests/Identity.IntegrationTests        # Docker gerekir (Testcontainers)
 ```
 
-### Unit tests
+Entegrasyon testleri izole bir **PostgreSQL Testcontainer** (`postgres:17-alpine`)
+ayağa kaldırır; Docker yoksa testler **atlanır** (`SkippableFact`), build kırılmaz.
 
-Domain and application validator tests run without external dependencies.
+## Notlar
 
-### Integration tests
-
-Integration tests spin up an isolated **PostgreSQL Testcontainer** (`postgres:17-alpine`, database `pimly`) via [Testcontainers](https://dotnet.testcontainers.org/). **Docker must be running** on the machine executing the tests.
-
-Migrations are applied automatically when the fixture starts. If Docker is unavailable, integration tests are **skipped** (`Xunit.SkippableFact`) rather than failing the build.
-
-## Notes
-
-- v1 is single-tenant (no schema-per-tenant yet).
-- Identity uses ASP.NET `PasswordHasher` and minimal JWT claims (`sub`, `email`). No role-based authorization in v1.
-- MetaObject CRUD is available (definitions, fields, entries). Attribute `value_source=metaobject` integration is Phase 2.
-- Products v1 accepts `GroupId` as a required FK reference without Group CRUD or category attribute validation.
-- Slicer variant types split into multiple products via `POST /products:batch`; `POST /products` creates exactly one product.
+- v1 tek kiracılıdır (şema-başına-kiracı yoktur).
+- Identity, ASP.NET `PasswordHasher` ve minimal JWT claim'leri (`sub`, `email`)
+  kullanır; v1'de rol tabanlı yetkilendirme yoktur.
+- `model_code` üretimi henüz backend'de yoktur; client gönderir. Ürün kodu üretici
+  mantığı frontend'de (localStorage) yaşar — bkz.
+  [`../docs/product-code-generator.md`](../docs/product-code-generator.md).
+- Slicer varyant tipleri `POST /products:batch` ile birden çok ürüne bölünür;
+  `POST /products` tam olarak bir ürün oluşturur.

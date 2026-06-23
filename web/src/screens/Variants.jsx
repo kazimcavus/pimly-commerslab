@@ -50,7 +50,7 @@ export function Variants({ onToast }) {
         else await api.createVariantValue(typeId, body(r, i))
       }
     } else {
-      const t = await api.createVariantType({ name, selection_style: style, slicer })
+      const t = await api.createVariantType({ name, selection_style: style, slicer, sort_order: types.length })
       typeId = t.id
       for (let i = 0; i < rows.length; i++) await api.createVariantValue(typeId, body(rows[i], i))
     }
@@ -65,14 +65,14 @@ export function Variants({ onToast }) {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Tanımlar" title="Varyantlar" sub="Varyant türleri ve değerleri — Renk, Beden, Ölçü. Ürün oluştururken buradan seçilir (en fazla 3 tür)."
+      <PageHeader eyebrow="Tanımlar" title="Varyantlar" help="variants" sub="Varyant türleri ve değerleri — Renk, Beden, Ölçü. Ürün oluştururken buradan seçilir (en fazla 3 tür)."
         actions={<Button variant="accent" iconLeft={I('plus')} onClick={openCreate}>Varyant türü ekle</Button>} />
       <div className="split">
         <div className="tree">
           {types.map((t) => (
             <div key={t.id} className="tree__node" data-active={sel === t.id} onClick={() => setSel(t.id)}>
-              {I('layers')}<span>{t.name}</span>
-              {t.slicer && <span className="badge" title="Ürün ayracı — her değer ayrı ürün olur" style={{ marginLeft: 'auto', fontSize: 11 }}>{I('scissors', { size: 12 })} Ayraç</span>}
+              {I('layers')}<span className="tree__name">{t.name}</span>
+              {t.slicer && <span className="badge" title="Ürün ayracı — her değer ayrı ürün olur" style={{ marginLeft: 'auto', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)' }}>{I('scissors', { size: 12 })} Ayraç</span>}
             </div>
           ))}
           {types.length === 0 && <div className="list-meta" style={{ padding: 12 }}>Varyant türü yok.</div>}
@@ -102,6 +102,7 @@ export function Variants({ onToast }) {
                     <span key={v.id} className="sizechip" data-on="true" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
                       {isColor && <span className="swatch-sm" style={swatchBg(v)}></span>}
                       {v.label}
+                      {v.code && <span className="typechip" title="SKU kodu" style={{ marginLeft: 2 }}>{v.code}</span>}
                     </span>
                   ))}
                 </div>

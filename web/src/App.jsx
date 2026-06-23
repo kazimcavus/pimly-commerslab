@@ -6,19 +6,15 @@ import { Login } from './screens/Login.jsx'
 import { Dashboard } from './screens/Dashboard.jsx'
 import { ProductList } from './screens/ProductList.jsx'
 import { ProductBuilder } from './screens/ProductBuilder.jsx'
-import { GroupDetail } from './screens/GroupDetail.jsx'
 import { Categories } from './screens/Categories.jsx'
 import { Attributes } from './screens/Attributes.jsx'
-import { Metaobjects } from './screens/Metaobjects.jsx'
 import { Variants } from './screens/Variants.jsx'
-import { Media } from './screens/Media.jsx'
-import { Admin } from './screens/Admin.jsx'
 import { Settings } from './screens/Settings.jsx'
+import { HelpProvider } from './help/Help.jsx'
 
 export function App() {
-  const [session, setSession] = useState(null) // { tenant: {slug, role, ...} }
+  const [session, setSession] = useState(null) // { user: { id, email, name } }
   const [route, setRoute] = useState('dashboard')
-  const [groupId, setGroupId] = useState(null)
   const [toast, setToast] = useState(null)
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,14 +23,13 @@ export function App() {
   // Restore a session from a stored token on first load.
   useEffect(() => {
     if (getToken()) {
-      api.me().then((m) => setSession({ tenant: m.tenant })).catch(() => setToken('')).finally(() => setBooting(false))
+      api.me().then((m) => setSession({ user: m })).catch(() => setToken('')).finally(() => setBooting(false))
     } else {
       setBooting(false)
     }
   }, [])
 
-  const navigate = (r, param) => {
-    if (r === 'group' && param) setGroupId(param)
+  const navigate = (r) => {
     setRoute(r)
     document.querySelector('.app__content')?.scrollTo(0, 0)
   }
@@ -45,12 +40,12 @@ export function App() {
     window.__pt = setTimeout(() => setToast(null), 3800)
   }
 
-  const signIn = async (email, password, tenant) => {
+  const signIn = async (email, password) => {
     setLoading(true); setAuthError('')
     try {
-      const r = await api.login(email, password, tenant || undefined)
+      const r = await api.login(email, password)
       setToken(r.token)
-      setSession({ tenant: r.tenant })
+      setSession({ user: r.user })
       setRoute('dashboard')
     } catch (e) {
       setAuthError(e.message || 'Giriş başarısız')
@@ -69,27 +64,22 @@ export function App() {
   if (booting) return null
   if (!session) return <Login onSignIn={signIn} error={authError} loading={loading} />
 
-  const tenantName = session.tenant?.slug || 'pimly'
-  const role = session.tenant?.role
+  const user = session.user
 
   const screens = {
-    dashboard: <Dashboard onNavigate={navigate} tenant={tenantName} />,
+    dashboard: <Dashboard onNavigate={navigate} user={user} />,
     products: <ProductList onNavigate={navigate} onToast={showToast} />,
     builder: <ProductBuilder onNavigate={navigate} onSaved={(msg) => { navigate('products'); showToast({ tone: 'success', title: 'Ürün kaydedildi', body: msg }) }} />,
-    group: <GroupDetail groupId={groupId} onNavigate={navigate} onToast={showToast} />,
     categories: <Categories onToast={showToast} />,
     attributes: <Attributes onToast={showToast} />,
-    metaobjects: <Metaobjects onToast={showToast} />,
     variants: <Variants onToast={showToast} />,
-    media: <Media onToast={showToast} />,
-    admin: <Admin onToast={showToast} />,
     settings: <Settings onToast={showToast} />,
   }
-  const navRoute = route === 'builder' || route === 'group' ? 'products' : route
+  const navRoute = route === 'builder' ? 'products' : route
 
   return (
-    <>
-      <AppShell route={navRoute} onNavigate={navigate} onLogout={logout} onToggleTheme={toggleTheme} tenant={tenantName} role={role}>
+    <HelpProvider>
+      <AppShell route={navRoute} onNavigate={navigate} onLogout={logout} onToggleTheme={toggleTheme} user={user}>
         {screens[route] || screens.dashboard}
       </AppShell>
       {toast && (
@@ -97,6 +87,6 @@ export function App() {
           <Toast tone={toast.tone} title={toast.title} onClose={() => setToast(null)}>{toast.body}</Toast>
         </div>
       )}
-    </>
+    </HelpProvider>
   )
 }

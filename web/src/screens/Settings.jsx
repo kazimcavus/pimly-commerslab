@@ -3,6 +3,8 @@ import { Button, Field, Input, Select, Switch, Banner } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { loadSkuConfig, saveSkuConfig } from '../lib/skuConfig.js'
+import { HelpHint } from '../help/Help.jsx'
 
 // Generic, company-agnostic building blocks. Each segment carries a
 // user-defined title (Başlık) so firms label them as they like (e.g. a
@@ -20,7 +22,6 @@ const SEG_TYPES = [
 const sampleToken = (s) => {
   const yy = new Date().getFullYear()
   switch (s.type) {
-    case 'season': return '22Y' // legacy
     case 'fixed': return (s.value || '').toUpperCase() || '··'
     case 'counter': return String(s.start ?? 1).padStart(s.width || 4, '0')
     case 'year': return s.digits === 4 ? String(yy) : String(yy % 100)
@@ -39,7 +40,8 @@ const labelPh = (t) => ({
 
 export function Settings({ onToast }) {
   const [sku, setSku] = useState({ enabled: false, segments: [] })
-  const [barcode, setBarcode] = useState({ enabled: false, start: '' })
+  // Barkod serisi (.NET Catalog): { next_value, client_allocation_required, next_preview }.
+  const [barcode, setBarcode] = useState({ nextValue: '', clientAllocationRequired: false, nextPreview: '' })
   const [loaded, setLoaded] = useState(false)
   const [savingSku, setSavingSku] = useState(false)
   const [savingBc, setSavingBc] = useState(false)
@@ -47,11 +49,17 @@ export function Settings({ onToast }) {
   const [insertAt, setInsertAt] = useState(null)
 
   useEffect(() => {
-    api.getSettings().then((s) => {
-      if (s.sku) setSku({ enabled: !!s.sku.enabled, segments: s.sku.segments || [] })
-      if (s.barcode) setBarcode({ enabled: !!s.barcode.enabled, start: s.barcode.start ? String(s.barcode.start) : '' })
-      setLoaded(true)
-    }).catch(() => setLoaded(true))
+    // SKU config frontend-only (localStorage).
+    setSku(loadSkuConfig())
+    // Barkod serisi .NET'ten; yapılandırılmamışsa (404) varsayılan kalır.
+    api.getBarcodeSequence()
+      .then((b) => setBarcode({
+        nextValue: b.next_value != null ? String(b.next_value) : '',
+        clientAllocationRequired: !!b.client_allocation_required,
+        nextPreview: b.next_preview || '',
+      }))
+      .catch(() => {})
+      .finally(() => setLoaded(true))
   }, [])
 
   // --- SKU segment editing ---
@@ -69,7 +77,7 @@ export function Settings({ onToast }) {
   const productPreview = sku.segments.filter((s) => !isVariantSeg(s.type)).map(sampleToken).join('')
   const variantPreview = sku.segments.map(sampleToken).join('')
 
-  const saveSku = async () => {
+  const saveSku = () => {
     setSavingSku(true)
     try {
       const segments = sku.segments.map((s) => {
@@ -80,7 +88,7 @@ export function Settings({ onToast }) {
         if (isVariantSeg(s.type)) o.source = s.source === 'name' ? 'name' : 'code'
         return o
       })
-      await api.putSetting('sku', { enabled: sku.enabled, segments })
+      saveSkuConfig({ enabled: sku.enabled, segments })
       onToast?.({ tone: 'success', title: 'Ürün kodu ayarı kaydedildi' })
     } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
     finally { setSavingSku(false) }
@@ -89,24 +97,30 @@ export function Settings({ onToast }) {
   const saveBarcode = async () => {
     setSavingBc(true)
     try {
-      await api.putSetting('barcode', { enabled: barcode.enabled, start: parseInt(barcode.start, 10) || 0 })
+      await api.putBarcodeSequence({
+        next_value: parseInt(barcode.nextValue, 10) || 0,
+        client_allocation_required: barcode.clientAllocationRequired,
+      })
+      // Güncel önizlemeyi geri çek.
+      const fresh = await api.getBarcodeSequence().catch(() => null)
+      if (fresh) setBarcode((b) => ({ ...b, nextValue: String(fresh.next_value), nextPreview: fresh.next_preview || '' }))
       onToast?.({ tone: 'success', title: 'Barkod ayarı kaydedildi' })
     } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
     finally { setSavingBc(false) }
   }
 
-  const startsWith2 = barcode.start.trim().startsWith('2')
+  const startsWith2 = barcode.nextValue.trim().startsWith('2')
 
   if (!loaded) return <div className="page"><div className="list-meta">Yükleniyor…</div></div>
 
   return (
     <div className="page" style={{ maxWidth: 860 }}>
-      <PageHeader eyebrow="Platform" title="Ayarlar" sub="Ürün kodu (SKU) oluşturucu ve barkod ayarları. Hepsi opsiyonel — kapalıysa elle girersiniz." />
+      <PageHeader eyebrow="Platform" title="Ayarlar" sub="Ürün kodu (SKU) oluşturucu ve barkod serisi. Kod üretici tarayıcıda saklanır; barkod serisi backend'de tutulur." />
 
-      {/* SKU GENERATOR */}
+      {/* SKU GENERATOR — frontend-only (localStorage) */}
       <div className="pim-card" style={{ marginBottom: 18 }}>
         <div className="pim-card__header">
-          <div className="hstack">{I('wand-2')}<span className="pim-card__title">Ürün Kodu Oluşturucu</span></div>
+          <div className="hstack">{I('wand-2')}<span className="pim-card__title">Ürün Kodu Oluşturucu</span><HelpHint topic="sku-generator" /></div>
           <Switch checked={sku.enabled} onChange={(e) => setSku((s) => ({ ...s, enabled: e.target.checked }))} label={sku.enabled ? 'Açık' : 'Kapalı'} />
         </div>
         <div className="pim-card__body">
@@ -165,27 +179,28 @@ export function Settings({ onToast }) {
         </div>
       </div>
 
-      {/* BARCODE */}
+      {/* BARCODE — .NET barkod serisi */}
       <div className="pim-card">
         <div className="pim-card__header">
-          <div className="hstack">{I('barcode')}<span className="pim-card__title">Barkod (EAN-13)</span></div>
-          <Switch checked={barcode.enabled} onChange={(e) => setBarcode((b) => ({ ...b, enabled: e.target.checked }))} label={barcode.enabled ? 'Açık' : 'Kapalı'} />
+          <div className="hstack">{I('barcode')}<span className="pim-card__title">Barkod (EAN-13)</span><HelpHint topic="barcode" /></div>
         </div>
         <div className="pim-card__body">
-          {!barcode.enabled ? (
-            <div className="subtle">Kapalı. Barkod boş bırakılırsa dahili seri ile üretilir; istersen elle girersin.</div>
-          ) : (
-            <>
-              <Field label="Başlangıç numarası" auto="Her üründe +1 artar, 13 haneye tamamlanıp kontrol hanesi eklenir">
-                <Input mono value={barcode.start} onChange={(e) => setBarcode((b) => ({ ...b, start: e.target.value.replace(/[^0-9]/g, '') }))} style={{ maxWidth: 220 }} />
-              </Field>
-              {startsWith2 && <div style={{ marginTop: 8 }}><Banner tone="warning" title="Öneri">2 ile başlayan barkodlar GS1'de mağaza-içi/dahili banttır. Engel değil ama tavsiye etmeyiz.</Banner></div>}
-              {barcode.start && (() => {
-                const w = Math.max(0, 12 - barcode.start.length)
-                const body = (barcode.start + '0'.repeat(w)).slice(0, 12)
-                return <div className="list-meta" style={{ marginTop: 10 }}>İlk barkod gövdesi: <span className="mono">{body}</span> + kontrol hanesi · her üründe +1, sağdaki sayaç dolunca {barcode.start} → {String(Number(barcode.start) + 1)} olur.</div>
-              })()}
-            </>
+          <Field label="Sonraki numara" auto="Her tahsiste +1 artar, 13 haneye tamamlanıp kontrol hanesi eklenir">
+            <Input mono value={barcode.nextValue} onChange={(e) => setBarcode((b) => ({ ...b, nextValue: e.target.value.replace(/[^0-9]/g, '') }))} style={{ maxWidth: 220 }} />
+          </Field>
+          {startsWith2 && <div style={{ marginTop: 8 }}><Banner tone="warning" title="Öneri">2 ile başlayan barkodlar GS1'de mağaza-içi/dahili banttır. Engel değil ama tavsiye etmeyiz.</Banner></div>}
+          <div style={{ marginTop: 12 }}>
+            <Switch
+              checked={barcode.clientAllocationRequired}
+              onChange={(e) => setBarcode((b) => ({ ...b, clientAllocationRequired: e.target.checked }))}
+              label="İstemci tahsisi zorunlu"
+            />
+            <div className="list-meta" style={{ marginTop: 6 }}>
+              Açıkken barkodlar ürün oluştururken otomatik atanmaz; önceden tahsis edilip elle girilir.
+            </div>
+          </div>
+          {barcode.nextPreview && (
+            <div className="list-meta" style={{ marginTop: 12 }}>Sıradaki barkod: <span className="mono pim-td-strong">{barcode.nextPreview}</span></div>
           )}
         </div>
         <div className="pim-card__footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)' }}>

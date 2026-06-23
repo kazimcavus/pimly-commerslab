@@ -5,11 +5,10 @@ import { I } from './icons.jsx'
 export function Login({ onSignIn, error, loading }) {
   const [email, setEmail] = useState('owner@acme.test')
   const [password, setPassword] = useState('')
-  const [tenant, setTenant] = useState('')
 
   const submit = (e) => {
     e.preventDefault()
-    onSignIn(email, password, tenant.trim())
+    onSignIn(email, password)
   }
 
   return (
@@ -25,7 +24,7 @@ export function Login({ onSignIn, error, loading }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 18, color: '#7e7568', fontSize: 13 }}>
-          <span>Multi-tenant</span><span>·</span><span>Trendyol-ready</span><span>·</span><span>v1</span>
+          <span>PIM</span><span>·</span><span>Trendyol-ready</span><span>·</span><span>v1</span>
         </div>
         <img className="login__layers" src="/assets/pimly-mark.svg" alt="" style={{ width: 320 }} />
       </div>
@@ -41,9 +40,6 @@ export function Login({ onSignIn, error, loading }) {
           </Field>
           <Field label="Şifre">
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} icon={I('lock')} />
-          </Field>
-          <Field label="Tenant slug" optional help="Birden fazla mağazan varsa belirt.">
-            <Input mono placeholder="acme-tekstil" value={tenant} onChange={(e) => setTenant(e.target.value)} />
           </Field>
           <Button variant="primary" fullWidth type="submit" loading={loading}>Giriş yap</Button>
           <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>

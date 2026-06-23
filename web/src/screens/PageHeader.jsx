@@ -1,8 +1,9 @@
 import React from 'react'
 import { Badge } from '../ds'
 import { I } from './icons.jsx'
+import { HelpHint } from '../help/Help.jsx'
 
-export function PageHeader({ eyebrow, title, sub, actions, crumbs }) {
+export function PageHeader({ eyebrow, title, sub, actions, crumbs, help }) {
   return (
     <div>
       {crumbs && (
@@ -22,7 +23,7 @@ export function PageHeader({ eyebrow, title, sub, actions, crumbs }) {
       <div className="ph">
         <div>
           {eyebrow && <div className="ph__eyebrow">{eyebrow}</div>}
-          <div className="ph__title">{title}</div>
+          <div className="ph__title">{title}{help && <HelpHint topic={help} size="lg" />}</div>
           {sub && <div className="ph__sub">{sub}</div>}
         </div>
         {actions && <div className="ph__actions">{actions}</div>}

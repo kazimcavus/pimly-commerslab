@@ -1,6 +1,6 @@
 /* ============================================================
    pimly — Spacing & sizing tokens
-   4px base grid. Balanced density (Shopify-admin-like).
+   4px base grid. Airy, macOS-leaning density.
    ============================================================ */
 :root {
   --space-0:  0;
@@ -19,14 +19,15 @@
   --space-32: 64px;
   --space-40: 80px;
 
-  /* Control heights (balanced density) */
+  /* Control heights */
   --control-sm: 28px;
   --control-md: 34px;   /* default input / button */
   --control-lg: 40px;
 
   /* Layout */
-  --sidebar-w:   248px;
-  --topbar-h:    56px;
-  --content-max: 1180px;
-  --page-gutter: 24px;
+  --sidebar-w:     250px;
+  --topbar-h:      54px;
+  --content-max:   1160px;
+  --page-gutter:   30px;
+  --content-radius: 16px;  /* rounded top-left of the floating content surface */
 }

@@ -58,14 +58,14 @@ export function Attributes({ onToast }) {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Tanımlar" title="Özellikler"
+      <PageHeader eyebrow="Tanımlar" title="Özellikler" help="attributes"
         sub="Ürün özellikleri ve değerleri — örn. Kumaş → Pamuk, Polyester. Kategorilere atanır, ürün açarken seçilir."
         actions={<Button variant="accent" iconLeft={I('plus')} onClick={openCreate}>Özellik ekle</Button>} />
       <div className="split">
         <div className="tree">
           {attrs.map((a) => (
             <div key={a.id} className="tree__node" data-active={sel === a.id} onClick={() => setSel(a.id)}>
-              {I('tag')}<span>{a.name}</span>
+              {I('tag')}<span className="tree__name">{a.name}</span>
             </div>
           ))}
           {attrs.length === 0 && <div className="list-meta" style={{ padding: 12 }}>Henüz özellik yok. Sağ üstten ekleyin.</div>}

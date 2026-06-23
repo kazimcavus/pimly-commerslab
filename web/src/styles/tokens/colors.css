@@ -111,12 +111,16 @@
   --success-bg: var(--green-50);
   --success-fg: var(--green-700);
 
-  /* Sidebar (slightly deeper warm panel) */
+  /* Sidebar (clean solid panel) */
   --sidebar-bg:       var(--warm-100);
   --sidebar-fg:       var(--warm-700);
   --sidebar-fg-active:var(--warm-950);
   --sidebar-active-bg:var(--warm-0);
+  --sidebar-active-fg:var(--warm-950);
   --sidebar-border:   var(--warm-200);
+
+  /* Login backdrop tint */
+  --desktop-tint:   var(--warm-150);
 }
 
 /* ===== Dark theme ===== */
@@ -181,5 +185,8 @@
   --sidebar-fg:       #9d9da6;
   --sidebar-fg-active:#f6f6f7;
   --sidebar-active-bg:var(--warm-900);
+  --sidebar-active-fg:#f6f6f7;
   --sidebar-border:   #262629;
+
+  --desktop-tint:   #0c0d0f;
 }
