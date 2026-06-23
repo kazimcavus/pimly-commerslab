@@ -35,7 +35,7 @@ public sealed class CreateProductItemInputValidator : AbstractValidator<CreatePr
     /// </summary>
     public CreateProductItemInputValidator()
     {
-        RuleFor(x => x.Barcode).VariantBarcode();
+        RuleFor(x => x.Barcode).OptionalVariantBarcode();
         RuleFor(x => x.Sku).OptionalVariantSku();
         RuleFor(x => x.Price).GreaterThanOrEqualTo(0)
             .WithMessage("Price cannot be negative.");
