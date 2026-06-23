@@ -121,7 +121,8 @@ internal static class ProductCreationSupport
                     variantType.SelectionStyle,
                     variantType.Slicer),
                 value.Id,
-                value.Label));
+                value.Label,
+                value.Code));
         }
 
         return Result.Success<IReadOnlyList<VariantValue>>(resolved);

@@ -9,6 +9,7 @@ public sealed record CreateProductCommand(
     string ModelCode,
     string Name,
     string Status,
+    IReadOnlyList<string>? CodeInputs,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     IReadOnlyList<Variant>? Variants,
     IReadOnlyList<CreateProductItemInput> Items);

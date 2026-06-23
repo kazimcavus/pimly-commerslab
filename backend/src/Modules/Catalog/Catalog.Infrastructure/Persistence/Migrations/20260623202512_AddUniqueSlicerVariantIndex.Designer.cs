@@ -3,6 +3,7 @@ using System;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Catalog.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CatalogDbContext))]
-    partial class CatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260623202512_AddUniqueSlicerVariantIndex")]
+    partial class AddUniqueSlicerVariantIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -244,30 +247,6 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasFilter("sku IS NOT NULL");
 
                     b.ToTable("product_items", "catalog");
-                });
-
-            modelBuilder.Entity("Catalog.Domain.SkuGenerator.SkuGeneratorConfig", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    b.Property<long>("CounterNextValue")
-                        .HasColumnType("bigint")
-                        .HasColumnName("counter_next_value");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("enabled");
-
-                    b.Property<string>("_segments")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("segments");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("sku_generator_config", "catalog");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Variants.Variant", b =>

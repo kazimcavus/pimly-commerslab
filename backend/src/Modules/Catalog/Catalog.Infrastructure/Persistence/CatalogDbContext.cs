@@ -2,6 +2,7 @@ using Catalog.Domain;
 using Catalog.Domain.Barcodes;
 using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
+using Catalog.Domain.SkuGenerator;
 using Catalog.Domain.Variants;
 using Microsoft.EntityFrameworkCore;
 using CatalogVariant = Catalog.Domain.Variants.Variant;
@@ -30,6 +31,8 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
     public DbSet<BarcodeSequence> BarcodeSequences => Set<BarcodeSequence>();
 
     public DbSet<BarcodeAllocation> BarcodeAllocations => Set<BarcodeAllocation>();
+
+    public DbSet<SkuGeneratorConfig> SkuGeneratorConfigs => Set<SkuGeneratorConfig>();
 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

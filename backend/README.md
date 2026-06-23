@@ -91,6 +91,7 @@ Login yanıtı: `{ "token", "expires_at", "user": { "id", "email", "name" } }`
 | Ürünler | `POST /products`, `POST /products:batch`, `GET/PATCH/DELETE /products/{id}` |
 | Ürün kalemleri | `GET/PATCH/DELETE /items/{id}` |
 | Barkod serisi | `GET/PUT /barcode-sequence`, `POST /barcodes:allocate`, `GET /barcode-allocations` |
+| SKU oluşturucu | `GET/PUT /sku-config` |
 
 Sağlık: `GET /healthz`
 
@@ -115,8 +116,8 @@ ayağa kaldırır; Docker yoksa testler **atlanır** (`SkippableFact`), build k�
 - v1 tek kiracılıdır (şema-başına-kiracı yoktur).
 - Identity, ASP.NET `PasswordHasher` ve minimal JWT claim'leri (`sub`, `email`)
   kullanır; v1'de rol tabanlı yetkilendirme yoktur.
-- `model_code` üretimi henüz backend'de yoktur; client gönderir. Ürün kodu üretici
-  mantığı frontend'de (localStorage) yaşar — bkz.
+- `model_code` / varyant `sku` üretimi generator açıkken sunucuda yapılır; client
+  `code_inputs` gönderir. Kapalıyken client `model_code` gönderir. Bkz.
   [`../docs/product-code-generator.md`](../docs/product-code-generator.md).
 - Slicer varyant tipleri `POST /products:batch` ile birden çok ürüne bölünür;
   `POST /products` tam olarak bir ürün oluşturur.

@@ -81,6 +81,67 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         await Client.DeleteAsync($"/api/v1/catalog/variants/{created.Id}");
     }
+
+    [SkippableFact]
+    public async Task CreateVariantType_SecondSlicer_Returns409()
+    {
+        var firstResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
+        {
+            name = $"Slicer-A-{Guid.NewGuid():N}",
+            selectionStyle = "color",
+            sortOrder = 0,
+            slicer = true,
+        });
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var first = await firstResponse.Content.ReadFromJsonAsync<VariantResponse>();
+
+        var secondResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
+        {
+            name = $"Slicer-B-{Guid.NewGuid():N}",
+            selectionStyle = "list",
+            sortOrder = 1,
+            slicer = true,
+        });
+        await CatalogHttpAssertions.AssertProblemAsync(secondResponse, HttpStatusCode.Conflict, "conflict");
+
+        await Client.DeleteAsync($"/api/v1/catalog/variants/{first!.Id}");
+    }
+
+    [SkippableFact]
+    public async Task UpdateVariantType_SecondSlicer_Returns409()
+    {
+        var slicerResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
+        {
+            name = $"Slicer-A-{Guid.NewGuid():N}",
+            selectionStyle = "color",
+            sortOrder = 0,
+            slicer = true,
+        });
+        slicerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var slicer = await slicerResponse.Content.ReadFromJsonAsync<VariantResponse>();
+
+        var otherResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
+        {
+            name = $"Other-{Guid.NewGuid():N}",
+            selectionStyle = "list",
+            sortOrder = 1,
+            slicer = false,
+        });
+        otherResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var other = await otherResponse.Content.ReadFromJsonAsync<VariantResponse>();
+
+        var patchResponse = await Client.PatchAsJsonAsync($"/api/v1/catalog/variants/{other!.Id}", new
+        {
+            name = other.Name,
+            selectionStyle = "list",
+            sortOrder = 1,
+            slicer = true,
+        });
+        await CatalogHttpAssertions.AssertProblemAsync(patchResponse, HttpStatusCode.Conflict, "conflict");
+
+        await Client.DeleteAsync($"/api/v1/catalog/variants/{other.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/variants/{slicer!.Id}");
+    }
 }
 
 internal sealed record VariantResponse(Guid Id, string Name, bool Slicer);

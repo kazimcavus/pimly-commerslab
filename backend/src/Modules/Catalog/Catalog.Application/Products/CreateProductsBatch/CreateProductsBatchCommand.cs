@@ -13,6 +13,7 @@ public sealed record CreateProductsBatchItem(
     string ModelCode,
     string Name,
     string Status,
+    IReadOnlyList<string>? CodeInputs,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     IReadOnlyList<Variant>? Variants,
     IReadOnlyList<CreateProduct.CreateProductItemInput> Items);

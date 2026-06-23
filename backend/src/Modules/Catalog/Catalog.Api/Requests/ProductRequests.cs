@@ -9,6 +9,7 @@ public sealed record CreateProductRequest(
     [property: JsonPropertyName("model_code")] string ModelCode,
     string Name,
     string Status,
+    [property: JsonPropertyName("code_inputs")] IReadOnlyList<string>? CodeInputs,
     [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues,
     [property: JsonPropertyName("variants")] JsonElement? Variants,
     IReadOnlyList<CreateProductItemRequest> Items);
@@ -23,6 +24,7 @@ public sealed record BatchProductRequest(
     [property: JsonPropertyName("model_code")] string ModelCode,
     string Name,
     string Status,
+    [property: JsonPropertyName("code_inputs")] IReadOnlyList<string>? CodeInputs,
     [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues,
     [property: JsonPropertyName("variants")] JsonElement? Variants,
     IReadOnlyList<CreateProductItemRequest> Items);

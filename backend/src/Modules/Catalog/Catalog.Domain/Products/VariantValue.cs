@@ -4,4 +4,4 @@ namespace Catalog.Domain.Products;
 
 /// <example>"Renk" ekseni altında Name "Kırmızı".</example>
 
-public sealed record VariantValue(Variant Variant, Guid Id, string Name);
+public sealed record VariantValue(Variant Variant, Guid Id, string Name, string? Code = null);

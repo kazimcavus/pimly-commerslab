@@ -44,11 +44,10 @@ public class CreateProductCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyModelCode_Fails()
+    public void Validate_WhitespaceModelCode_AllowedAtValidationLayer()
     {
         var result = _validator.Validate(ValidCommand() with { ModelCode = "  " });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "ModelCode");
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -92,6 +91,7 @@ public class CreateProductCommandValidatorTests
             "Title",
             "draft",
             null,
+            null,
             [],
             [ValidItem()]);
 
@@ -120,6 +120,7 @@ public class CreateProductsBatchCommandValidatorTests
             "Title",
             "draft",
             null,
+            null,
             [],
             [new CreateProductItemInput(null, "8690000001", null, null, null, null, 10m, null, 5, null, null)]);
 
@@ -134,6 +135,7 @@ public class CreateProductsBatchCommandValidatorTests
             "SKU-001",
             "Title",
             "draft",
+            null,
             null,
             [],
             [new CreateProductItemInput(null, "8690000002", null, null, null, null, -1m, null, 5, null, null)]);

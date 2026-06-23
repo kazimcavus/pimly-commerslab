@@ -12,6 +12,8 @@ public interface IVariantRepository
 
     Task<Variant?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
+    Task<Variant?> GetSlicerVariantAsync(Guid? excludeId = null, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Variant>> ListAsync(CancellationToken cancellationToken = default);
 
     Task<PagedResult<Variant>> ListAsync(Pagination pagination, CancellationToken cancellationToken = default);

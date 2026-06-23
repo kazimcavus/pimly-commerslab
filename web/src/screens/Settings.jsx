@@ -3,7 +3,7 @@ import { Button, Field, Input, Select, Switch, Banner } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
-import { loadSkuConfig, saveSkuConfig } from '../lib/skuConfig.js'
+import { loadSkuConfig, saveSkuConfig, loadSkuConfigSync } from '../lib/skuConfig.js'
 import { HelpHint } from '../help/Help.jsx'
 
 // Generic, company-agnostic building blocks. Each segment carries a
@@ -19,11 +19,11 @@ const SEG_TYPES = [
 ]
 
 // A sample token for the live preview of each segment.
-const sampleToken = (s) => {
+const sampleToken = (s, counterNext) => {
   const yy = new Date().getFullYear()
   switch (s.type) {
     case 'fixed': return (s.value || '').toUpperCase() || '··'
-    case 'counter': return String(s.start ?? 1).padStart(s.width || 4, '0')
+    case 'counter': return String(counterNext ?? s.start ?? 1).padStart(s.width || 4, '0')
     case 'year': return s.digits === 4 ? String(yy) : String(yy % 100)
     case 'manual': return '...'
     case 'color': return s.source === 'name' ? 'KIRMIZI' : 'R08'
@@ -39,7 +39,7 @@ const labelPh = (t) => ({
 }[t] || 'Başlık')
 
 export function Settings({ onToast }) {
-  const [sku, setSku] = useState({ enabled: false, segments: [] })
+  const [sku, setSku] = useState({ enabled: false, segments: [], counterNextValue: null })
   // Barkod serisi (.NET Catalog): { next_value, client_allocation_required, next_preview }.
   const [barcode, setBarcode] = useState({ nextValue: '', clientAllocationRequired: false, nextPreview: '' })
   const [loaded, setLoaded] = useState(false)
@@ -49,9 +49,13 @@ export function Settings({ onToast }) {
   const [insertAt, setInsertAt] = useState(null)
 
   useEffect(() => {
-    // SKU config frontend-only (localStorage).
-    setSku(loadSkuConfig())
-    // Barkod serisi .NET'ten; yapılandırılmamışsa (404) varsayılan kalır.
+    loadSkuConfig()
+      .then((cfg) => setSku({
+        enabled: cfg.enabled,
+        segments: cfg.segments,
+        counterNextValue: cfg.counterNextValue ?? null,
+      }))
+      .catch(() => setSku(loadSkuConfigSync()))
     api.getBarcodeSequence()
       .then((b) => setBarcode({
         nextValue: b.next_value != null ? String(b.next_value) : '',
@@ -74,10 +78,10 @@ export function Settings({ onToast }) {
     return { ...s, segments: segs }
   })
 
-  const productPreview = sku.segments.filter((s) => !isVariantSeg(s.type)).map(sampleToken).join('')
-  const variantPreview = sku.segments.map(sampleToken).join('')
+  const productPreview = sku.segments.filter((s) => !isVariantSeg(s.type)).map((s) => sampleToken(s, sku.counterNextValue)).join('')
+  const variantPreview = sku.segments.map((s) => sampleToken(s, sku.counterNextValue)).join('')
 
-  const saveSku = () => {
+  const saveSku = async () => {
     setSavingSku(true)
     try {
       const segments = sku.segments.map((s) => {
@@ -88,7 +92,12 @@ export function Settings({ onToast }) {
         if (isVariantSeg(s.type)) o.source = s.source === 'name' ? 'name' : 'code'
         return o
       })
-      saveSkuConfig({ enabled: sku.enabled, segments })
+      const saved = await saveSkuConfig({
+        enabled: sku.enabled,
+        segments,
+        counterNextValue: sku.counterNextValue,
+      })
+      setSku((s) => ({ ...s, counterNextValue: saved.counterNextValue ?? s.counterNextValue }))
       onToast?.({ tone: 'success', title: 'Ürün kodu ayarı kaydedildi' })
     } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
     finally { setSavingSku(false) }
@@ -115,9 +124,9 @@ export function Settings({ onToast }) {
 
   return (
     <div className="page" style={{ maxWidth: 860 }}>
-      <PageHeader eyebrow="Platform" title="Ayarlar" sub="Ürün kodu (SKU) oluşturucu ve barkod serisi. Kod üretici tarayıcıda saklanır; barkod serisi backend'de tutulur." />
+      <PageHeader eyebrow="Platform" title="Ayarlar" sub="Ürün kodu (SKU) oluşturucu ve barkod serisi — ikisi de backend'de tutulur." />
 
-      {/* SKU GENERATOR — frontend-only (localStorage) */}
+      {/* SKU GENERATOR — .NET Catalog */}
       <div className="pim-card" style={{ marginBottom: 18 }}>
         <div className="pim-card__header">
           <div className="hstack">{I('wand-2')}<span className="pim-card__title">Ürün Kodu Oluşturucu</span><HelpHint topic="sku-generator" /></div>
@@ -144,7 +153,7 @@ export function Settings({ onToast }) {
                       <div style={{ width: 200 }}>
                         <Select value={s.type} onChange={(e) => setSeg(i, { type: e.target.value })} options={SEG_TYPES} />
                       </div>
-                      <span className="typechip" style={{ marginLeft: 'auto' }}>{sampleToken(s)}</span>
+                      <span className="typechip" style={{ marginLeft: 'auto' }}>{sampleToken(s, sku.counterNextValue)}</span>
                       <button className="tb__icon" style={{ width: 26, height: 26 }} title="Kaldır" onClick={() => removeSeg(i)}>{I('trash-2')}</button>
                     </div>
                     <div className="hstack" style={{ gap: 8, marginTop: 8, paddingLeft: 56, flexWrap: 'wrap', alignItems: 'flex-start' }}>

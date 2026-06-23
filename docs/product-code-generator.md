@@ -1,13 +1,15 @@
 # Ürün Kodu (SKU) Oluşturucu — Mantık Belgesi
 
-> **Durum:** Şu an **frontend-only** çalışıyor — yapılandırma tarayıcıda `localStorage`
-> (`pimly_sku_config` anahtarı) içinde tutulur, backend yoktur. Bu belge mantığı
-> birebir tanımlar; ileride aynı kurallar **.NET Catalog** modülüne taşınacaktır.
+> **Durum:** **.NET Catalog** modülünde uygulanmıştır — yapılandırma `GET/PUT /api/v1/catalog/sku-config`
+> ile kalıcıdır; token/birleştirme ve atomik sayaç sunucuda çalışır. Frontend yalnızca
+> şablonu yönetir ve `code_inputs` gönderir; `model_code` / varyant `sku` sunucuda üretilir.
 >
 > **Kaynak referans:**
-> - `web/src/lib/skuConfig.js` — yükle/kaydet
-> - `web/src/screens/Settings.jsx` — segment editörü ve önizleme (`sampleToken`)
-> - `web/src/screens/ProductBuilder.jsx` — gerçek üretim (`skuToken`, `optToken`, `variantSkuPreview`)
+> - `backend/src/Modules/Catalog/Catalog.Domain/SkuGenerator/` — token/birleştirme mantığı
+> - `backend/src/Modules/Catalog/Catalog.Application/SkuGenerator/` — config API + üretim servisi
+> - `web/src/lib/skuConfig.js` — API wrapper (localStorage tek seferlik migrate)
+> - `web/src/screens/Settings.jsx` — segment editörü ve önizleme
+> - `web/src/screens/ProductBuilder.jsx` — `code_inputs` gönderimi; önizleme (`variantSkuPreview`)
 
 ---
 
@@ -129,14 +131,11 @@ variantSku = productCode + (şablondaki color/size segmentlerinin sırasıyla to
 
 ---
 
-## 7. .NET'e Taşıma Notları
+## 7. .NET uygulaması
 
-- Yapılandırma için bir **Catalog ayar** kalıcılığı gerekir (örn. `GET/PUT /api/v1/catalog/settings/sku`),
-  şekil: `{ enabled, segments[] }`.
-- Token/birleştirme kuralları yukarıdaki tablolarla birebir uygulanmalı.
-- `counter` segmenti sunucu tarafında **atomik** artırılmalı (eşzamanlılık güvenli),
-  tıpkı barkod serisi (`barcode-sequence`) gibi.
-- `model_code` üretimi backend'e taşınınca, `POST /products:batch` artık client'tan
-  `model_code` yerine `code_inputs` (manual segment değerleri) alıp kodu sunucuda üretebilir.
-- Barkod serisi zaten .NET'te (`BarcodeEndpoints` — `barcode-sequence`, `barcodes:allocate`);
-  SKU üreticisi de aynı desende eklenebilir.
+- Yapılandırma: `GET/PUT /api/v1/catalog/sku-config` — şekil: `{ enabled, segments[], counter_next_value? }`.
+- Token/birleştirme kuralları bu belgedeki tablolarla birebir uygulanır (`SkuCodeAssembler`).
+- `counter` segmenti PostgreSQL `UPDATE … RETURNING` ile atomik artırılır (`SkuCounterAllocator`).
+- `POST /products:batch` (ve `POST /products`) generator açıkken boş `model_code` kabul eder;
+  `code_inputs` (manual segment değerleri) alır; kodları sunucuda üretir.
+- Barkod serisi aynı desende ayrı yaşar (`barcode-sequence`, `barcodes:allocate`).

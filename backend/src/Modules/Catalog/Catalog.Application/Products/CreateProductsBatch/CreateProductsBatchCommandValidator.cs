@@ -29,7 +29,11 @@ public sealed class CreateProductsBatchItemValidator : AbstractValidator<CreateP
     /// </summary>
     public CreateProductsBatchItemValidator()
     {
-        RuleFor(x => x.ModelCode).ModelCode();
+        RuleFor(x => x.ModelCode)
+            .MaximumLength(CatalogValidationRules.ModelCodeMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("ModelCode", CatalogValidationRules.ModelCodeMaxLength))
+            .When(x => !string.IsNullOrWhiteSpace(x.ModelCode));
         RuleFor(x => x.Name).ProductName();
         RuleFor(x => x.Status).ProductStatus();
         RuleFor(x => x.Items).NotEmpty()

@@ -18,6 +18,9 @@ internal sealed class VariantConfiguration : IEntityTypeConfiguration<Variant>
         builder.Property(v => v.Slicer).HasColumnName("slicer").HasDefaultValue(false);
         builder.Ignore(v => v.DomainEvents);
         builder.HasIndex(v => v.Name).IsUnique();
+        builder.HasIndex(v => v.Slicer)
+            .IsUnique()
+            .HasFilter("slicer = true");
 
         builder.Property(v => v.SelectionStyle)
             .HasColumnName("selection_style")

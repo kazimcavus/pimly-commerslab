@@ -1,4 +1,5 @@
 using Catalog.Application.Contracts;
+using Catalog.Application.SkuGenerator;
 using Catalog.Application.Validation;
 using Catalog.Domain;
 using Catalog.Domain.Products;
@@ -13,6 +14,7 @@ public sealed class CreateProductHandler(
     IProductRepository products,
     IVariantRepository variantTypes,
     IAttributeRepository attributes,
+    ISkuGeneratorService skuGenerator,
     IUnitOfWork unitOfWork) : ICreateProductHandler
 {
     /// <inheritdoc/>
@@ -63,36 +65,40 @@ public sealed class CreateProductHandler(
             return Result.Failure<ProductDto>(itemDraftsResult.Error);
         }
 
-        var itemDrafts = itemDraftsResult.Value;
+        var plansResult = await skuGenerator.BuildPlansAsync(
+            command.ModelCode,
+            command.CodeInputs,
+            command.Name,
+            resolvedTypesResult.Value,
+            itemDraftsResult.Value,
+            cancellationToken);
 
-        if (await products.ModelCodeExistsAsync(command.ModelCode, cancellationToken))
+        if (plansResult.IsFailure)
         {
-            return Result.Failure<ProductDto>(Error.Conflict("Model code already exists."));
+            return Result.Failure<ProductDto>(plansResult.Error);
         }
 
-        foreach (var item in itemDrafts)
-        {
-            if (await products.BarcodeExistsAsync(item.Barcode, cancellationToken))
-            {
-                return Result.Failure<ProductDto>(Error.Conflict($"Barcode '{item.Barcode}' already exists."));
-            }
+        var plan = plansResult.Value.Single();
 
-            if (!string.IsNullOrWhiteSpace(item.Sku) &&
-                await products.VariantSkuExistsAsync(item.Sku, cancellationToken))
-            {
-                return Result.Failure<ProductDto>(Error.Conflict($"Variant SKU '{item.Sku}' already exists."));
-            }
+        var persistenceUniquenessResult = await ProductCreationSupport.EnsurePlanIsUniqueAsync(
+            products,
+            plan,
+            cancellationToken);
+
+        if (persistenceUniquenessResult.IsFailure)
+        {
+            return Result.Failure<ProductDto>(persistenceUniquenessResult.Error);
         }
 
         var status = ProductMappings.ParseStatus(command.Status);
         var createResult = Product.Create(
             command.GroupId,
-            command.ModelCode,
-            command.Name,
+            plan.ModelCode,
+            plan.Name,
             status,
             attributeValuesResult.Value,
-            resolvedTypesResult.Value,
-            itemDrafts.ToList());
+            plan.Variants,
+            plan.Items.ToList());
 
         if (createResult.IsFailure)
         {

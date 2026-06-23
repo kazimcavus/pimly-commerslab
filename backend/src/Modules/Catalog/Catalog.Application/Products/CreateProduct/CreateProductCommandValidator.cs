@@ -13,7 +13,11 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
     public CreateProductCommandValidator()
     {
         RuleFor(x => x.GroupId).RequiredGroupId();
-        RuleFor(x => x.ModelCode).ModelCode();
+        RuleFor(x => x.ModelCode)
+            .MaximumLength(CatalogValidationRules.ModelCodeMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("ModelCode", CatalogValidationRules.ModelCodeMaxLength))
+            .When(x => !string.IsNullOrWhiteSpace(x.ModelCode));
         RuleFor(x => x.Name).ProductName();
         RuleFor(x => x.Status).ProductStatus();
         RuleFor(x => x.Items).NotEmpty()

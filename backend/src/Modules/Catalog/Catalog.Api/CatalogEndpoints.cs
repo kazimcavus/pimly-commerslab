@@ -23,6 +23,7 @@ public static class CatalogEndpoints
         group.MapProductEndpoints();
         group.MapProductItemEndpoints();
         group.MapBarcodeEndpoints();
+        group.MapSkuGeneratorEndpoints();
 
         return group;
     }

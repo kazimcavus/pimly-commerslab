@@ -65,10 +65,11 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     }).catch(() => { if (alive) { setCatAttrs([]); setAttrVals({}) } })
     return () => { alive = false }
   }, [categoryId])
-  // SKU şablonu frontend-only (localStorage); barkod serisi .NET'ten.
+  // SKU şablonu .NET Catalog'dan; barkod serisi .NET'ten.
   useEffect(() => {
-    const cfg = loadSkuConfig()
-    if (cfg.enabled && cfg.segments.length) setSkuCfg({ enabled: true, segments: cfg.segments })
+    loadSkuConfig()
+      .then((cfg) => { if (cfg.enabled && cfg.segments.length) setSkuCfg({ enabled: true, segments: cfg.segments }) })
+      .catch(() => {})
   }, [])
   useEffect(() => {
     // Seri yapılandırılmış ve istemci tahsisi gerekmiyorsa barkod otomatik atanır.
@@ -257,13 +258,16 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     // group_id is a shared "model" id (not an FK); the backend splits by the
     // slicer variant type (read from the DB) into one product per slicer value.
     const netProduct = {
-      model_code: (product.product_sku || groupCode || '').trim(),
+      model_code: skuOn ? '' : (product.product_sku || groupCode || '').trim(),
+      code_inputs: skuOn
+        ? skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
+        : undefined,
       name: title.trim(),
       status,
       attribute_values: (product.attribute_values || []).map((a) => ({ attribute_id: a.attribute_id, attribute_value_id: a.attribute_value_id })),
       variants: (product.variant_types || []).map((t) => ({ id: t.id, name: t.name, selection_style: t.selection_style })),
       items: product.variants.map((v) => ({
-        sku: v.sku || null,
+        sku: skuOn ? null : (v.sku || null),
         barcode: v.barcode,
         price: v.price,
         compare_at_price: v.compare_at_price,

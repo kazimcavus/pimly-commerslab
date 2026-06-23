@@ -36,6 +36,12 @@ public sealed class UpdateVariantTypeHandler(
             return Result.Failure<VariantTypeDto>(Error.Conflict("Variant type name already exists."));
         }
 
+        if (command.Slicer &&
+            await variantTypes.GetSlicerVariantAsync(command.Id, cancellationToken) is not null)
+        {
+            return Result.Failure<VariantTypeDto>(Error.Conflict("Only one variant type can be marked as slicer."));
+        }
+
         var style = string.IsNullOrWhiteSpace(command.SelectionStyle)
             ? SelectionStyle.List
             : CatalogMappings.ParseSelectionStyle(command.SelectionStyle);

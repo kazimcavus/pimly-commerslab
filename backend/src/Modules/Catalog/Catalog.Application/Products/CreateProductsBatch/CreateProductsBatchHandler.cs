@@ -1,4 +1,5 @@
 using Catalog.Application.Contracts;
+using Catalog.Application.SkuGenerator;
 using Catalog.Application.Validation;
 using Catalog.Domain;
 using Catalog.Domain.Products;
@@ -13,6 +14,7 @@ public sealed class CreateProductsBatchHandler(
     IProductRepository products,
     IVariantRepository variantTypes,
     IAttributeRepository attributes,
+    ISkuGeneratorService skuGenerator,
     IUnitOfWork unitOfWork) : ICreateProductsBatchHandler
 {
     /// <inheritdoc/>
@@ -64,11 +66,13 @@ public sealed class CreateProductsBatchHandler(
                 return Result.Failure<CreateProductsBatchResult>(itemDraftsResult.Error);
             }
 
-            var plansResult = ProductCreateSplitter.Split(
+            var plansResult = await skuGenerator.BuildPlansAsync(
                 item.ModelCode,
+                item.CodeInputs,
                 item.Name,
                 resolvedTypesResult.Value,
-                itemDraftsResult.Value.ToList());
+                itemDraftsResult.Value,
+                cancellationToken);
 
             if (plansResult.IsFailure)
             {

@@ -1,8 +1,11 @@
 using Catalog.Application.Barcodes;
+using Catalog.Application.SkuGenerator;
 using Catalog.Domain;
+using Catalog.Domain.SkuGenerator;
 using Catalog.Infrastructure.Barcodes;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Repositories;
+using Catalog.Infrastructure.SkuGenerator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<IBarcodeSequenceRepository, BarcodeSequenceRepository>();
         services.AddScoped<IBarcodeAllocationRepository, BarcodeAllocationRepository>();
         services.AddScoped<IBarcodeAllocator, BarcodeAllocator>();
+        services.AddScoped<ISkuGeneratorConfigRepository, SkuGeneratorConfigRepository>();
+        services.AddScoped<ISkuCounterAllocator, SkuCounterAllocator>();
 
         return services;
     }

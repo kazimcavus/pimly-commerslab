@@ -117,4 +117,8 @@ export const api = {
   putBarcodeSequence: (b) => req('PUT', `${CATALOG}/barcode-sequence`, { body: b }),
   allocateBarcodes: (count) => req('POST', `${CATALOG}/barcodes:allocate`, { body: { count } }),
   listBarcodeAllocations: () => reqList(`${CATALOG}/barcode-allocations`),
+
+  // --- SKU oluşturucu (Catalog modülü) ---
+  getSkuConfig: () => req('GET', `${CATALOG}/sku-config`),
+  putSkuConfig: (b) => req('PUT', `${CATALOG}/sku-config`, { body: b }),
 }

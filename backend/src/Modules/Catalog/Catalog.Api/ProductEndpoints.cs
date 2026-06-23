@@ -71,6 +71,7 @@ internal static class ProductEndpoints
             request.ModelCode,
             request.Name,
             request.Status,
+            request.CodeInputs,
             ProductInputMapper.MapAttributeValues(request.AttributeValues),
             ProductInputMapper.MapVariants(request.Variants),
             MapItemInputs(request.Items));
@@ -80,6 +81,7 @@ internal static class ProductEndpoints
             request.ModelCode,
             request.Name,
             request.Status,
+            request.CodeInputs,
             ProductInputMapper.MapAttributeValues(request.AttributeValues),
             ProductInputMapper.MapVariants(request.Variants),
             MapItemInputs(request.Items));

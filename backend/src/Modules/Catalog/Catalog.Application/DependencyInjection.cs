@@ -29,6 +29,9 @@ using Catalog.Application.Products.GetProductItem;
 using Catalog.Application.Products.ListProducts;
 using Catalog.Application.Products.UpdateProduct;
 using Catalog.Application.Products.UpdateProductItem;
+using Catalog.Application.SkuGenerator;
+using Catalog.Application.SkuGenerator.GetSkuGeneratorConfig;
+using Catalog.Application.SkuGenerator.UpdateSkuGeneratorConfig;
 using Catalog.Application.Variants.AddVariantValue;
 using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Application.Variants.DeleteVariantType;
@@ -92,6 +95,10 @@ public static class DependencyInjection
         services.AddScoped<IUpdateBarcodeSequenceHandler, UpdateBarcodeSequenceHandler>();
         services.AddScoped<IAllocateBarcodesHandler, AllocateBarcodesHandler>();
         services.AddScoped<IListBarcodeAllocationsHandler, ListBarcodeAllocationsHandler>();
+
+        services.AddScoped<ISkuGeneratorService, SkuGeneratorService>();
+        services.AddScoped<IGetSkuGeneratorConfigHandler, GetSkuGeneratorConfigHandler>();
+        services.AddScoped<IUpdateSkuGeneratorConfigHandler, UpdateSkuGeneratorConfigHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
