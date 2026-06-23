@@ -13,5 +13,6 @@ public sealed class CreateVariantTypeCommandValidator : AbstractValidator<Create
     {
         RuleFor(x => x.Name).VariantTypeName();
         RuleFor(x => x.SelectionStyle).OptionalSelectionStyle();
+        RuleFor(x => x.Key).OptionalVariantTypeKey();
     }
 }

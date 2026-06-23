@@ -33,7 +33,7 @@ public sealed class AddVariantValueHandler(
             command.Label,
             command.Color,
             command.ImageUrl,
-            command.Code,
+            command.Key,
             command.SortOrder);
 
         if (addResult.IsFailure)

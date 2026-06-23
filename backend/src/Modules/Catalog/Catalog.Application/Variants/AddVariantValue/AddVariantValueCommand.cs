@@ -6,5 +6,5 @@ public sealed record AddVariantValueCommand(
     string Label,
     string? Color,
     string? ImageUrl,
-    string? Code,
+    string? Key,
     int SortOrder);

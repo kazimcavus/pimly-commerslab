@@ -23,7 +23,7 @@ internal static class VariantValueEndpoints
                 request.Label,
                 request.Color,
                 request.ImageUrl,
-                request.Code,
+                request.Key,
                 request.SortOrder));
             return result.ToCreatedResult(dto => $"/api/v1/catalog/variant-values/{dto.Id}");
         });
@@ -48,7 +48,7 @@ internal static class VariantValueEndpoints
                 request.Label,
                 request.Color,
                 request.ImageUrl,
-                request.Code,
+                request.Key,
                 request.SortOrder));
             return result.ToHttpResult();
         });

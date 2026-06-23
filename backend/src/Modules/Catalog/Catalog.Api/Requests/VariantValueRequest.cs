@@ -5,5 +5,5 @@ internal sealed record VariantValueRequest(
     string Label,
     string? Color,
     string? ImageUrl,
-    string? Code,
+    string? Key,
     int SortOrder);

@@ -122,7 +122,7 @@ internal static class ProductCreationSupport
                     variantType.Slicer),
                 value.Id,
                 value.Label,
-                value.Code));
+                value.Key.Value));
         }
 
         return Result.Success<IReadOnlyList<VariantValue>>(resolved);

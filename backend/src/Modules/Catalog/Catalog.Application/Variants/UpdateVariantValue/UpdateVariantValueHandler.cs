@@ -34,7 +34,7 @@ public sealed class UpdateVariantValueHandler(
             command.Label,
             command.Color,
             command.ImageUrl,
-            command.Code,
+            command.Key,
             command.SortOrder);
 
         if (updateResult.IsFailure)

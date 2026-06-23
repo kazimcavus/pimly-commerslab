@@ -1,4 +1,3 @@
-using System.Text;
 using SharedKernel;
 
 namespace Catalog.Domain.Attributes;
@@ -6,10 +5,10 @@ namespace Catalog.Domain.Attributes;
 /// <summary>
 /// Özelliği benzersiz şekilde tanımlayan anahtar değer nesnesi; aggregate oluşturulurken adından türetilir.
 /// </summary>
-/// <example>yaka_tipi.</example>
+/// <example>YAKA_TIPI.</example>
 public sealed class AttributeKey : ValueObject
 {
-    public const int MaxLength = 200;
+    public const int MaxLength = CatalogKeyGenerator.MaxLength;
 
     public string Value { get; }
 
@@ -22,54 +21,18 @@ public sealed class AttributeKey : ValueObject
 
     internal static Result<AttributeKey> FromName(string name)
     {
-        var normalized = name.ToLowerInvariant()
-            .Replace('ı', 'i')
-            .Replace('ş', 's')
-            .Replace('ğ', 'g')
-            .Replace('ü', 'u')
-            .Replace('ö', 'o')
-            .Replace('ç', 'c');
-
-        var builder = new StringBuilder(normalized.Length);
-        var pendingSeparator = false;
-
-        foreach (var ch in normalized)
-        {
-            if (char.IsAsciiLetterOrDigit(ch))
-            {
-                if (pendingSeparator && builder.Length > 0)
-                {
-                    builder.Append('_');
-                }
-
-                builder.Append(ch);
-                pendingSeparator = false;
-                continue;
-            }
-
-            if (!pendingSeparator && builder.Length > 0)
-            {
-                pendingSeparator = true;
-            }
-        }
-
-        return Create(builder.ToString());
+        var generateResult = CatalogKeyGenerator.GenerateFromName(name);
+        return generateResult.IsFailure
+            ? Result.Failure<AttributeKey>(generateResult.Error)
+            : Result.Success(new AttributeKey(generateResult.Value));
     }
 
     internal static Result<AttributeKey> Create(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return Result.Failure<AttributeKey>(Error.Validation("Attribute key is required."));
-        }
-
-        var normalized = value.Trim();
-        if (normalized.Length > MaxLength)
-        {
-            return Result.Failure<AttributeKey>(Error.Validation($"Attribute key must be at most {MaxLength} characters."));
-        }
-
-        return Result.Success(new AttributeKey(normalized));
+        var validateResult = CatalogKeyGenerator.ValidateExplicit(value);
+        return validateResult.IsFailure
+            ? Result.Failure<AttributeKey>(validateResult.Error)
+            : Result.Success(new AttributeKey(validateResult.Value));
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()

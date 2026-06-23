@@ -117,13 +117,13 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
         Guid typeId,
         string label,
         string? color,
-        string code)
+        string key)
     {
         var response = await Client.PostAsJsonAsync($"/api/v1/catalog/variants/{typeId}/values", new
         {
             label,
             color,
-            code,
+            key,
             sortOrder = 0,
         });
 

@@ -15,7 +15,7 @@ public class AttributeKeyTests
     {
         var result = CreateAttribute("Yaka Tipi");
         result.IsSuccess.Should().BeTrue();
-        result.Value.Key.Value.Should().Be("yaka_tipi");
+        result.Value.Key.Value.Should().Be("YAKA_TIPI");
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public class AttributeKeyTests
     {
         var result = CreateAttribute("Size (EU)");
         result.IsSuccess.Should().BeTrue();
-        result.Value.Key.Value.Should().Be("size_eu");
+        result.Value.Key.Value.Should().Be("SIZE_EU");
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public class AttributeKeyTests
     {
         var result = CreateAttribute("---");
         result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("key");
+        result.Error.Message.Should().Contain("Key");
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class AttributeKeyTests
     {
         var result = CreateAttribute(new string('a', AttributeKey.MaxLength + 1));
         result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("key");
+        result.Error.Message.Should().Contain("Key");
     }
 
     [Fact]

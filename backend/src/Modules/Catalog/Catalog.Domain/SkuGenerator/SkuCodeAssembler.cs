@@ -7,7 +7,8 @@ namespace Catalog.Domain.SkuGenerator;
 /// <summary>Segment şablonundan ürün kodu ve varyant SKU üretir.</summary>
 public static class SkuCodeAssembler
 {
-    private const string CodeSource = "code";
+    private const string KeySource = "key";
+    private const string LegacyCodeSource = "code";
 
     /// <summary>Ürün seviyesi kod üretir (color/size segmentleri hariç).</summary>
     public static Result<(string Code, long NextCounter)> AssembleProductCode(
@@ -77,7 +78,7 @@ public static class SkuCodeAssembler
         var useName = string.Equals(source, "name", StringComparison.OrdinalIgnoreCase);
         var raw = useName
             ? selection.Name
-            : selection.Code ?? selection.Name;
+            : selection.Key ?? selection.Name;
 
         return (raw ?? string.Empty).Trim().ToUpperInvariant();
     }
@@ -115,7 +116,7 @@ public static class SkuCodeAssembler
         foreach (var segment in segments)
         {
             if (segment.IsVariantSegment &&
-                string.Equals(segment.Source, CodeSource, StringComparison.OrdinalIgnoreCase))
+                UsesKeySource(segment.Source))
             {
                 var selections = string.Equals(segment.Type, SkuSegmentTypes.Color, StringComparison.OrdinalIgnoreCase)
                     ? variantSelections.Where(v => v.SelectionStyle == SelectionStyle.Color)
@@ -123,10 +124,10 @@ public static class SkuCodeAssembler
 
                 foreach (var selection in selections)
                 {
-                    if (string.IsNullOrWhiteSpace(selection.Code))
+                    if (string.IsNullOrWhiteSpace(selection.Key))
                     {
                         return Result.Failure(Error.Validation(
-                            $"Variant value '{selection.Name}' requires a code for SKU segment '{segment.Type}'."));
+                            $"Variant value '{selection.Name}' requires a key for SKU segment '{segment.Type}'."));
                     }
                 }
             }
@@ -134,6 +135,10 @@ public static class SkuCodeAssembler
 
         return Result.Success();
     }
+
+    private static bool UsesKeySource(string? source) =>
+        string.Equals(source, KeySource, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(source, LegacyCodeSource, StringComparison.OrdinalIgnoreCase);
 
     private static Result<string> BuildNonVariantToken(
         SkuSegment segment,
@@ -186,4 +191,4 @@ public static class SkuCodeAssembler
 public sealed record SkuVariantSelection(
     SelectionStyle SelectionStyle,
     string Name,
-    string? Code);
+    string? Key);

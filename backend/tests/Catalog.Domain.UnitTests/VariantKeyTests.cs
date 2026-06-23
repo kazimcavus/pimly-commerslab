@@ -15,7 +15,7 @@ public class VariantKeyTests
     {
         var result = CreateVariant("Renk");
         result.IsSuccess.Should().BeTrue();
-        result.Value.Key.Value.Should().Be("renk");
+        result.Value.Key.Value.Should().Be("RENK");
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public class VariantKeyTests
     {
         var result = CreateVariant("Size (EU)");
         result.IsSuccess.Should().BeTrue();
-        result.Value.Key.Value.Should().Be("size_eu");
+        result.Value.Key.Value.Should().Be("SIZE_EU");
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public class VariantKeyTests
     {
         var result = CreateVariant("---");
         result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("key");
+        result.Error.Message.Should().Contain("Key");
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class VariantKeyTests
     {
         var result = CreateVariant(new string('a', VariantKey.MaxLength + 1));
         result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("key");
+        result.Error.Message.Should().Contain("Key");
     }
 
     [Fact]

@@ -31,10 +31,10 @@ internal static class CatalogMappings
         new(
             value.Id,
             variantTypeId,
+            value.Key.Value,
             value.Label,
             value.Color,
             value.ImageUrl,
-            value.Code,
             value.SortOrder);
 
     public static SelectionStyle ParseSelectionStyle(string value) =>

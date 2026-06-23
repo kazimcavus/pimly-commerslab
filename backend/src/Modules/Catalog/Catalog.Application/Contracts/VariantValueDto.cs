@@ -4,8 +4,8 @@ namespace Catalog.Application.Contracts;
 public sealed record VariantValueDto(
     Guid Id,
     Guid VariantTypeId,
+    string Key,
     string Label,
     string? Color,
     string? ImageUrl,
-    string? Code,
     int SortOrder);

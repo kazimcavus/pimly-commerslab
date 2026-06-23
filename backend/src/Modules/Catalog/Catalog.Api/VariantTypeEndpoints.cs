@@ -20,7 +20,8 @@ internal static class VariantTypeEndpoints
                 request.Name,
                 request.SelectionStyle ?? "list",
                 request.SortOrder,
-                request.Slicer));
+                request.Slicer,
+                request.Key));
             return result.ToCreatedResult(dto => $"/api/v1/catalog/variants/{dto.Id}");
         });
 

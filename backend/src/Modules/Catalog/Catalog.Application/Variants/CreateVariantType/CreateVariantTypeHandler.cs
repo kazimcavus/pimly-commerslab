@@ -38,7 +38,7 @@ public sealed class CreateVariantTypeHandler(
             ? SelectionStyle.List
             : CatalogMappings.ParseSelectionStyle(command.SelectionStyle);
 
-        var createResult = Variant.Create(command.Name, style, command.SortOrder, command.Slicer);
+        var createResult = Variant.Create(command.Name, style, command.SortOrder, command.Slicer, command.Key);
         if (createResult.IsFailure)
         {
             return Result.Failure<VariantTypeDto>(createResult.Error);

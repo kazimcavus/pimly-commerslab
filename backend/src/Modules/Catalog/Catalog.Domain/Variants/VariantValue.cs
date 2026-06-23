@@ -16,19 +16,22 @@ public sealed class VariantValue : Entity<Guid>
 
     internal VariantValue(
         Guid id,
+        VariantKey key,
         string label,
         string? color,
         string? imageUrl,
-        string? code,
         int sortOrder)
         : base(id)
     {
+        Key = key;
         Label = label;
         Color = color;
         ImageUrl = imageUrl;
-        Code = code;
         SortOrder = sortOrder;
     }
+
+    /// <summary>Gets değeri benzersiz tanımlayan anahtar; gönderilmezse etiketten türetilir.</summary>
+    public VariantKey Key { get; private set; } = null!;
 
     /// <summary>Gets değerin görünen etiketi.</summary>
     public string Label { get; private set; } = string.Empty;
@@ -39,18 +42,20 @@ public sealed class VariantValue : Entity<Guid>
     /// <summary>Gets görsel gösterim için resim URL'si; opsiyonel.</summary>
     public string? ImageUrl { get; private set; }
 
-    /// <summary>Gets harici sistem kodu; opsiyonel.</summary>
-    public string? Code { get; private set; }
-
     /// <summary>Gets tür içindeki görüntüleme sırası.</summary>
     public int SortOrder { get; private set; }
 
-    internal void Update(string label, string? color, string? imageUrl, string? code, int sortOrder)
+    internal void Update(
+        VariantKey key,
+        string label,
+        string? color,
+        string? imageUrl,
+        int sortOrder)
     {
+        Key = key;
         Label = label;
         Color = color;
         ImageUrl = imageUrl;
-        Code = code;
         SortOrder = sortOrder;
     }
 }

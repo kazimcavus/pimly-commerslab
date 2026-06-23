@@ -15,6 +15,6 @@ public sealed class UpdateVariantValueCommandValidator : AbstractValidator<Updat
         RuleFor(x => x.Label).VariantValueLabel();
         RuleFor(x => x.Color).OptionalVariantValueColor();
         RuleFor(x => x.ImageUrl).OptionalVariantValueImageUrl();
-        RuleFor(x => x.Code).OptionalVariantValueCode();
+        RuleFor(x => x.Key).OptionalVariantValueKey();
     }
 }

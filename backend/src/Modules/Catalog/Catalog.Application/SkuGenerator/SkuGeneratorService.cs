@@ -133,7 +133,7 @@ public sealed class SkuGeneratorService(
             .Select(value => new SkuVariantSelection(
                 value.Variant.SelectionStyle,
                 value.Name,
-                value.Code))
+                value.Key))
             .ToList();
 
         return SkuCodeAssembler.ValidateVariantCodes(segments, selections);
@@ -154,7 +154,7 @@ public sealed class SkuGeneratorService(
             .Select(value => new SkuVariantSelection(
                 value.Variant.SelectionStyle,
                 value.Name,
-                value.Code))
+                value.Key))
             .ToList();
 
         var sku = SkuCodeAssembler.AssembleVariantSku(modelCode, config.Segments, selections);

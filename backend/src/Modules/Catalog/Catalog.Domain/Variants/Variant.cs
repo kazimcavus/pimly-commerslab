@@ -8,7 +8,7 @@ namespace Catalog.Domain.Variants;
 /// SKU kombinasyonunu değil; eksen adını, seçim stilini, sıralamasını ve seçilebilir değerleri yönetir.
 /// </summary>
 /// <example>
-/// "Renk" varyantı key değeri renk, SelectionStyle Color, SortOrder 1, Slicer true ile oluşturulur;
+/// "Renk" varyantı key değeri RENK, SelectionStyle Color, SortOrder 1, Slicer true ile oluşturulur;
 /// "Kırmızı" (#FF0000) ve "Mavi" (#0000FF) değerleri eklenir. "Beden" varyantı List stiliyle ayrı tanımlanır.
 /// </example>
 public sealed class Variant : AggregateRoot<Guid>
@@ -30,7 +30,7 @@ public sealed class Variant : AggregateRoot<Guid>
     }
 
     /// <summary>Gets varyant türünü benzersiz tanımlayan anahtar; oluşturulurken adından türetilir.</summary>
-    /// <example>renk.</example>
+    /// <example>RENK.</example>
     public VariantKey Key { get; private set; } = null!;
 
     /// <summary>Gets varyant türünün adı.</summary>
@@ -48,7 +48,12 @@ public sealed class Variant : AggregateRoot<Guid>
     /// <summary>Gets türe ait seçilebilir değerler.</summary>
     public IReadOnlyCollection<VariantValue> Values => _values.AsReadOnly();
 
-    public static Result<Variant> Create(string name, SelectionStyle selectionStyle, int sortOrder, bool slicer = false)
+    public static Result<Variant> Create(
+        string name,
+        SelectionStyle selectionStyle,
+        int sortOrder,
+        bool slicer = false,
+        string? key = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -56,7 +61,7 @@ public sealed class Variant : AggregateRoot<Guid>
         }
 
         var trimmedName = name.Trim();
-        var keyResult = VariantKey.FromName(trimmedName);
+        var keyResult = VariantKey.FromOptional(key, trimmedName);
         if (keyResult.IsFailure)
         {
             return Result.Failure<Variant>(keyResult.Error);
@@ -92,7 +97,7 @@ public sealed class Variant : AggregateRoot<Guid>
         string label,
         string? color,
         string? imageUrl,
-        string? code,
+        string? key,
         int sortOrder)
     {
         if (string.IsNullOrWhiteSpace(label))
@@ -107,12 +112,24 @@ public sealed class Variant : AggregateRoot<Guid>
                 Error.Conflict("Variant value label must be unique within the type."));
         }
 
+        var keyResult = VariantKey.FromOptional(key, trimmedLabel);
+        if (keyResult.IsFailure)
+        {
+            return Result.Failure<VariantValue>(keyResult.Error);
+        }
+
+        if (_values.Any(v => string.Equals(v.Key.Value, keyResult.Value.Value, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Result.Failure<VariantValue>(
+                Error.Conflict("Variant value key must be unique within the type."));
+        }
+
         var value = new VariantValue(
             Guid.NewGuid(),
+            keyResult.Value,
             trimmedLabel,
             string.IsNullOrWhiteSpace(color) ? null : color.Trim(),
             string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim(),
-            string.IsNullOrWhiteSpace(code) ? null : code.Trim(),
             sortOrder);
 
         _values.Add(value);
@@ -124,7 +141,7 @@ public sealed class Variant : AggregateRoot<Guid>
         string label,
         string? color,
         string? imageUrl,
-        string? code,
+        string? key,
         int sortOrder)
     {
         if (string.IsNullOrWhiteSpace(label))
@@ -145,11 +162,23 @@ public sealed class Variant : AggregateRoot<Guid>
             return Result.Failure(Error.Conflict("Variant value label must be unique within the type."));
         }
 
+        var keyResult = VariantKey.FromOptional(key, trimmedLabel);
+        if (keyResult.IsFailure)
+        {
+            return Result.Failure(keyResult.Error);
+        }
+
+        if (_values.Any(v => v.Id != valueId &&
+                             string.Equals(v.Key.Value, keyResult.Value.Value, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Result.Failure(Error.Conflict("Variant value key must be unique within the type."));
+        }
+
         value.Update(
+            keyResult.Value,
             trimmedLabel,
             string.IsNullOrWhiteSpace(color) ? null : color.Trim(),
             string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim(),
-            string.IsNullOrWhiteSpace(code) ? null : code.Trim(),
             sortOrder);
 
         return Result.Success();

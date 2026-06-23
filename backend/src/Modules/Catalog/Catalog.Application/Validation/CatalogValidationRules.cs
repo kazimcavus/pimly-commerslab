@@ -17,7 +17,7 @@ internal static class CatalogValidationRules
     public const int VariantValueLabelMaxLength = 200;
     public const int VariantValueColorMaxLength = 50;
     public const int VariantValueImageUrlMaxLength = 2000;
-    public const int VariantValueCodeMaxLength = 100;
+    public const int VariantValueKeyMaxLength = 200;
     public const int ModelCodeMaxLength = 200;
     public const int ProductNameMaxLength = 500;
     public const int VariantBarcodeMaxLength = 200;
@@ -110,11 +110,17 @@ internal static class CatalogValidationRules
             .WithErrorCode(ValidationErrorCodes.MaxLength)
             .WithMessage(ValidationMessages.MaxLength("ImageUrl", VariantValueImageUrlMaxLength));
 
-    public static IRuleBuilderOptions<T, string?> OptionalVariantValueCode<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
+    public static IRuleBuilderOptions<T, string?> OptionalVariantTypeKey<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
         ruleBuilder
-            .MaximumLength(VariantValueCodeMaxLength)
+            .MaximumLength(VariantValueKeyMaxLength)
             .WithErrorCode(ValidationErrorCodes.MaxLength)
-            .WithMessage(ValidationMessages.MaxLength("Code", VariantValueCodeMaxLength));
+            .WithMessage(ValidationMessages.MaxLength("Key", VariantValueKeyMaxLength));
+
+    public static IRuleBuilderOptions<T, string?> OptionalVariantValueKey<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
+        ruleBuilder
+            .MaximumLength(VariantValueKeyMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Key", VariantValueKeyMaxLength));
 
     public static IRuleBuilderOptions<T, Guid> RequiredGroupId<T>(this IRuleBuilder<T, Guid> ruleBuilder) =>
         ruleBuilder

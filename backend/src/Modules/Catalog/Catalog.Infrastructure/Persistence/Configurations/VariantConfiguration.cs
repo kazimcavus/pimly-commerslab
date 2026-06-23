@@ -56,12 +56,24 @@ internal sealed class VariantConfiguration : IEntityTypeConfiguration<Variant>
             value.HasKey(vv => vv.Id);
             value.Property(vv => vv.Id).HasColumnName("id").ValueGeneratedNever();
             value.Property(vv => vv.Label).HasColumnName("label").IsRequired().HasMaxLength(200);
+
+            var valueKeyProperty = value.Property(vv => vv.Key)
+                .HasColumnName("key")
+                .HasConversion(key => key.Value, keyValue => VariantKey.FromPersistence(keyValue))
+                .HasMaxLength(200)
+                .IsRequired();
+
+            valueKeyProperty.Metadata.SetValueComparer(new ValueComparer<VariantKey>(
+                (left, right) => left!.Value == right!.Value,
+                key => key.Value.GetHashCode(StringComparison.Ordinal),
+                key => VariantKey.FromPersistence(key.Value)));
+
             value.Property(vv => vv.Color).HasColumnName("color").HasMaxLength(50);
             value.Property(vv => vv.ImageUrl).HasColumnName("image_url").HasMaxLength(2000);
-            value.Property(vv => vv.Code).HasColumnName("code").HasMaxLength(100);
             value.Property(vv => vv.SortOrder).HasColumnName("sort_order");
             value.Ignore(vv => vv.DomainEvents);
             value.HasIndex("VariantId", nameof(VariantValue.Label)).IsUnique();
+            value.HasIndex("VariantId", nameof(VariantValue.Key)).IsUnique();
         });
     }
 }

@@ -20,7 +20,38 @@ public class VariantTests
         var result = Variant.Create("Color", SelectionStyle.Color, 0);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Key.Value.Should().Be("color");
+        result.Value.Key.Value.Should().Be("COLOR");
+    }
+
+    [Fact]
+    public void Create_WithExplicitKey_UsesProvidedKey()
+    {
+        var result = Variant.Create("Color", SelectionStyle.Color, 0, key: "custom_color");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Key.Value.Should().Be("custom_color");
+    }
+
+    [Fact]
+    public void AddValue_DerivesKeyFromLabelWhenNotProvided()
+    {
+        var variant = Variant.Create("Color", SelectionStyle.Color, 0).Value;
+
+        var addResult = variant.AddValue("Red", "#ff0000", null, null, 0);
+
+        addResult.IsSuccess.Should().BeTrue();
+        addResult.Value.Key.Value.Should().Be("RED");
+    }
+
+    [Fact]
+    public void AddValue_WithExplicitKey_UsesProvidedKey()
+    {
+        var variant = Variant.Create("Color", SelectionStyle.Color, 0).Value;
+
+        var addResult = variant.AddValue("Red", "#ff0000", null, "R08", 0);
+
+        addResult.IsSuccess.Should().BeTrue();
+        addResult.Value.Key.Value.Should().Be("R08");
     }
 
     [Fact]

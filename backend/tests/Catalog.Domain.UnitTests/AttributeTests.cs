@@ -19,7 +19,7 @@ public class AttributeTests
     {
         var result = DomainAttribute.Create("Yaka Tipi");
         result.IsSuccess.Should().BeTrue();
-        result.Value.Key.Value.Should().Be("yaka_tipi");
+        result.Value.Key.Value.Should().Be("YAKA_TIPI");
         result.Value.Name.Should().Be("Yaka Tipi");
     }
 

@@ -60,11 +60,11 @@ public class SkuCodeAssemblerTests
     }
 
     [Fact]
-    public void VariantToken_FallsBackToNameWhenCodeMissing()
+    public void VariantToken_FallsBackToNameWhenKeyMissing()
     {
         var selection = new SkuVariantSelection(SelectionStyle.List, "Large", null);
 
-        SkuCodeAssembler.VariantToken(selection, "code").Should().Be("LARGE");
+        SkuCodeAssembler.VariantToken(selection, "key").Should().Be("LARGE");
     }
 
     [Fact]

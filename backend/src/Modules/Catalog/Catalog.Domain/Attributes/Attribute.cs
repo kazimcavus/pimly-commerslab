@@ -8,7 +8,7 @@ namespace Catalog.Domain.Attributes;
 /// Özellik adını ve seçilebilir değerlerini yönetir.
 /// </summary>
 /// <example>
-/// "Yaka Tipi" adıyla oluşturulan özelliğin key değeri yaka_tipi olur;
+/// "Yaka Tipi" adıyla oluşturulan özelliğin key değeri YAKA_TIPI olur;
 /// "Bisiklet Yaka" ve "V Yaka" değerleri eklenir.
 /// </example>
 public sealed class Attribute : AggregateRoot<Guid>
@@ -27,7 +27,7 @@ public sealed class Attribute : AggregateRoot<Guid>
     }
 
     /// <summary>Gets özelliği benzersiz tanımlayan anahtar; oluşturulurken adından türetilir.</summary>
-    /// <example>yaka_tipi.</example>
+    /// <example>YAKA_TIPI.</example>
     public AttributeKey Key { get; private set; } = null!;
 
     /// <summary>Gets özelliğin kullanıcıya gösterilen adı.</summary>
