@@ -109,7 +109,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
       default: return ''
     }
   }
-  const optToken = (v, source) => ((source === 'name' ? v.label : (v.code || v.label)) || '').toUpperCase()
+  const optToken = (v, source) => ((source === 'name' ? v.label : (v.key || v.label)) || '').toUpperCase()
   const productCodePreview = skuOn ? skuCfg.segments.map((s, i) => isVarSeg(s.type) ? '' : skuToken(s, i)).join('') : ''
   const variantSkuPreview = (combo) => {
     if (!skuOn) return ''
@@ -206,7 +206,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
             stock: parseInt(r.stock, 10) || 0,
             options: combo.map((v, i) => ({
               type_id: used[i].id, type_name: used[i].name,
-              value_id: v.id, value_label: v.label, color: v.color || '', image_url: v.image_url || '', code: v.code || '',
+              value_id: v.id, value_label: v.label, color: v.color || '', image_url: v.image_url || '', key: v.key || '',
             })),
           }
         }),
@@ -232,7 +232,8 @@ export function ProductBuilder({ onNavigate, onSaved }) {
       }
       product.code_inputs = skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
 
-      // Variant segments using "Kod" require a code on each selected value.
+      // "Key" kaynaklı varyant segmentleri, seçili her değerde bir key gerektirir
+      // (key boşsa backend addan otomatik üretir; yine de boş kalmasına izin verme).
       if (mode === 'variant') {
         for (const s of skuCfg.segments) {
           if (!isVarSeg(s.type) || s.source === 'name') continue
@@ -240,8 +241,8 @@ export function ProductBuilder({ onNavigate, onSaved }) {
           for (const c of activeChosen) {
             const t = typeById[c.typeId]
             if ((t?.selection_style === 'color') !== wantColor) continue
-            const missing = (t.values || []).filter((v) => c.valueIds.includes(v.id)).find((v) => !v.code)
-            if (missing) { setError(`"${missing.label}" için kod girilmemiş — Varyantlar'dan kod ekleyin ya da Ayarlar'da kaynağı "Ad" yapın.`); return }
+            const missing = (t.values || []).filter((v) => c.valueIds.includes(v.id)).find((v) => !v.key)
+            if (missing) { setError(`"${missing.label}" için key yok — Varyantlar'dan key ekleyin ya da Ayarlar'da kaynağı "Ad" yapın.`); return }
           }
         }
       }

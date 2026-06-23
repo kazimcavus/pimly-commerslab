@@ -38,7 +38,7 @@ export function Variants({ onToast }) {
 
   const submit = async ({ name, style, slicer, rows }) => {
     let typeId
-    const body = (r, i) => ({ label: r.label, color: style === 'color' ? r.color : null, image_url: style === 'color' ? (r.image_url || null) : null, code: r.code ? r.code.trim() : null, sort_order: i })
+    const body = (r, i) => ({ label: r.label, color: style === 'color' ? r.color : null, image_url: style === 'color' ? (r.image_url || null) : null, key: r.key ? r.key.trim() : null, sort_order: i })
     if (editing) {
       await api.updateVariantType(editing.id, { name, selection_style: style, slicer })
       typeId = editing.id
@@ -80,7 +80,7 @@ export function Variants({ onToast }) {
         {active && (
           <div className="pim-card">
             <div className="pim-card__header">
-              <div className="hstack"><span className="pim-card__title">{active.name}</span></div>
+              <div className="hstack"><span className="pim-card__title">{active.name}</span>{active.key && <span className="typechip" title="Otomatik üretilen tür anahtarı">{active.key}</span>}</div>
               <div className="hstack">
                 <Button variant="secondary" size="sm" iconLeft={I('pencil')} onClick={() => openEdit(active)}>Düzenle</Button>
                 <button className="tb__icon" style={{ width: 30, height: 30 }} title="Türü sil"
@@ -102,7 +102,7 @@ export function Variants({ onToast }) {
                     <span key={v.id} className="sizechip" data-on="true" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
                       {isColor && <span className="swatch-sm" style={swatchBg(v)}></span>}
                       {v.label}
-                      {v.code && <span className="typechip" title="SKU kodu" style={{ marginLeft: 2 }}>{v.code}</span>}
+                      {v.key && <span className="typechip" title="Varyant key (SKU'da kullanılır)" style={{ marginLeft: 2 }}>{v.key}</span>}
                     </span>
                   ))}
                 </div>
@@ -141,7 +141,7 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
       setName(editing.name)
       setStyle(editing.selection_style)
       setSlicer(!!editing.slicer)
-      setRows((editing._values || []).map((v) => ({ _k: keyRef.current++, id: v.id, label: v.label, color: v.color || '#d3ccc1', image_url: v.image_url || '', code: v.code || '' })))
+      setRows((editing._values || []).map((v) => ({ _k: keyRef.current++, id: v.id, label: v.label, color: v.color || '#d3ccc1', image_url: v.image_url || '', key: v.key || '' })))
       setManualOrder(true) // preserve saved order on edit
     } else {
       setName(''); setStyle('list'); setSlicer(false); setRows([]); setManualOrder(false)
@@ -159,7 +159,7 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
     const label = draft.trim()
     if (!label) return
     setRows((rs) => {
-      const next = [...rs, { _k: keyRef.current++, label, color: '#d3ccc1', image_url: '', code: '' }]
+      const next = [...rs, { _k: keyRef.current++, label, color: '#d3ccc1', image_url: '', key: '' }]
       return manualOrder ? next : azSort(next)
     })
     setDraft('')
@@ -214,6 +214,13 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
       </Field>
 
       {rows.length > 0 && (
+        <div className="hstack" style={{ gap: 6, alignItems: 'flex-start', color: 'var(--text-muted)', fontSize: 12.5, lineHeight: 1.45 }}>
+          <span style={{ color: 'var(--accent)', flex: '0 0 auto', marginTop: 1 }}>{I('info', { size: 14 })}</span>
+          <span>Sağdaki <strong>key</strong> opsiyoneldir — istersen kısa bir kod ver (örn. Kırmızı → <span className="mono">R08</span>). Ürün kodu üreticisi bu key'i kullanır; <strong>boş bırakırsan addan otomatik</strong> üretilir (gri ipucu).</span>
+        </div>
+      )}
+
+      {rows.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>
           <div className="between">
             <span className="list-meta">{rows.length} değer · sürükleyip sıralayabilirsin</span>
@@ -239,6 +246,10 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
               ) : (
                 <span className="vrow__label" onDoubleClick={() => setEditLabelKey(r._k)}>{r.label}</span>
               )}
+              <Input size="sm" mono value={r.key || ''} onChange={(e) => patchRow(r._k, { key: e.target.value })}
+                placeholder={r.label ? r.label.toLocaleUpperCase('tr') : 'KEY'}
+                title="Varyant key — opsiyonel. Doluysa SKU'da kullanılır; boşsa addan otomatik üretilir."
+                style={{ width: 100, flex: '0 0 auto' }} />
               <button className="tb__icon" style={{ width: 26, height: 26 }} title="Adı düzenle" onClick={() => setEditLabelKey(editLabelKey === r._k ? null : r._k)}>{I('pencil', { size: 14 })}</button>
               <button className="tb__icon" style={{ width: 26, height: 26 }} title="Kaldır" onClick={() => removeRow(r._k)}>{I('trash-2')}</button>
             </div>
@@ -255,7 +266,6 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
           onColor={(c) => patchRow(editRow._k, { color: c })}
           onImage={(url) => patchRow(editRow._k, { image_url: url })}
           onClearImage={() => patchRow(editRow._k, { image_url: '' })}
-          onCode={(c) => patchRow(editRow._k, { code: c })}
           onClose={() => setEditKey(null)}
           onToast={onToast}
         />
@@ -265,7 +275,7 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
 }
 
 // Floating Renk / Görsel editor anchored to the clicked swatch.
-function ValueEditorPopover({ anchor, tab, setTab, row, onColor, onImage, onClearImage, onCode, onClose, onToast }) {
+function ValueEditorPopover({ anchor, tab, setTab, row, onColor, onImage, onClearImage, onClose, onToast }) {
   const W = 300
   let left = anchor.left - W - 12
   if (left < 12) left = anchor.right + 12
@@ -284,9 +294,7 @@ function ValueEditorPopover({ anchor, tab, setTab, row, onColor, onImage, onClea
         {tab === 'color'
           ? <ColorPicker value={row.color} onChange={onColor} />
           : <ImageUpload value={row.image_url} onUpload={onImage} onClear={onClearImage} onToast={onToast} />}
-        <Field label="Kod (SKU için)" auto="Örn. R08 — opsiyonel">
-          <Input size="sm" mono value={row.code || ''} onChange={(e) => onCode(e.target.value)} placeholder="R08" />
-        </Field>
+        <div className="list-meta" style={{ marginTop: 10 }}>Key artık satırda — listede her değerin yanından girilir.</div>
       </div>
     </>,
     document.body,

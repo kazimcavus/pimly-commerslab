@@ -65,9 +65,13 @@ export const HELP = {
     steps: [
       'Bir varyant tipi ekleyin (örn. Renk veya Beden).',
       'Değerlerini girin (Renk için renk seçici, Beden için S/M/L…).',
+      'İstersen her değere kısa bir kod (key) verin — örn. Kırmızı → R08. Opsiyoneldir.',
       'Ürün oluştururken tipleri seçin; tüm kombinasyonlar (Kırmızı-M, Mavi-L…) otomatik oluşur.',
     ],
-    tips: ['Renk değerlerine kod verirseniz, ürün kodunda otomatik kullanılabilir.'],
+    tips: [
+      'Değer kodu (key) opsiyoneldir: doluysa ürün kodu üreticisi onu kullanır (örn. R08).',
+      'Kodu boş bırakırsan ürün kodunda değerin adı otomatik kullanılır — ayrıca uğraşmana gerek yok.',
+    ],
   },
   products: {
     eyebrow: 'Katalog',
