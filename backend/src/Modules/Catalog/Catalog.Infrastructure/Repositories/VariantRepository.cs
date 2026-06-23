@@ -18,6 +18,12 @@ internal sealed class VariantRepository(CatalogDbContext db) : IVariantRepositor
         await db.Variants
             .FirstOrDefaultAsync(v => v.Name == name, cancellationToken);
 
+    public async Task<Variant?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var variantKey = VariantKey.FromPersistence(key);
+        return await db.Variants.FirstOrDefaultAsync(v => v.Key == variantKey, cancellationToken);
+    }
+
     public async Task<Variant?> GetSlicerVariantAsync(
         Guid? excludeId = null,
         CancellationToken cancellationToken = default)

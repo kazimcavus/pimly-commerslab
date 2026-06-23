@@ -44,6 +44,11 @@ public sealed class CreateVariantTypeHandler(
             return Result.Failure<VariantTypeDto>(createResult.Error);
         }
 
+        if (await variantTypes.GetByKeyAsync(createResult.Value.Key.Value, cancellationToken) is not null)
+        {
+            return Result.Failure<VariantTypeDto>(Error.Conflict("Variant key already exists."));
+        }
+
         await variantTypes.AddAsync(createResult.Value, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

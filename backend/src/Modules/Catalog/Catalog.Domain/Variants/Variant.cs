@@ -8,7 +8,7 @@ namespace Catalog.Domain.Variants;
 /// SKU kombinasyonunu değil; eksen adını, seçim stilini, sıralamasını ve seçilebilir değerleri yönetir.
 /// </summary>
 /// <example>
-/// "Renk" varyantı SelectionStyle Color, SortOrder 1, Slicer true ile oluşturulur;
+/// "Renk" varyantı key değeri renk, SelectionStyle Color, SortOrder 1, Slicer true ile oluşturulur;
 /// "Kırmızı" (#FF0000) ve "Mavi" (#0000FF) değerleri eklenir. "Beden" varyantı List stiliyle ayrı tanımlanır.
 /// </example>
 public sealed class Variant : AggregateRoot<Guid>
@@ -19,14 +19,19 @@ public sealed class Variant : AggregateRoot<Guid>
     {
     }
 
-    private Variant(Guid id, string name, SelectionStyle selectionStyle, int sortOrder, bool slicer)
+    private Variant(Guid id, VariantKey key, string name, SelectionStyle selectionStyle, int sortOrder, bool slicer)
         : base(id)
     {
+        Key = key;
         Name = name;
         SelectionStyle = selectionStyle;
         SortOrder = sortOrder;
         Slicer = slicer;
     }
+
+    /// <summary>Gets varyant türünü benzersiz tanımlayan anahtar; oluşturulurken adından türetilir.</summary>
+    /// <example>renk.</example>
+    public VariantKey Key { get; private set; } = null!;
 
     /// <summary>Gets varyant türünün adı.</summary>
     public string Name { get; private set; } = string.Empty;
@@ -50,14 +55,22 @@ public sealed class Variant : AggregateRoot<Guid>
             return Result.Failure<Variant>(Error.Validation("Variant type name is required."));
         }
 
+        var trimmedName = name.Trim();
+        var keyResult = VariantKey.FromName(trimmedName);
+        if (keyResult.IsFailure)
+        {
+            return Result.Failure<Variant>(keyResult.Error);
+        }
+
         var variant = new Variant(
             Guid.NewGuid(),
-            name.Trim(),
+            keyResult.Value,
+            trimmedName,
             selectionStyle,
             sortOrder,
             slicer);
 
-        variant.RaiseDomainEvent(new VariantCreated(variant.Id, variant.Name));
+        variant.RaiseDomainEvent(new VariantCreated(variant.Id, variant.Key.Value));
         return Result.Success(variant);
     }
 

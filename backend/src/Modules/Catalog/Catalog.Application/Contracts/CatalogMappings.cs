@@ -21,6 +21,7 @@ internal static class CatalogMappings
     public static VariantTypeDto ToDto(this Variant variant) =>
         new(
             variant.Id,
+            variant.Key.Value,
             variant.Name,
             variant.SelectionStyle.ToString().ToLowerInvariant(),
             variant.SortOrder,

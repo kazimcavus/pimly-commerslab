@@ -15,6 +15,15 @@ public class VariantTests
     }
 
     [Fact]
+    public void Create_WithValidName_DerivesKeyFromName()
+    {
+        var result = Variant.Create("Color", SelectionStyle.Color, 0);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Key.Value.Should().Be("color");
+    }
+
+    [Fact]
     public void AddValue_DuplicateLabel_Fails()
     {
         var variant = Variant.Create("Color", SelectionStyle.Color, 0).Value;

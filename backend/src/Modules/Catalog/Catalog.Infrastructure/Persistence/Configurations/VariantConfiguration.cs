@@ -1,5 +1,6 @@
 using Catalog.Domain.Variants;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
@@ -17,6 +18,19 @@ internal sealed class VariantConfiguration : IEntityTypeConfiguration<Variant>
         builder.Property(v => v.SortOrder).HasColumnName("sort_order");
         builder.Property(v => v.Slicer).HasColumnName("slicer").HasDefaultValue(false);
         builder.Ignore(v => v.DomainEvents);
+
+        var keyProperty = builder.Property(v => v.Key)
+            .HasColumnName("key")
+            .HasConversion(key => key.Value, value => VariantKey.FromPersistence(value))
+            .HasMaxLength(200)
+            .IsRequired();
+
+        keyProperty.Metadata.SetValueComparer(new ValueComparer<VariantKey>(
+            (left, right) => left!.Value == right!.Value,
+            key => key.Value.GetHashCode(StringComparison.Ordinal),
+            key => VariantKey.FromPersistence(key.Value)));
+
+        builder.HasIndex(v => v.Key).IsUnique();
         builder.HasIndex(v => v.Name).IsUnique();
         builder.HasIndex(v => v.Slicer)
             .IsUnique()
