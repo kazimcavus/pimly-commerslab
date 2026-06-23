@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -26,7 +27,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
             {
                 new
                 {
-                    barcode = $"BC-{Guid.NewGuid():N}",
+                    barcode = NextNumericBarcode(),
                     price = 19.99m,
                     stock = 10,
                 },
@@ -89,7 +90,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
             {
                 new
                 {
-                    barcode = $"BC-{Guid.NewGuid():N}",
+                    barcode = NextNumericBarcode(),
                     price = 19.99m,
                     stock = 5,
                     variant_values = new object[]
@@ -137,7 +138,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
                 new { attribute_id = attribute.Id, attribute_value_id = value!.Id },
             },
             variants = Array.Empty<object>(),
-            items = new[] { new { barcode = $"BC-{Guid.NewGuid():N}", price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         });
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -166,14 +167,14 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
             {
                 new
                 {
-                    barcode = $"BC-{Guid.NewGuid():N}",
+                    barcode = NextNumericBarcode(),
                     price = 10m,
                     stock = 1,
                     variant_values = new[] { new { variant_id = sizeVariant.Id, variant_value_id = small.Id } },
                 },
                 new
                 {
-                    barcode = $"BC-{Guid.NewGuid():N}",
+                    barcode = NextNumericBarcode(),
                     price = 11m,
                     stock = 2,
                     variant_values = new[] { new { variant_id = sizeVariant.Id, variant_value_id = medium.Id } },
@@ -221,6 +222,9 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<VariantValueResponse>())!;
     }
+
+    private static string NextNumericBarcode() =>
+        (9100000000L + Random.Shared.Next(1, 1000000)).ToString(CultureInfo.InvariantCulture);
 }
 
 /// <summary>API ürün yanıtını deserialize etmek için kullanılan DTO.</summary>

@@ -22,6 +22,7 @@ public static class CatalogEndpoints
         group.MapVariantValueEndpoints();
         group.MapProductEndpoints();
         group.MapProductItemEndpoints();
+        group.MapBarcodeEndpoints();
 
         return group;
     }

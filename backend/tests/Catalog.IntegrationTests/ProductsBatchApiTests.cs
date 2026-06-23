@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
@@ -20,8 +21,6 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         var groupId = Guid.NewGuid();
         var baseSku = $"BATCH-{Guid.NewGuid():N}";
 
-        var barcodePrefix = Guid.NewGuid().ToString("N")[..8];
-
         var batchResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products:batch", new
         {
             group_id = groupId,
@@ -40,10 +39,10 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
                     },
                     items = new object[]
                     {
-                        Item($"{barcodePrefix}-RED-S", red, colorVariant, small, sizeVariant),
-                        Item($"{barcodePrefix}-RED-M", red, colorVariant, medium, sizeVariant),
-                        Item($"{barcodePrefix}-BLUE-S", blue, colorVariant, small, sizeVariant),
-                        Item($"{barcodePrefix}-BLUE-M", blue, colorVariant, medium, sizeVariant),
+                        Item(red, colorVariant, small, sizeVariant),
+                        Item(red, colorVariant, medium, sizeVariant),
+                        Item(blue, colorVariant, small, sizeVariant),
+                        Item(blue, colorVariant, medium, sizeVariant),
                     },
                 },
             },
@@ -94,7 +93,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
                     {
                         new
                         {
-                            barcode = $"{Guid.NewGuid():N}-S",
+                            barcode = NextNumericBarcode(),
                             price = 19.99m,
                             stock = 10,
                             variant_values = new[] { new { variant_id = sizeVariant.Id, variant_value_id = small.Id } },
@@ -121,7 +120,6 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         var red = await CreateVariantValue(colorVariant.Id, "Red", "#ff0000");
         var blue = await CreateVariantValue(colorVariant.Id, "Blue", "#0000ff");
         var baseSku = $"BATCH-COLOR-{Guid.NewGuid():N}";
-        var prefix = Guid.NewGuid().ToString("N")[..8];
 
         var batchResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products:batch", new
         {
@@ -139,14 +137,14 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
                     {
                         new
                         {
-                            barcode = $"{prefix}-RED",
+                            barcode = NextNumericBarcode(),
                             price = 19.99m,
                             stock = 10,
                             variant_values = new[] { new { variant_id = colorVariant.Id, variant_value_id = red.Id } },
                         },
                         new
                         {
-                            barcode = $"{prefix}-BLUE",
+                            barcode = NextNumericBarcode(),
                             price = 19.99m,
                             stock = 10,
                             variant_values = new[] { new { variant_id = colorVariant.Id, variant_value_id = blue.Id } },
@@ -199,14 +197,13 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
     }
 
     private static object Item(
-        string barcode,
         VariantValueResponse colorValue,
         VariantResponse colorVariant,
         VariantValueResponse sizeValue,
         VariantResponse sizeVariant) =>
         new
         {
-            barcode,
+            barcode = NextNumericBarcode(),
             price = 19.99m,
             stock = 10,
             variant_values = new object[]
@@ -223,6 +220,9 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
                 },
             },
         };
+
+    private static string NextNumericBarcode() =>
+        (9200000000L + Random.Shared.Next(1, 1000000)).ToString(CultureInfo.InvariantCulture);
 }
 
 internal sealed record BatchCreateResponse(IReadOnlyList<BatchProductResponse> Products);

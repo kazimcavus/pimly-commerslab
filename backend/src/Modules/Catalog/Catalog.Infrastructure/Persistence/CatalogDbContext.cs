@@ -1,4 +1,5 @@
 using Catalog.Domain;
+using Catalog.Domain.Barcodes;
 using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using Catalog.Domain.Variants;
@@ -25,6 +26,10 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<ProductItem> ProductItems => Set<ProductItem>();
+
+    public DbSet<BarcodeSequence> BarcodeSequences => Set<BarcodeSequence>();
+
+    public DbSet<BarcodeAllocation> BarcodeAllocations => Set<BarcodeAllocation>();
 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

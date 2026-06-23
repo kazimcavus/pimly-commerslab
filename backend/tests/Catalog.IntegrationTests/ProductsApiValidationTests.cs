@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
@@ -26,7 +27,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             status = "draft",
             attribute_values = Array.Empty<object>(),
             variants = Array.Empty<object>(),
-            items = new[] { new { barcode = $"BC-{Guid.NewGuid():N}", price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
@@ -62,7 +63,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             status = "draft",
             attribute_values = Array.Empty<object>(),
             variants = Array.Empty<object>(),
-            items = new[] { new { barcode = $"BC-{Guid.NewGuid():N}", price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         };
 
         (await Client.PostAsJsonAsync("/api/v1/catalog/products", payload)).StatusCode.Should().Be(HttpStatusCode.Created);
@@ -75,7 +76,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             status = "draft",
             attribute_values = Array.Empty<object>(),
             variants = Array.Empty<object>(),
-            items = new[] { new { barcode = $"BC-{Guid.NewGuid():N}", price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(duplicate, HttpStatusCode.Conflict, "conflict");
@@ -84,7 +85,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
     [SkippableFact]
     public async Task CreateProduct_DuplicateBarcode_Returns409()
     {
-        var barcode = $"BC-DUP-{Guid.NewGuid():N}";
+        var barcode = (8880000000L + Random.Shared.Next(1, 100000)).ToString(CultureInfo.InvariantCulture);
         var first = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
@@ -132,7 +133,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             status = "draft",
             attribute_values = Array.Empty<object>(),
             variants = new[] { new { id = variant!.Id, name = variant.Name, selection_style = "color" } },
-            items = new[] { new { barcode = $"BC-{Guid.NewGuid():N}", price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
@@ -178,7 +179,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             status = "draft",
             attribute_values = Array.Empty<object>(),
             variants = Array.Empty<object>(),
-            items = new[] { new { barcode = $"BC-{Guid.NewGuid():N}", price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
@@ -197,4 +198,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var response = await Client.DeleteAsync($"/api/v1/catalog/items/{Guid.NewGuid()}");
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.NotFound, "not_found");
     }
+
+    private static string NextNumericBarcode() =>
+        (9100000000L + Random.Shared.Next(1, 1000000)).ToString(CultureInfo.InvariantCulture);
 }

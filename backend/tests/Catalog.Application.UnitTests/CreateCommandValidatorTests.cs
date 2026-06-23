@@ -96,7 +96,7 @@ public class CreateProductCommandValidatorTests
             [ValidItem()]);
 
     private static CreateProductItemInput ValidItem() =>
-        new(null, "BC-001", null, null, null, null, 10m, null, 5, null, null);
+        new(null, "8690000001", null, null, null, null, 10m, null, 5, null, null);
 }
 
 /// <summary>CreateProductsBatchCommandValidator için smoke testleri.</summary>
@@ -121,7 +121,7 @@ public class CreateProductsBatchCommandValidatorTests
             "draft",
             null,
             [],
-            [new CreateProductItemInput(null, "BC-001", null, null, null, null, 10m, null, 5, null, null)]);
+            [new CreateProductItemInput(null, "8690000001", null, null, null, null, 10m, null, 5, null, null)]);
 
         var result = _validator.Validate(new CreateProductsBatchCommand(Guid.NewGuid(), [item]));
         result.IsValid.Should().BeTrue();
@@ -136,7 +136,7 @@ public class CreateProductsBatchCommandValidatorTests
             "draft",
             null,
             [],
-            [new CreateProductItemInput(null, "BC-001", null, null, null, null, -1m, null, 5, null, null)]);
+            [new CreateProductItemInput(null, "8690000002", null, null, null, null, -1m, null, 5, null, null)]);
 
         var result = _validator.Validate(new CreateProductsBatchCommand(Guid.NewGuid(), [item]));
         result.IsValid.Should().BeFalse();

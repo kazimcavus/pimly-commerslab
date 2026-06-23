@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
@@ -230,7 +231,7 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
     [SkippableFact]
     public async Task ProductsBatch_DuplicateBarcodeInRequest_Returns409()
     {
-        var barcode = $"BC-BATCH-DUP-{Guid.NewGuid():N}";
+        var barcode = (8890000000L + Random.Shared.Next(1, 100000)).ToString(CultureInfo.InvariantCulture);
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/products:batch", new
         {
             group_id = Guid.NewGuid(),

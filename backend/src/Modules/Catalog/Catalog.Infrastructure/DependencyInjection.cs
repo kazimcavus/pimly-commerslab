@@ -1,4 +1,6 @@
+using Catalog.Application.Barcodes;
 using Catalog.Domain;
+using Catalog.Infrastructure.Barcodes;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +28,9 @@ public static class DependencyInjection
         services.AddScoped<IAttributeRepository, AttributeRepository>();
         services.AddScoped<IVariantRepository, VariantRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IBarcodeSequenceRepository, BarcodeSequenceRepository>();
+        services.AddScoped<IBarcodeAllocationRepository, BarcodeAllocationRepository>();
+        services.AddScoped<IBarcodeAllocator, BarcodeAllocator>();
 
         return services;
     }

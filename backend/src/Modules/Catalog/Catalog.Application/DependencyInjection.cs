@@ -7,6 +7,10 @@ using Catalog.Application.Attributes.ListAttributeValues;
 using Catalog.Application.Attributes.RemoveAttributeValue;
 using Catalog.Application.Attributes.UpdateAttribute;
 using Catalog.Application.Attributes.UpdateAttributeValue;
+using Catalog.Application.Barcodes.AllocateBarcodes;
+using Catalog.Application.Barcodes.GetBarcodeSequence;
+using Catalog.Application.Barcodes.ListBarcodeAllocations;
+using Catalog.Application.Barcodes.UpdateBarcodeSequence;
 using Catalog.Application.Categories.AssignCategoryAttribute;
 using Catalog.Application.Categories.CreateCategory;
 using Catalog.Application.Categories.DeleteCategory;
@@ -83,6 +87,11 @@ public static class DependencyInjection
         services.AddScoped<IGetProductItemHandler, GetProductItemHandler>();
         services.AddScoped<IUpdateProductItemHandler, UpdateProductItemHandler>();
         services.AddScoped<IDeleteProductItemHandler, DeleteProductItemHandler>();
+
+        services.AddScoped<IGetBarcodeSequenceHandler, GetBarcodeSequenceHandler>();
+        services.AddScoped<IUpdateBarcodeSequenceHandler, UpdateBarcodeSequenceHandler>();
+        services.AddScoped<IAllocateBarcodesHandler, AllocateBarcodesHandler>();
+        services.AddScoped<IListBarcodeAllocationsHandler, ListBarcodeAllocationsHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

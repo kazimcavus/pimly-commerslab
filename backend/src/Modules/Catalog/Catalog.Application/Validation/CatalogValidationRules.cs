@@ -1,4 +1,5 @@
 using Catalog.Application.Contracts;
+using Catalog.Domain.Barcodes;
 using FluentValidation;
 using SharedKernel;
 
@@ -155,13 +156,26 @@ internal static class CatalogValidationRules
             .WithMessage(ValidationMessages.Required("Barcode"))
             .MaximumLength(VariantBarcodeMaxLength)
             .WithErrorCode(ValidationErrorCodes.MaxLength)
-            .WithMessage(ValidationMessages.MaxLength("Barcode", VariantBarcodeMaxLength));
+            .WithMessage(ValidationMessages.MaxLength("Barcode", VariantBarcodeMaxLength))
+            .Must(BeNumericBarcode)
+            .WithMessage("Barcode must be numeric.");
+
+    public static IRuleBuilderOptions<T, string?> OptionalNumericBarcode<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
+        ruleBuilder
+            .MaximumLength(VariantBarcodeMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Barcode", VariantBarcodeMaxLength))
+            .Must(value => string.IsNullOrWhiteSpace(value) || BeNumericBarcode(value))
+            .WithMessage("Barcode must be numeric.");
 
     public static IRuleBuilderOptions<T, string?> OptionalVariantSku<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
         ruleBuilder
             .MaximumLength(VariantSkuMaxLength)
             .WithErrorCode(ValidationErrorCodes.MaxLength)
             .WithMessage(ValidationMessages.MaxLength("Sku", VariantSkuMaxLength));
+
+    private static bool BeNumericBarcode(string value) =>
+        BarcodeAllocation.IsNumericBarcode(value.Trim());
 
     private static bool BeValidProductStatus(string value)
     {
