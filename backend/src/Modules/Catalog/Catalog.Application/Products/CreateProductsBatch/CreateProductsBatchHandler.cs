@@ -1,4 +1,3 @@
-using Catalog.Application.Barcodes;
 using Catalog.Application.Contracts;
 using Catalog.Application.SkuGenerator;
 using Catalog.Application.Validation;
@@ -16,7 +15,6 @@ public sealed class CreateProductsBatchHandler(
     IVariantRepository variantTypes,
     IAttributeRepository attributes,
     ISkuGeneratorService skuGenerator,
-    IBarcodeAllocator barcodeAllocator,
     IUnitOfWork unitOfWork) : ICreateProductsBatchHandler
 {
     /// <inheritdoc/>
@@ -68,22 +66,12 @@ public sealed class CreateProductsBatchHandler(
                 return Result.Failure<CreateProductsBatchResult>(itemDraftsResult.Error);
             }
 
-            // Boş bırakılan barkodları barkod serisinden otomatik tahsis et.
-            var barcodeFillResult = await FillMissingBarcodesAsync(
-                itemDraftsResult.Value,
-                cancellationToken);
-
-            if (barcodeFillResult.IsFailure)
-            {
-                return Result.Failure<CreateProductsBatchResult>(barcodeFillResult.Error);
-            }
-
             var plansResult = await skuGenerator.BuildPlansAsync(
                 item.ModelCode,
                 item.CodeInputs,
                 item.Name,
                 resolvedTypesResult.Value,
-                barcodeFillResult.Value,
+                itemDraftsResult.Value,
                 cancellationToken);
 
             if (plansResult.IsFailure)
@@ -150,34 +138,6 @@ public sealed class CreateProductsBatchHandler(
 
         return Result.Success(new CreateProductsBatchResult(
             createdProducts.Select(product => product.ToDto()).ToList()));
-    }
-
-    // Barkodu boş olan kalemlere seriden sıradaki barkodları atar (atomik tahsis;
-    // seri yapılandırılmamışsa anlaşılır bir hata döner).
-    private async Task<Result<IReadOnlyList<ProductItemDraft>>> FillMissingBarcodesAsync(
-        IReadOnlyList<ProductItemDraft> drafts,
-        CancellationToken cancellationToken)
-    {
-        var missingCount = drafts.Count(draft => string.IsNullOrWhiteSpace(draft.Barcode));
-        if (missingCount == 0)
-        {
-            return Result.Success(drafts);
-        }
-
-        var allocationResult = await barcodeAllocator.AllocateAsync(missingCount, cancellationToken);
-        if (allocationResult.IsFailure)
-        {
-            return Result.Failure<IReadOnlyList<ProductItemDraft>>(allocationResult.Error);
-        }
-
-        var barcodes = new Queue<string>(allocationResult.Value.Select(allocated => allocated.Barcode));
-        var filled = drafts
-            .Select(draft => string.IsNullOrWhiteSpace(draft.Barcode)
-                ? draft with { Barcode = barcodes.Dequeue() }
-                : draft)
-            .ToList();
-
-        return Result.Success<IReadOnlyList<ProductItemDraft>>(filled);
     }
 
     private static Result EnsureBatchUniqueness(

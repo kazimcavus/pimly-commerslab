@@ -168,16 +168,6 @@ internal static class CatalogValidationRules
             .Must(value => string.IsNullOrWhiteSpace(value) || BeNumericBarcode(value))
             .WithMessage("Barcode must be numeric.");
 
-    // Boş bırakılabilir barkod (non-null property). Boşsa ürün oluşturulurken
-    // seriden otomatik tahsis edilir; doluysa sayısal olmalıdır.
-    public static IRuleBuilderOptions<T, string> OptionalVariantBarcode<T>(this IRuleBuilder<T, string> ruleBuilder) =>
-        ruleBuilder
-            .MaximumLength(VariantBarcodeMaxLength)
-            .WithErrorCode(ValidationErrorCodes.MaxLength)
-            .WithMessage(ValidationMessages.MaxLength("Barcode", VariantBarcodeMaxLength))
-            .Must(value => string.IsNullOrWhiteSpace(value) || BeNumericBarcode(value))
-            .WithMessage("Barcode must be numeric.");
-
     public static IRuleBuilderOptions<T, string?> OptionalVariantSku<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
         ruleBuilder
             .MaximumLength(VariantSkuMaxLength)

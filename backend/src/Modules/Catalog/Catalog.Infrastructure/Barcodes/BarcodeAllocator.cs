@@ -19,10 +19,7 @@ internal sealed class BarcodeAllocator(CatalogDbContext db) : IBarcodeAllocator
                 Error.Validation("Count must be at least 1."));
         }
 
-        // UPDATE … RETURNING is not composable, so EF cannot append the LIMIT that
-        // SingleOrDefaultAsync adds. Materialize with ToListAsync (executes the raw
-        // SQL as-is) and pick the row client-side.
-        var reservedRows = await db.Database
+        var startRow = await db.Database
             .SqlQuery<SequenceReserveRow>(
                 $"""
                  UPDATE catalog.barcode_sequence
@@ -30,9 +27,7 @@ internal sealed class BarcodeAllocator(CatalogDbContext db) : IBarcodeAllocator
                  WHERE id = {BarcodeSequence.SingletonId}
                  RETURNING (next_value - {count})::bigint AS "StartValue"
                  """)
-            .ToListAsync(cancellationToken);
-
-        var startRow = reservedRows.Count > 0 ? reservedRows[0] : null;
+            .SingleOrDefaultAsync(cancellationToken);
 
         if (startRow is null)
         {
