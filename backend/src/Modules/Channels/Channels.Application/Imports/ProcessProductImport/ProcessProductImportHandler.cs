@@ -801,6 +801,8 @@ public sealed class ProcessProductImportHandler(
 
     private async Task SaveRunAsync(ProductImportRun run, CancellationToken cancellationToken)
     {
+        // Update() burada aggregate'i yeniden Modified yapmaz; yalnızca yanlışlıkla Modified
+        // işaretlenmiş yeni hata child'larını Added'e çevirir (bkz. ProductImportRunRepository).
         importRuns.Update(run);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }

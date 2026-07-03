@@ -35,7 +35,8 @@ public static class WorkerServiceCollectionExtensions
         services.AddScoped<AmbientTenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<AmbientTenantContext>());
 
-        services.AddHttpClient(nameof(CatalogImportGateway));
+        // Görsel indirme tek iş parçacığında; yavaş bir CDN yanıtı tüm import'u bloklamasın.
+        services.AddHttpClient(nameof(CatalogImportGateway), client => client.Timeout = TimeSpan.FromSeconds(20));
         services.AddScoped<ICatalogImportGateway, CatalogImportGateway>();
 
         // İşlemci, Catalog yazma kapısına ihtiyaç duyduğu için yalnızca worker kompozisyonunda kayıtlıdır.

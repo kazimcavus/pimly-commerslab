@@ -31,11 +31,15 @@ public static class ProductImportPlanner
     {
         var groups = new List<ProductGroupPlan>();
 
+        // SKU tekilliği tüm import boyunca korunur (DB'de tenant başına tek SKU); bir stok kodu
+        // gruplar arasında tekrar ederse yalnızca ilkine atanır, diğerlerinde SKU boş kalır.
+        var usedSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var groupRows in products
                      .GroupBy(product => product.ProductMainId, StringComparer.Ordinal)
                      .OrderBy(group => group.Key, StringComparer.Ordinal))
         {
-            groups.Add(BuildGroup(groupRows.Key, groupRows.ToList(), attributeDefsByCategory));
+            groups.Add(BuildGroup(groupRows.Key, groupRows.ToList(), attributeDefsByCategory, usedSkus));
         }
 
         return new ProductImportPlan(groups);
@@ -44,7 +48,8 @@ public static class ProductImportPlanner
     private static ProductGroupPlan BuildGroup(
         string productMainId,
         IReadOnlyList<MarketplaceProductNode> rows,
-        IReadOnlyDictionary<string, IReadOnlyList<ProductImportAttributeDef>> attributeDefsByCategory)
+        IReadOnlyDictionary<string, IReadOnlyList<ProductImportAttributeDef>> attributeDefsByCategory,
+        HashSet<string> usedSkus)
     {
         var warnings = new List<string>();
         var first = rows[0];
@@ -164,6 +169,9 @@ public static class ProductImportPlanner
         }
 
         // Satırlar: eksen seçimleri + indirgenen eksenlerin kalem düzeyi özellik değerleri.
+        // SKU tekilliği: Trendyol stockCode çoğu zaman model seviyesindedir (varyantlar aynı
+        // kodu paylaşır). SKU kalem başına benzersiz olmak zorunda; çakışan stok kodlarında
+        // SKU boş bırakılır (barkod zaten benzersiz tanımlayıcıdır). usedSkus tüm import boyunca paylaşılır.
         var items = new List<PlannedItem>();
         foreach (var row in uniqueRows)
         {
@@ -219,9 +227,12 @@ public static class ProductImportPlanner
                 .Select(planned => planned!)
                 .ToList();
 
+            var stockCode = string.IsNullOrWhiteSpace(row.StockCode) ? null : row.StockCode.Trim();
+            var sku = stockCode is not null && usedSkus.Add(stockCode) ? stockCode : null;
+
             items.Add(new PlannedItem(
                 row.Barcode,
-                string.IsNullOrWhiteSpace(row.StockCode) ? null : row.StockCode.Trim(),
+                sku,
                 row.SalePrice,
                 row.ListPrice > row.SalePrice ? row.ListPrice : null,
                 Math.Max(0, row.Quantity),

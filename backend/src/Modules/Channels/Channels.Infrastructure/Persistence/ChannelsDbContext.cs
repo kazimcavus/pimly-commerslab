@@ -63,6 +63,24 @@ public sealed class ChannelsDbContext : DbContext, IUnitOfWork
     public DbSet<AttributeValueChannelMapping> AttributeValueChannelMappings => Set<AttributeValueChannelMapping>();
 
     /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // ProductImportError, app-assigned Guid anahtarına sahip owned bir child'dır; EF onu
+        // izlenen aggregate'e eklendiğinde "var olan kayıt" sanıp Modified işaretler → UPDATE
+        // 0 satır → DbUpdateConcurrencyException. Hata kayıtları yalnızca eklenir (hiç
+        // güncellenmez), bu yüzden Modified görülen her kaydı güvenle Added'e çeviririz.
+        foreach (var entry in ChangeTracker.Entries<ProductImportError>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("channels");

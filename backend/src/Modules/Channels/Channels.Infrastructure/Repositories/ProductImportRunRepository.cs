@@ -84,6 +84,7 @@ internal sealed class ProductImportRunRepository(ChannelsDbContext db, TimeProvi
     public async Task AddAsync(ProductImportRun run, CancellationToken cancellationToken = default) =>
         await db.ProductImportRuns.AddAsync(run, cancellationToken);
 
-    public void Update(ProductImportRun run) =>
-        db.ProductImportRuns.Update(run);
+    // run zaten izleniyor (GetByIdAsync). Ekstra Update gerekmez; yeni hata child'larının
+    // durumu ChannelsDbContext.SaveChangesAsync içinde düzeltilir (append-only → Added).
+    public void Update(ProductImportRun run) => _ = run;
 }
