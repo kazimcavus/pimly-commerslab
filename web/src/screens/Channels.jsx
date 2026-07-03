@@ -64,7 +64,10 @@ export function Channels({ onNavigate, onToast }) {
                 : 'Henüz bağlı değil'}
             </div>
           </div>
-          <div style={{ marginLeft: 'auto' }} className="hstack">
+          <div className="hstack" style={{ marginLeft: 'auto', gap: 8 }}>
+            {connected && (
+              <Button variant="ghost" iconLeft={I('pencil')} onClick={() => onNavigate('onboarding')}>Düzenle</Button>
+            )}
             <Button variant={connected ? 'secondary' : 'primary'} iconLeft={I(connected ? 'refresh-cw' : 'plug')}
               disabled={hasActiveRun}
               onClick={() => onNavigate('onboarding')}>

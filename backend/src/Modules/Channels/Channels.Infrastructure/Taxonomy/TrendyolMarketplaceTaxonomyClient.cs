@@ -32,6 +32,7 @@ internal sealed class TrendyolMarketplaceTaxonomyClient(
             marketplace,
             cancellationToken);
 
+        // getCategoryTree yanıtı { "categories": [ ... ] } sarmalayıcısıyla döner.
         var fetchResult = await TrendyolHttpSupport.GetJsonAsync<TrendyolCategoryTreeResponse>(
             httpClient,
             $"{baseUrl}/integration/product/product-categories",

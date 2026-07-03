@@ -24,6 +24,8 @@ export function TrendyolOnboarding({ onNavigate, onToast }) {
   const [apiKey, setApiKey] = useState('')
   const [apiSecret, setApiSecret] = useState('')
   const [savingConn, setSavingConn] = useState(false)
+  const [existingConnection, setExistingConnection] = useState(null) // {seller_id, api_key_hint}
+  const [editing, setEditing] = useState(false)                       // bağlıyken formu açar
 
   // Adım 2 — taksonomi durumu
   const [taxStatus, setTaxStatus] = useState(null)
@@ -35,7 +37,10 @@ export function TrendyolOnboarding({ onNavigate, onToast }) {
   // Mevcut bağlantı varsa formu ön-doldur (secret asla geri dönmez, sadece ipucu).
   useEffect(() => {
     api.getConnection(MP).then((c) => {
-      if (c?.seller_id) setSellerId(c.seller_id)
+      if (c?.has_api_key) {
+        setExistingConnection(c)
+        setSellerId(c.seller_id || '')
+      }
     }).catch(() => {})
     return () => clearInterval(pollRef.current)
   }, [])
@@ -162,11 +167,34 @@ export function TrendyolOnboarding({ onNavigate, onToast }) {
 
       {error && <div style={{ marginBottom: 16 }}><Banner tone="danger" title="Bir sorun çıktı">{error}</Banner></div>}
 
-      {step === 'connect' && (
+      {step === 'connect' && existingConnection && !editing && (
+        <div className="bnode">
+          <div className="bnode__head">
+            <span className="ic">{I('badge-check')}</span>
+            <div><div className="bnode__title">Trendyol bağlı</div>
+              <div className="list-meta">Kayıtlı bilgilerle devam edebilir ya da bilgileri değiştirebilirsin.</div></div>
+          </div>
+          <div className="bnode__body">
+            <div className="between" style={{ padding: '10px 14px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', flexWrap: 'wrap', gap: 8 }}>
+              <div className="list-meta">
+                Satıcı ID <span className="mono pim-td-strong">{existingConnection.seller_id || '—'}</span>
+                {' · '}API anahtarı <span className="mono">••••{existingConnection.api_key_hint || ''}</span>
+              </div>
+              <Button variant="ghost" size="sm" iconLeft={I('pencil')} onClick={() => { setEditing(true); setApiKey(''); setApiSecret('') }}>Bilgileri değiştir</Button>
+            </div>
+            <div className="hstack" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
+              <Button variant="secondary" onClick={() => onNavigate('channels')}>İptal</Button>
+              <Button variant="primary" iconLeft={I('arrow-right')} onClick={startSync}>Mevcut bağlantıyla devam et</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 'connect' && (!existingConnection || editing) && (
         <form className="bnode" onSubmit={saveConnection}>
           <div className="bnode__head">
             <span className="ic">{I('plug')}</span>
-            <div><div className="bnode__title">Trendyol mağazanı bağla</div>
+            <div><div className="bnode__title">{editing ? 'Trendyol bilgilerini değiştir' : 'Trendyol mağazanı bağla'}</div>
               <div className="list-meta">API bilgilerin yalnızca senin hesabında saklanır.</div></div>
           </div>
           <div className="bnode__body">
@@ -186,8 +214,12 @@ export function TrendyolOnboarding({ onNavigate, onToast }) {
               </Field>
             </div>
             <div className="hstack" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
-              <Button variant="secondary" onClick={() => onNavigate('dashboard')}>Sonra yaparım</Button>
-              <Button variant="primary" type="submit" loading={savingConn} iconLeft={I('plug')}>Bağlan ve devam et</Button>
+              {editing
+                ? <Button variant="secondary" onClick={() => setEditing(false)}>Vazgeç</Button>
+                : <Button variant="secondary" onClick={() => onNavigate('dashboard')}>Sonra yaparım</Button>}
+              <Button variant="primary" type="submit" loading={savingConn} iconLeft={I('plug')}>
+                {editing ? 'Kaydet ve devam et' : 'Bağlan ve devam et'}
+              </Button>
             </div>
           </div>
         </form>
