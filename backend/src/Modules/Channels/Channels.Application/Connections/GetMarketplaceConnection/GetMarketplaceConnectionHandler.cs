@@ -23,19 +23,13 @@ public sealed class GetMarketplaceConnectionHandler(
             return Result.Failure<MarketplaceConnectionDto>(validationResult.Error);
         }
 
-        var keyResult = MarketplaceKey.Create(query.MarketplaceKey);
-        if (keyResult.IsFailure)
-        {
-            return Result.Failure<MarketplaceConnectionDto>(keyResult.Error);
-        }
-
-        var marketplaceResult = MarketplaceRegistry.GetByKey(keyResult.Value);
+        var marketplaceResult = Marketplace.FromCode(query.MarketplaceCode);
         if (marketplaceResult.IsFailure)
         {
             return Result.Failure<MarketplaceConnectionDto>(marketplaceResult.Error);
         }
 
-        var connection = await connections.GetByMarketplaceKeyAsync(keyResult.Value, cancellationToken);
+        var connection = await connections.GetByMarketplaceAsync(marketplaceResult.Value, cancellationToken);
         if (connection is null)
         {
             return Result.Failure<MarketplaceConnectionDto>(Error.NotFound("Marketplace connection not found."));

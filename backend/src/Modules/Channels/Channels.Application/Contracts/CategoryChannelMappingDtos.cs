@@ -4,7 +4,7 @@ namespace Channels.Application.Contracts;
 public sealed record CategoryChannelMappingDto(
     Guid Id,
     Guid CatalogCategoryId,
-    string MarketplaceKey,
+    string MarketplaceCode,
     string ExternalId,
     CatalogCategorySnapshotDto? CatalogCategory,
     ExternalCategorySummaryDto? ExternalCategory);
@@ -25,6 +25,6 @@ public sealed record ExternalCategorySummaryDto(
 
 /// <summary>Ürün listeleme için çözümlenmiş eşleme DTO'su.</summary>
 public sealed record ResolvedCategoryChannelMappingDto(
-    string MarketplaceKey,
+    string MarketplaceCode,
     Guid CatalogCategoryId,
     string ExternalId);

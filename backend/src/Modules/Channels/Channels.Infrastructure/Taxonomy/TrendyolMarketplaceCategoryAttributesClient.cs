@@ -1,4 +1,4 @@
-using Channels.Application.Taxonomy;
+using Channels.Application.ExternalCatalog;
 using Channels.Domain.Marketplaces;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
@@ -10,7 +10,7 @@ internal sealed class TrendyolMarketplaceCategoryAttributesClient(
     ILogger<TrendyolMarketplaceCategoryAttributesClient> logger) : IMarketplaceCategoryAttributesClient
 {
     public Task<Result<IReadOnlyList<MarketplaceCategoryAttributeNode>>> FetchCategoryAttributesAsync(
-        MarketplaceDefinition marketplace,
+        Marketplace marketplace,
         string externalCategoryId,
         CancellationToken cancellationToken = default)
     {

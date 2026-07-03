@@ -1,6 +1,9 @@
 using Channels.Application.Contracts;
 using Channels.Application.Ports;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 
 namespace Channels.Application.Contracts;
 
@@ -25,7 +28,7 @@ internal static class CategoryChannelMappingMappings
         new(
             mapping.Id,
             mapping.CatalogCategoryId,
-            mapping.MarketplaceKey.Value,
+            mapping.Marketplace.Code,
             mapping.ExternalId,
             catalogCategory?.ToDto(),
             externalCategory?.ToSummaryDto());

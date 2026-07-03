@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
-using Channels.Application.Taxonomy.EnqueueTaxonomySync;
-using Channels.Application.Taxonomy.ProcessTaxonomySync;
+using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
+using Channels.Application.TaxonomySync.ProcessTaxonomySync;
 using Channels.Domain.Marketplaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -24,21 +24,21 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
         await ProcessPendingSyncRunsAsync(Factory);
 
         var getRunResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/trendyol/taxonomy/sync-runs/{syncRun.Id}");
+            $"/api/v1/channels/marketplaces/TY/taxonomy/sync-runs/{syncRun.Id}");
         getRunResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var completedRun = await getRunResponse.Content.ReadFromJsonAsync<TaxonomySyncRunResponse>();
         completedRun!.Status.Should().Be("completed");
         completedRun.ProcessedCount.Should().BeGreaterThan(0);
 
-        var statusResponse = await Client.GetAsync("/api/v1/channels/marketplaces/trendyol/taxonomy/status");
+        var statusResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/taxonomy/status");
         statusResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var status = await statusResponse.Content.ReadFromJsonAsync<TaxonomyStatusResponse>();
         status!.CachedCategoryCount.Should().BeGreaterThan(0);
         status.IsSyncActive.Should().BeFalse();
 
-        var searchResponse = await Client.GetAsync("/api/v1/channels/marketplaces/trendyol/categories?q=Telefon");
+        var searchResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/categories?q=Telefon");
         searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var categories = await searchResponse.Content.ReadFromJsonAsync<List<ExternalCategoryResponse>>();
@@ -55,7 +55,7 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
         await ProcessPendingSyncRunsAsync(Factory);
 
         var getRunResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/trendyol/taxonomy/sync-runs/{syncRun.Id}");
+            $"/api/v1/channels/marketplaces/TY/taxonomy/sync-runs/{syncRun.Id}");
         getRunResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var completedRun = await getRunResponse.Content.ReadFromJsonAsync<TaxonomySyncRunResponse>();
@@ -73,8 +73,8 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
 
         await using var scope = Factory.Services.CreateAsyncScope();
         var handler = scope.ServiceProvider.GetRequiredService<IEnqueueTaxonomySyncHandler>();
-        var marketplaceKey = MarketplaceKey.Create("trendyol").Value;
-        var second = await handler.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplaceKey));
+        var marketplace = Marketplace.FromCode("TY").Value;
+        var second = await handler.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplace));
 
         second.IsFailure.Should().BeTrue();
         second.Error.Code.Should().Be("conflict");
@@ -82,7 +82,7 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
 
     private async Task UpsertTrendyolConnectionAsync()
     {
-        var response = await Client.PutAsJsonAsync("/api/v1/channels/marketplaces/trendyol/connection", new
+        var response = await Client.PutAsJsonAsync("/api/v1/channels/marketplaces/TY/connection", new
         {
             seller_id = "seller-123",
             api_key = "test-api-key",
@@ -97,14 +97,14 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var handler = scope.ServiceProvider.GetRequiredService<IEnqueueTaxonomySyncHandler>();
-        var marketplaceKey = MarketplaceKey.Create("trendyol").Value;
-        var result = await handler.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplaceKey));
+        var marketplace = Marketplace.FromCode("TY").Value;
+        var result = await handler.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplace));
 
         result.IsSuccess.Should().BeTrue();
 
         return new TaxonomySyncRunResponse(
             result.Value.Id,
-            result.Value.MarketplaceKey,
+            result.Value.MarketplaceCode,
             result.Value.Status,
             result.Value.ProcessedCount,
             result.Value.TotalEstimate);
@@ -128,13 +128,13 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
 
     private sealed record TaxonomySyncRunResponse(
         Guid Id,
-        string MarketplaceKey,
+        string MarketplaceCode,
         string Status,
         int ProcessedCount,
         int? TotalEstimate);
 
     private sealed record TaxonomyStatusResponse(
-        string MarketplaceKey,
+        string MarketplaceCode,
         bool IsSyncActive,
         int CachedCategoryCount);
 

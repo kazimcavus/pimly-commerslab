@@ -17,7 +17,7 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var marketplaces = await response.Content.ReadFromJsonAsync<List<MarketplaceResponse>>();
         marketplaces.Should().NotBeNull();
         marketplaces!.Should().ContainSingle(m =>
-            m.Key == "trendyol"
+            m.Code == "TY"
             && m.Name == "Trendyol"
             && m.IsActive
             && !m.IsConfigured);
@@ -28,10 +28,10 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     {
         const string apiKey = "test-api-key-12345678";
 
-        var missingResponse = await Client.GetAsync("/api/v1/channels/marketplaces/trendyol/connection");
+        var missingResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/connection");
         await CatalogHttpAssertions.AssertProblemAsync(missingResponse, HttpStatusCode.NotFound, "not_found");
 
-        var upsertResponse = await Client.PutAsJsonAsync("/api/v1/channels/marketplaces/trendyol/connection", new
+        var upsertResponse = await Client.PutAsJsonAsync("/api/v1/channels/marketplaces/TY/connection", new
         {
             seller_id = "seller-123",
             api_key = apiKey,
@@ -42,14 +42,14 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         var upserted = await upsertResponse.Content.ReadFromJsonAsync<MarketplaceConnectionResponse>();
         upserted.Should().NotBeNull();
-        upserted!.MarketplaceKey.Should().Be("trendyol");
+        upserted!.MarketplaceCode.Should().Be("TY");
         upserted.SellerId.Should().Be("seller-123");
         upserted.HasApiKey.Should().BeTrue();
         upserted.HasApiSecret.Should().BeTrue();
         upserted.ApiKeyHint.Should().Be("5678");
         upserted.IsEnabled.Should().BeTrue();
 
-        var getResponse = await Client.GetAsync("/api/v1/channels/marketplaces/trendyol/connection");
+        var getResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/connection");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var fetched = await getResponse.Content.ReadFromJsonAsync<MarketplaceConnectionResponse>();
@@ -58,13 +58,13 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         var listResponse = await Client.GetAsync("/api/v1/channels/marketplaces");
         var marketplaces = await listResponse.Content.ReadFromJsonAsync<List<MarketplaceResponse>>();
-        marketplaces!.Should().ContainSingle(m => m.Key == "trendyol" && m.IsConfigured);
+        marketplaces!.Should().ContainSingle(m => m.Code == "TY" && m.IsConfigured);
     }
 
     [SkippableFact]
     public async Task UpsertConnection_MissingApiKey_ReturnsValidationError()
     {
-        var response = await Client.PutAsJsonAsync("/api/v1/channels/marketplaces/trendyol/connection", new
+        var response = await Client.PutAsJsonAsync("/api/v1/channels/marketplaces/TY/connection", new
         {
             seller_id = "seller-123",
             api_key = string.Empty,
@@ -83,14 +83,14 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     }
 
     private sealed record MarketplaceResponse(
-        string Key,
+        string Code,
         string Name,
         bool IsActive,
         bool IsConfigured);
 
     private sealed record MarketplaceConnectionResponse(
         Guid Id,
-        string MarketplaceKey,
+        string MarketplaceCode,
         string? SellerId,
         bool HasApiKey,
         bool HasApiSecret,

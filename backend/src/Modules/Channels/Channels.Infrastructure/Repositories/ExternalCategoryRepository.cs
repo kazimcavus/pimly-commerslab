@@ -1,5 +1,8 @@
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
 using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,30 +12,30 @@ namespace Channels.Infrastructure.Repositories;
 internal sealed class ExternalCategoryRepository(ChannelsDbContext db) : IExternalCategoryRepository
 {
     public Task<int> CountByMarketplaceAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         CancellationToken cancellationToken = default) =>
         db.ExternalCategories.CountAsync(
-            category => category.MarketplaceKey == marketplaceKey,
+            category => category.Marketplace == marketplace,
             cancellationToken);
 
     public Task<ExternalCategory?> GetByExternalIdAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         string externalId,
         CancellationToken cancellationToken = default) =>
         db.ExternalCategories.FirstOrDefaultAsync(
             category =>
-                category.MarketplaceKey == marketplaceKey
+                category.Marketplace == marketplace
                 && category.ExternalId == externalId,
             cancellationToken);
 
     public async Task<IReadOnlyList<ExternalCategory>> SearchAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         string? query,
         int limit,
         CancellationToken cancellationToken = default)
     {
         var categories = db.ExternalCategories
-            .Where(category => category.MarketplaceKey == marketplaceKey);
+            .Where(category => category.Marketplace == marketplace);
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -50,7 +53,7 @@ internal sealed class ExternalCategoryRepository(ChannelsDbContext db) : IExtern
     }
 
     public async Task UpsertBatchAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         IReadOnlyList<ExternalCategoryUpsert> categories,
         DateTimeOffset syncedAt,
         CancellationToken cancellationToken = default)
@@ -63,7 +66,7 @@ internal sealed class ExternalCategoryRepository(ChannelsDbContext db) : IExtern
         var externalIds = categories.Select(category => category.ExternalId).ToList();
         var existing = await db.ExternalCategories
             .Where(category =>
-                category.MarketplaceKey == marketplaceKey
+                category.Marketplace == marketplace
                 && externalIds.Contains(category.ExternalId))
             .ToDictionaryAsync(category => category.ExternalId, cancellationToken);
 
@@ -81,7 +84,7 @@ internal sealed class ExternalCategoryRepository(ChannelsDbContext db) : IExtern
             }
 
             var createResult = ExternalCategory.Create(
-                marketplaceKey,
+                marketplace,
                 category.ExternalId,
                 category.Name,
                 category.ParentExternalId,

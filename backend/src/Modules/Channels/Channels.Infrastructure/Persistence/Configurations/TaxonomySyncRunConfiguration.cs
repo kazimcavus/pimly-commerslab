@@ -1,7 +1,8 @@
-using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Channels.Infrastructure.Persistence.Configurations;
@@ -17,19 +18,11 @@ internal sealed class TaxonomySyncRunConfiguration : IEntityTypeConfiguration<Ta
         builder.Property(syncRun => syncRun.Id).HasColumnName("id");
         builder.Ignore(syncRun => syncRun.DomainEvents);
 
-        var keyProperty = builder.Property(syncRun => syncRun.MarketplaceKey)
-            .HasColumnName("marketplace_key")
-            .HasConversion(key => key.Value, value => MarketplaceKey.FromPersistence(value))
-            .HasMaxLength(MarketplaceKey.MaxLength)
-            .IsRequired();
+        builder.Property(syncRun => syncRun.Marketplace)
+            .ConfigureMarketplaceColumn();
 
-        keyProperty.Metadata.SetValueComparer(new ValueComparer<MarketplaceKey>(
-            (left, right) => left!.Value == right!.Value,
-            key => key.Value.GetHashCode(StringComparison.Ordinal),
-            key => MarketplaceKey.FromPersistence(key.Value)));
-
-        builder.HasIndex(syncRun => syncRun.MarketplaceKey);
-        builder.HasIndex(syncRun => new { syncRun.MarketplaceKey, syncRun.Status });
+        builder.HasIndex(syncRun => syncRun.Marketplace);
+        builder.HasIndex(syncRun => new { syncRun.Marketplace, syncRun.Status });
 
         builder.Property(syncRun => syncRun.Status)
             .HasColumnName("status")

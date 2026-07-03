@@ -45,11 +45,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_enabled");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<string>("SellerId")
                         .HasMaxLength(200)
@@ -62,13 +62,13 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "MarketplaceKey")
+                    b.HasIndex("TenantId", "Marketplace")
                         .IsUnique();
 
                     b.ToTable("marketplace_connections", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.AttributeChannelMapping", b =>
+            modelBuilder.Entity("Channels.Domain.AttributeChannelMappings.AttributeChannelMapping", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -89,11 +89,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("external_attribute_id");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<string>("SourceType")
                         .IsRequired()
@@ -107,16 +107,16 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "MarketplaceKey", "CatalogCategoryId");
+                    b.HasIndex("TenantId", "Marketplace", "CatalogCategoryId");
 
-                    b.HasIndex("TenantId", "MarketplaceKey", "CatalogCategoryId", "SourceType", "CatalogSourceId")
+                    b.HasIndex("TenantId", "Marketplace", "CatalogCategoryId", "SourceType", "CatalogSourceId")
                         .IsUnique()
-                        .HasDatabaseName("IX_attribute_channel_mappings_tenant_id_marketplace_key_catal~1");
+                        .HasDatabaseName("IX_attribute_channel_mappings_tenant_id_marketplace_code_cata~1");
 
                     b.ToTable("attribute_channel_mappings", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.AttributeValueChannelMapping", b =>
+            modelBuilder.Entity("Channels.Domain.AttributeChannelMappings.AttributeValueChannelMapping", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -149,7 +149,7 @@ namespace Channels.Infrastructure.Persistence.Migrations
                     b.ToTable("attribute_value_channel_mappings", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.CategoryChannelMapping", b =>
+            modelBuilder.Entity("Channels.Domain.CategoryChannelMappings.CategoryChannelMapping", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -166,11 +166,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("external_id");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -178,17 +178,17 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "MarketplaceKey");
+                    b.HasIndex("TenantId", "Marketplace");
 
-                    b.HasIndex("TenantId", "CatalogCategoryId", "MarketplaceKey")
+                    b.HasIndex("TenantId", "CatalogCategoryId", "Marketplace")
                         .IsUnique();
 
-                    b.HasIndex("TenantId", "MarketplaceKey", "ExternalId");
+                    b.HasIndex("TenantId", "Marketplace", "ExternalId");
 
                     b.ToTable("category_channel_mappings", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.ExternalAttributeValue", b =>
+            modelBuilder.Entity("Channels.Domain.ExternalCatalog.ExternalAttributeValue", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -213,11 +213,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("external_value_id");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -231,13 +231,13 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MarketplaceKey", "ExternalCategoryId", "ExternalAttributeId", "ExternalValueId")
+                    b.HasIndex("Marketplace", "ExternalCategoryId", "ExternalAttributeId", "ExternalValueId")
                         .IsUnique();
 
                     b.ToTable("external_attribute_values", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.ExternalCategory", b =>
+            modelBuilder.Entity("Channels.Domain.ExternalCatalog.ExternalCategory", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -254,11 +254,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_leaf");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -283,17 +283,17 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MarketplaceKey");
+                    b.HasIndex("Marketplace");
 
                     b.HasIndex("Name");
 
-                    b.HasIndex("MarketplaceKey", "ExternalId")
+                    b.HasIndex("Marketplace", "ExternalId")
                         .IsUnique();
 
                     b.ToTable("external_categories", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.ExternalCategoryAttribute", b =>
+            modelBuilder.Entity("Channels.Domain.ExternalCatalog.ExternalCategoryAttribute", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -320,11 +320,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_variant");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -342,16 +342,16 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MarketplaceKey", "ExternalCategoryId");
+                    b.HasIndex("Marketplace", "ExternalCategoryId");
 
-                    b.HasIndex("MarketplaceKey", "ExternalCategoryId", "ExternalAttributeId")
+                    b.HasIndex("Marketplace", "ExternalCategoryId", "ExternalAttributeId")
                         .IsUnique()
-                        .HasDatabaseName("IX_external_category_attributes_marketplace_key_external_cate~1");
+                        .HasDatabaseName("IX_external_category_attributes_marketplace_code_external_cat~1");
 
                     b.ToTable("external_category_attributes", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Taxonomy.TaxonomySyncRun", b =>
+            modelBuilder.Entity("Channels.Domain.TaxonomySync.TaxonomySyncRun", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -371,11 +371,11 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("error_message");
 
-                    b.Property<string>("MarketplaceKey")
+                    b.Property<string>("Marketplace")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("marketplace_key");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
 
                     b.Property<int>("ProcessedCount")
                         .HasColumnType("integer")
@@ -397,9 +397,9 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MarketplaceKey");
+                    b.HasIndex("Marketplace");
 
-                    b.HasIndex("MarketplaceKey", "Status");
+                    b.HasIndex("Marketplace", "Status");
 
                     b.ToTable("taxonomy_sync_runs", "channels");
                 });

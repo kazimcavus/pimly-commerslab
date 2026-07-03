@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
-using Channels.Application.Taxonomy.EnqueueTaxonomySync;
-using Channels.Application.Taxonomy.ProcessTaxonomySync;
+using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
+using Channels.Application.TaxonomySync.ProcessTaxonomySync;
 using Channels.Domain.Marketplaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -23,7 +23,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var catalogCategoryId = await CreateCategoryAsync("Gömlek Kategorisi");
 
         var upsertResponse = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}",
             new { external_id = LeafExternalId });
 
         upsertResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -31,7 +31,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var mapping = await upsertResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>();
         mapping!.CatalogCategoryId.Should().Be(catalogCategoryId);
         mapping.ExternalId.Should().Be(LeafExternalId);
-        mapping.MarketplaceKey.Should().Be("trendyol");
+        mapping.MarketplaceCode.Should().Be("TY");
         mapping.CatalogCategory!.Name.Should().Be("Gömlek Kategorisi");
         mapping.ExternalCategory!.Name.Should().Be("Gömlek");
         mapping.ExternalCategory.IsLeaf.Should().BeTrue();
@@ -44,12 +44,12 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var catalogCategoryId = await CreateCategoryAsync();
 
         var firstResponse = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}",
             new { external_id = LeafExternalId });
         firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var secondResponse = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}",
             new { external_id = "211" });
         secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -65,7 +65,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var missingCategoryId = Guid.NewGuid();
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{missingCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{missingCategoryId}",
             new { external_id = LeafExternalId });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -78,7 +78,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var catalogCategoryId = await CreateCategoryAsync();
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}",
             new { external_id = "missing-category" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -91,7 +91,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var catalogCategoryId = await CreateCategoryAsync();
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}",
             new { external_id = NonLeafExternalId });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -104,30 +104,30 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
         var catalogCategoryId = await CreateCategoryAsync("CRUD Category");
 
         var upsertResponse = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}",
             new { external_id = LeafExternalId });
         upsertResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var getResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}");
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var getMapping = await getResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>();
         getMapping!.ExternalId.Should().Be(LeafExternalId);
 
         var listResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings?catalog_category_id={catalogCategoryId}");
+            $"/api/v1/channels/marketplaces/TY/category-mappings?catalog_category_id={catalogCategoryId}");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var list = await listResponse.Content.ReadFromJsonAsync<PagedCategoryChannelMappingsResponse>();
         list!.Items.Should().ContainSingle(item => item.CatalogCategoryId == catalogCategoryId);
 
         var deleteResponse = await Client.DeleteAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}");
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}");
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var getAfterDelete = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/trendyol/category-mappings/{catalogCategoryId}");
+            $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}");
         getAfterDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -135,8 +135,8 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
     {
         await using var scope = Factory.Services.CreateAsyncScope();
         var enqueue = scope.ServiceProvider.GetRequiredService<IEnqueueTaxonomySyncHandler>();
-        var marketplaceKey = MarketplaceKey.Create("trendyol").Value;
-        var enqueueResult = await enqueue.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplaceKey));
+        var marketplace = Marketplace.FromCode("TY").Value;
+        var enqueueResult = await enqueue.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplace));
         enqueueResult.IsSuccess.Should().BeTrue();
 
         var process = scope.ServiceProvider.GetRequiredService<IProcessTaxonomySyncHandler>();
@@ -154,7 +154,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
     private sealed record CategoryChannelMappingResponse(
         Guid Id,
         Guid CatalogCategoryId,
-        string MarketplaceKey,
+        string MarketplaceCode,
         string ExternalId,
         CatalogCategorySnapshotResponse? CatalogCategory,
         ExternalCategorySummaryResponse? ExternalCategory);

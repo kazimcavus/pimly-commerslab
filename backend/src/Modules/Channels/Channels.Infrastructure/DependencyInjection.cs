@@ -1,8 +1,12 @@
+using Channels.Application.ExternalCatalog;
 using Channels.Application.Options;
-using Channels.Application.Taxonomy;
 using Channels.Domain;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.Marketplaces;
+using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Options;
 using Channels.Infrastructure.Persistence;
 using Channels.Infrastructure.Taxonomy;
@@ -50,15 +54,53 @@ public static class DependencyInjection
             ?? new ChannelsOptions();
 
         services.AddHttpClient(nameof(TrendyolMarketplaceTaxonomyClient));
+        services.AddScoped<IMarketplaceTaxonomyClientResolver, MarketplaceTaxonomyClientResolver>();
+        services.AddScoped<IMarketplaceCategoryAttributesClientResolver, MarketplaceCategoryAttributesClientResolver>();
 
         if (options.UseStubTaxonomyClient)
         {
-            services.AddScoped<IMarketplaceTaxonomyClient, StubMarketplaceTaxonomyClient>();
-            services.AddScoped<IMarketplaceCategoryAttributesClient, StubMarketplaceCategoryAttributesClient>();
+            RegisterTaxonomyClient<StubMarketplaceTaxonomyClient>(services);
+            RegisterCategoryAttributesClient<StubMarketplaceCategoryAttributesClient>(services);
             return;
         }
 
-        services.AddScoped<IMarketplaceTaxonomyClient, TrendyolMarketplaceTaxonomyClient>();
-        services.AddScoped<IMarketplaceCategoryAttributesClient, TrendyolMarketplaceCategoryAttributesClient>();
+        RegisterTaxonomyClient<TrendyolMarketplaceTaxonomyClient>(services, Marketplace.Trendyol);
+        RegisterCategoryAttributesClient<TrendyolMarketplaceCategoryAttributesClient>(services, Marketplace.Trendyol);
+    }
+
+    private static void RegisterTaxonomyClient<TClient>(
+        IServiceCollection services,
+        Marketplace? marketplace = null)
+        where TClient : class, IMarketplaceTaxonomyClient
+    {
+        if (marketplace is null)
+        {
+            foreach (var entry in Marketplace.AllSupported)
+            {
+                services.AddKeyedScoped<IMarketplaceTaxonomyClient, TClient>(entry.Code);
+            }
+
+            return;
+        }
+
+        services.AddKeyedScoped<IMarketplaceTaxonomyClient, TClient>(marketplace.Code);
+    }
+
+    private static void RegisterCategoryAttributesClient<TClient>(
+        IServiceCollection services,
+        Marketplace? marketplace = null)
+        where TClient : class, IMarketplaceCategoryAttributesClient
+    {
+        if (marketplace is null)
+        {
+            foreach (var entry in Marketplace.AllSupported)
+            {
+                services.AddKeyedScoped<IMarketplaceCategoryAttributesClient, TClient>(entry.Code);
+            }
+
+            return;
+        }
+
+        services.AddKeyedScoped<IMarketplaceCategoryAttributesClient, TClient>(marketplace.Code);
     }
 }

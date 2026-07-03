@@ -1,5 +1,8 @@
 using Channels.Application.Contracts;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 
 namespace Channels.Application.Contracts;
 

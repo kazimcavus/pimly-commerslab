@@ -1,7 +1,8 @@
-using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Channels.Infrastructure.Persistence.Configurations;
@@ -16,16 +17,8 @@ internal sealed class ExternalAttributeValueConfiguration : IEntityTypeConfigura
         builder.Property(value => value.Id).HasColumnName("id");
         builder.Ignore(value => value.DomainEvents);
 
-        var keyProperty = builder.Property(value => value.MarketplaceKey)
-            .HasColumnName("marketplace_key")
-            .HasConversion(key => key.Value, val => MarketplaceKey.FromPersistence(val))
-            .HasMaxLength(MarketplaceKey.MaxLength)
-            .IsRequired();
-
-        keyProperty.Metadata.SetValueComparer(new ValueComparer<MarketplaceKey>(
-            (left, right) => left!.Value == right!.Value,
-            key => key.Value.GetHashCode(StringComparison.Ordinal),
-            key => MarketplaceKey.FromPersistence(key.Value)));
+        builder.Property(value => value.Marketplace)
+            .ConfigureMarketplaceColumn();
 
         builder.Property(value => value.ExternalCategoryId)
             .HasColumnName("external_category_id")
@@ -44,7 +37,7 @@ internal sealed class ExternalAttributeValueConfiguration : IEntityTypeConfigura
 
         builder.HasIndex(value => new
         {
-            value.MarketplaceKey,
+            value.Marketplace,
             value.ExternalCategoryId,
             value.ExternalAttributeId,
             value.ExternalValueId,

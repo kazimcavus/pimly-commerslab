@@ -1,7 +1,8 @@
-using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Channels.Infrastructure.Persistence.Configurations;
@@ -17,24 +18,16 @@ internal sealed class ExternalCategoryConfiguration : IEntityTypeConfiguration<E
         builder.Property(category => category.Id).HasColumnName("id");
         builder.Ignore(category => category.DomainEvents);
 
-        var keyProperty = builder.Property(category => category.MarketplaceKey)
-            .HasColumnName("marketplace_key")
-            .HasConversion(key => key.Value, value => MarketplaceKey.FromPersistence(value))
-            .HasMaxLength(MarketplaceKey.MaxLength)
-            .IsRequired();
-
-        keyProperty.Metadata.SetValueComparer(new ValueComparer<MarketplaceKey>(
-            (left, right) => left!.Value == right!.Value,
-            key => key.Value.GetHashCode(StringComparison.Ordinal),
-            key => MarketplaceKey.FromPersistence(key.Value)));
+        builder.Property(category => category.Marketplace)
+            .ConfigureMarketplaceColumn();
 
         builder.Property(category => category.ExternalId)
             .HasColumnName("external_id")
             .HasMaxLength(100)
             .IsRequired();
 
-        builder.HasIndex(category => new { category.MarketplaceKey, category.ExternalId }).IsUnique();
-        builder.HasIndex(category => category.MarketplaceKey);
+        builder.HasIndex(category => new { category.Marketplace, category.ExternalId }).IsUnique();
+        builder.HasIndex(category => category.Marketplace);
         builder.HasIndex(category => category.Name);
 
         builder.Property(category => category.Name)

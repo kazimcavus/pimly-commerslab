@@ -8,6 +8,6 @@ public sealed class GetMarketplaceConnectionQueryValidator : AbstractValidator<G
 {
     public GetMarketplaceConnectionQueryValidator()
     {
-        RuleFor(x => x.MarketplaceKey).MarketplaceKey();
+        RuleFor(x => x.MarketplaceCode).MarketplaceCode();
     }
 }

@@ -1,4 +1,4 @@
 namespace Channels.Application.Connections.GetMarketplaceConnection;
 
 /// <summary>Pazaryeri bağlantısı getirme sorgusu.</summary>
-public sealed record GetMarketplaceConnectionQuery(string MarketplaceKey);
+public sealed record GetMarketplaceConnectionQuery(string MarketplaceCode);

@@ -1,7 +1,6 @@
 using Channels.Domain.Connections;
 using Channels.Domain.Marketplaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Channels.Infrastructure.Persistence.Configurations;
@@ -21,18 +20,10 @@ internal sealed class MarketplaceConnectionConfiguration : IEntityTypeConfigurat
             .HasColumnName("tenant_id")
             .IsRequired();
 
-        var keyProperty = builder.Property(connection => connection.MarketplaceKey)
-            .HasColumnName("marketplace_key")
-            .HasConversion(key => key.Value, value => MarketplaceKey.FromPersistence(value))
-            .HasMaxLength(MarketplaceKey.MaxLength)
-            .IsRequired();
+        builder.Property(connection => connection.Marketplace)
+            .ConfigureMarketplaceColumn();
 
-        keyProperty.Metadata.SetValueComparer(new ValueComparer<MarketplaceKey>(
-            (left, right) => left!.Value == right!.Value,
-            key => key.Value.GetHashCode(StringComparison.Ordinal),
-            key => MarketplaceKey.FromPersistence(key.Value)));
-
-        builder.HasIndex(connection => new { connection.TenantId, connection.MarketplaceKey }).IsUnique();
+        builder.HasIndex(connection => new { connection.TenantId, connection.Marketplace }).IsUnique();
 
         builder.Property(connection => connection.SellerId)
             .HasColumnName("seller_id")

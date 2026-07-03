@@ -8,18 +8,18 @@ namespace Channels.Infrastructure.Repositories;
 /// <summary>MarketplaceConnection aggregate'leri için EF Core tabanlı depo.</summary>
 internal sealed class MarketplaceConnectionRepository(ChannelsDbContext db) : IMarketplaceConnectionRepository
 {
-    public Task<MarketplaceConnection?> GetByMarketplaceKeyAsync(
-        MarketplaceKey marketplaceKey,
+    public Task<MarketplaceConnection?> GetByMarketplaceAsync(
+        Marketplace marketplace,
         CancellationToken cancellationToken = default) =>
         db.MarketplaceConnections.FirstOrDefaultAsync(
-            connection => connection.MarketplaceKey == marketplaceKey,
+            connection => connection.Marketplace == marketplace,
             cancellationToken);
 
-    public async Task<IReadOnlySet<MarketplaceKey>> GetConfiguredMarketplaceKeysAsync(
+    public async Task<IReadOnlySet<Marketplace>> GetConfiguredMarketplacesAsync(
         CancellationToken cancellationToken = default)
     {
         var keys = await db.MarketplaceConnections
-            .Select(connection => connection.MarketplaceKey)
+            .Select(connection => connection.Marketplace)
             .ToListAsync(cancellationToken);
 
         return keys.ToHashSet();

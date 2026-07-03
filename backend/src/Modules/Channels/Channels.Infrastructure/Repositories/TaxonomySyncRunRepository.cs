@@ -1,5 +1,8 @@
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
 using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,32 +16,32 @@ internal sealed class TaxonomySyncRunRepository(ChannelsDbContext db, TimeProvid
         db.TaxonomySyncRuns.FirstOrDefaultAsync(syncRun => syncRun.Id == id, cancellationToken);
 
     public Task<TaxonomySyncRun?> GetActiveForMarketplaceAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         CancellationToken cancellationToken = default) =>
         db.TaxonomySyncRuns
             .Where(syncRun =>
-                syncRun.MarketplaceKey == marketplaceKey
+                syncRun.Marketplace == marketplace
                 && (syncRun.Status == TaxonomySyncStatus.Pending
                     || syncRun.Status == TaxonomySyncStatus.Running))
             .OrderByDescending(syncRun => syncRun.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
     public Task<TaxonomySyncRun?> GetLatestCompletedForMarketplaceAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         CancellationToken cancellationToken = default) =>
         db.TaxonomySyncRuns
             .Where(syncRun =>
-                syncRun.MarketplaceKey == marketplaceKey
+                syncRun.Marketplace == marketplace
                 && syncRun.Status == TaxonomySyncStatus.Completed)
             .OrderByDescending(syncRun => syncRun.CompletedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
     public Task<bool> HasSyncRunSinceAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         DateTimeOffset since,
         CancellationToken cancellationToken = default) =>
         db.TaxonomySyncRuns.AnyAsync(
-            syncRun => syncRun.MarketplaceKey == marketplaceKey && syncRun.CreatedAt >= since,
+            syncRun => syncRun.Marketplace == marketplace && syncRun.CreatedAt >= since,
             cancellationToken);
 
     public async Task<TaxonomySyncRun?> TryClaimNextPendingAsync(CancellationToken cancellationToken = default)
@@ -47,7 +50,7 @@ internal sealed class TaxonomySyncRunRepository(ChannelsDbContext db, TimeProvid
 
         var pendingId = await db.TaxonomySyncRuns
             .FromSqlInterpolated($"""
-                SELECT id, marketplace_key, status, created_at, started_at, completed_at,
+                SELECT id, marketplace_code, status, created_at, started_at, completed_at,
                        processed_count, total_estimate, error_message
                 FROM channels.taxonomy_sync_runs
                 WHERE status = {"pending"}

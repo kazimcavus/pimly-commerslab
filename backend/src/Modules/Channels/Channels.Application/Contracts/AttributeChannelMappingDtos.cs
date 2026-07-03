@@ -3,7 +3,7 @@ namespace Channels.Application.Contracts;
 public sealed record AttributeChannelMappingDto(
     Guid Id,
     Guid CatalogCategoryId,
-    string MarketplaceKey,
+    string MarketplaceCode,
     string SourceType,
     Guid CatalogSourceId,
     string ExternalAttributeId,
@@ -35,7 +35,7 @@ public sealed record ExternalAttributeValueSummaryDto(
     string Name);
 
 public sealed record ResolvedAttributeChannelMappingDto(
-    string MarketplaceKey,
+    string MarketplaceCode,
     Guid CatalogCategoryId,
     string SourceType,
     Guid CatalogSourceId,

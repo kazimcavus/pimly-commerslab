@@ -27,30 +27,21 @@ public sealed class UpsertMarketplaceConnectionHandler(
             return Result.Failure<MarketplaceConnectionDto>(validationResult.Error);
         }
 
-        var keyResult = MarketplaceKey.Create(command.MarketplaceKey);
-        if (keyResult.IsFailure)
-        {
-            return Result.Failure<MarketplaceConnectionDto>(keyResult.Error);
-        }
-
-        var marketplaceResult = MarketplaceRegistry.GetByKey(keyResult.Value);
+        var marketplaceResult = Marketplace.FromCode(command.MarketplaceCode);
         if (marketplaceResult.IsFailure)
         {
             return Result.Failure<MarketplaceConnectionDto>(marketplaceResult.Error);
         }
 
-        if (!marketplaceResult.Value.IsActive)
-        {
-            return Result.Failure<MarketplaceConnectionDto>(Error.Validation("Marketplace is not active."));
-        }
+        var marketplace = marketplaceResult.Value;
 
-        var existing = await connections.GetByMarketplaceKeyAsync(keyResult.Value, cancellationToken);
+        var existing = await connections.GetByMarketplaceAsync(marketplace, cancellationToken);
 
         if (existing is null)
         {
             var createResult = MarketplaceConnection.Create(
                 tenantContext.TenantId,
-                keyResult.Value,
+                marketplace,
                 command.SellerId,
                 command.ApiKey,
                 command.ApiSecret,

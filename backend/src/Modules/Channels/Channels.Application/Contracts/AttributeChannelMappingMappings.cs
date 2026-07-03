@@ -1,7 +1,11 @@
+using Channels.Application.AttributeChannelMappings;
 using Channels.Application.Contracts;
+using Channels.Application.ExternalCatalog;
 using Channels.Application.Ports;
-using Channels.Application.Taxonomy;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 
 namespace Channels.Application.Contracts;
 
@@ -32,7 +36,7 @@ internal static class AttributeChannelMappingMappings
         new(
             mapping.Id,
             mapping.CatalogCategoryId,
-            mapping.MarketplaceKey.Value,
+            mapping.Marketplace.Code,
             AttributeMappingSourceTypeParser.ToApiValue(mapping.SourceType),
             mapping.CatalogSourceId,
             mapping.ExternalAttributeId,

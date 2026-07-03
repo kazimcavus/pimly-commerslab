@@ -1,21 +1,21 @@
 using Channels.Api.Requests;
+using Channels.Application.AttributeChannelMappings.DeleteAttributeChannelMapping;
+using Channels.Application.AttributeChannelMappings.GetAttributeChannelMapping;
+using Channels.Application.AttributeChannelMappings.ListAttributeChannelMappings;
+using Channels.Application.AttributeChannelMappings.ListAttributeValueChannelMappings;
+using Channels.Application.AttributeChannelMappings.UpsertAttributeChannelMapping;
+using Channels.Application.AttributeChannelMappings.UpsertAttributeValueChannelMappings;
+using Channels.Application.CategoryChannelMappings.DeleteCategoryChannelMapping;
+using Channels.Application.CategoryChannelMappings.GetCategoryChannelMapping;
+using Channels.Application.CategoryChannelMappings.ListCategoryChannelMappings;
+using Channels.Application.CategoryChannelMappings.UpsertCategoryChannelMapping;
 using Channels.Application.Connections.GetMarketplaceConnection;
 using Channels.Application.Connections.UpsertMarketplaceConnection;
+using Channels.Application.ExternalCatalog.ListExternalCategoryAttributes;
+using Channels.Application.ExternalCatalog.SearchExternalCategories;
 using Channels.Application.Marketplaces.ListMarketplaces;
-using Channels.Application.Taxonomy.DeleteAttributeChannelMapping;
-using Channels.Application.Taxonomy.DeleteCategoryChannelMapping;
-using Channels.Application.Taxonomy.GetAttributeChannelMapping;
-using Channels.Application.Taxonomy.GetCategoryChannelMapping;
-using Channels.Application.Taxonomy.GetTaxonomyStatus;
-using Channels.Application.Taxonomy.GetTaxonomySyncRun;
-using Channels.Application.Taxonomy.ListAttributeChannelMappings;
-using Channels.Application.Taxonomy.ListAttributeValueChannelMappings;
-using Channels.Application.Taxonomy.ListCategoryChannelMappings;
-using Channels.Application.Taxonomy.ListExternalCategoryAttributes;
-using Channels.Application.Taxonomy.SearchExternalCategories;
-using Channels.Application.Taxonomy.UpsertAttributeChannelMapping;
-using Channels.Application.Taxonomy.UpsertAttributeValueChannelMappings;
-using Channels.Application.Taxonomy.UpsertCategoryChannelMapping;
+using Channels.Application.TaxonomySync.GetTaxonomyStatus;
+using Channels.Application.TaxonomySync.GetTaxonomySyncRun;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -41,24 +41,24 @@ public static class ChannelsEndpoints
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/connection", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/connection", async (
+            string code,
             IGetMarketplaceConnectionHandler handler,
             CancellationToken cancellationToken) =>
         {
-            var result = await handler.ExecuteAsync(new GetMarketplaceConnectionQuery(key), cancellationToken);
+            var result = await handler.ExecuteAsync(new GetMarketplaceConnectionQuery(code), cancellationToken);
             return result.ToHttpResult();
         });
 
-        group.MapPut("/marketplaces/{key}/connection", async (
-            string key,
+        group.MapPut("/marketplaces/{code}/connection", async (
+            string code,
             UpsertMarketplaceConnectionRequest request,
             IUpsertMarketplaceConnectionHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
                 new UpsertMarketplaceConnectionCommand(
-                    key,
+                    code,
                     request.SellerId,
                     request.ApiKey,
                     request.ApiSecret,
@@ -68,71 +68,71 @@ public static class ChannelsEndpoints
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/taxonomy/status", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/taxonomy/status", async (
+            string code,
             IGetTaxonomyStatusHandler handler,
             CancellationToken cancellationToken) =>
         {
-            var result = await handler.ExecuteAsync(new GetTaxonomyStatusQuery(key), cancellationToken);
+            var result = await handler.ExecuteAsync(new GetTaxonomyStatusQuery(code), cancellationToken);
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/taxonomy/sync-runs/{syncRunId:guid}", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/taxonomy/sync-runs/{syncRunId:guid}", async (
+            string code,
             Guid syncRunId,
             IGetTaxonomySyncRunHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new GetTaxonomySyncRunQuery(key, syncRunId),
+                new GetTaxonomySyncRunQuery(code, syncRunId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/categories", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/categories", async (
+            string code,
             string? q,
             int? limit,
             ISearchExternalCategoriesHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new SearchExternalCategoriesQuery(key, q, limit ?? 25),
+                new SearchExternalCategoriesQuery(code, q, limit ?? 25),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapPut("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}", async (
-            string key,
+        group.MapPut("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}", async (
+            string code,
             Guid catalogCategoryId,
             UpsertCategoryChannelMappingRequest request,
             IUpsertCategoryChannelMappingHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new UpsertCategoryChannelMappingCommand(key, catalogCategoryId, request.ExternalId),
+                new UpsertCategoryChannelMappingCommand(code, catalogCategoryId, request.ExternalId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}", async (
+            string code,
             Guid catalogCategoryId,
             IGetCategoryChannelMappingHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new GetCategoryChannelMappingQuery(key, catalogCategoryId),
+                new GetCategoryChannelMappingQuery(code, catalogCategoryId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/category-mappings", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/category-mappings", async (
+            string code,
             Guid? catalog_category_id,
             int? page,
             int? page_size,
@@ -141,7 +141,7 @@ public static class ChannelsEndpoints
         {
             var result = await handler.ExecuteAsync(
                 new ListCategoryChannelMappingsQuery(
-                    key,
+                    code,
                     catalog_category_id,
                     page ?? 0,
                     page_size ?? 0),
@@ -150,34 +150,34 @@ public static class ChannelsEndpoints
             return result.ToHttpResult();
         });
 
-        group.MapDelete("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}", async (
-            string key,
+        group.MapDelete("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}", async (
+            string code,
             Guid catalogCategoryId,
             IDeleteCategoryChannelMappingHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new DeleteCategoryChannelMappingCommand(key, catalogCategoryId),
+                new DeleteCategoryChannelMappingCommand(code, catalogCategoryId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/external-attributes", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/external-attributes", async (
+            string code,
             Guid catalogCategoryId,
             IListExternalCategoryAttributesHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new ListExternalCategoryAttributesQuery(key, catalogCategoryId),
+                new ListExternalCategoryAttributesQuery(code, catalogCategoryId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapPut("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/attribute-mappings", async (
-            string key,
+        group.MapPut("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/attribute-mappings", async (
+            string code,
             Guid catalogCategoryId,
             UpsertAttributeChannelMappingRequest request,
             IUpsertAttributeChannelMappingHandler handler,
@@ -185,7 +185,7 @@ public static class ChannelsEndpoints
         {
             var result = await handler.ExecuteAsync(
                 new UpsertAttributeChannelMappingCommand(
-                    key,
+                    code,
                     catalogCategoryId,
                     request.SourceType,
                     request.CatalogSourceId,
@@ -195,8 +195,8 @@ public static class ChannelsEndpoints
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/attribute-mappings", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/attribute-mappings", async (
+            string code,
             Guid catalogCategoryId,
             string? source_type,
             int? page,
@@ -206,7 +206,7 @@ public static class ChannelsEndpoints
         {
             var result = await handler.ExecuteAsync(
                 new ListAttributeChannelMappingsQuery(
-                    key,
+                    code,
                     catalogCategoryId,
                     source_type,
                     page ?? 0,
@@ -216,36 +216,36 @@ public static class ChannelsEndpoints
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}", async (
+            string code,
             Guid catalogCategoryId,
             Guid mappingId,
             IGetAttributeChannelMappingHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new GetAttributeChannelMappingQuery(key, catalogCategoryId, mappingId),
+                new GetAttributeChannelMappingQuery(code, catalogCategoryId, mappingId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapDelete("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}", async (
-            string key,
+        group.MapDelete("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}", async (
+            string code,
             Guid catalogCategoryId,
             Guid mappingId,
             IDeleteAttributeChannelMappingHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new DeleteAttributeChannelMappingCommand(key, catalogCategoryId, mappingId),
+                new DeleteAttributeChannelMappingCommand(code, catalogCategoryId, mappingId),
                 cancellationToken);
 
             return result.ToHttpResult();
         });
 
-        group.MapPut("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}/value-mappings", async (
-            string key,
+        group.MapPut("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}/value-mappings", async (
+            string code,
             Guid catalogCategoryId,
             Guid mappingId,
             UpsertAttributeValueChannelMappingsRequest request,
@@ -254,7 +254,7 @@ public static class ChannelsEndpoints
         {
             var result = await handler.ExecuteAsync(
                 new UpsertAttributeValueChannelMappingsCommand(
-                    key,
+                    code,
                     catalogCategoryId,
                     mappingId,
                     request.Values
@@ -267,15 +267,15 @@ public static class ChannelsEndpoints
             return result.ToHttpResult();
         });
 
-        group.MapGet("/marketplaces/{key}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}/value-mappings", async (
-            string key,
+        group.MapGet("/marketplaces/{code}/category-mappings/{catalogCategoryId:guid}/attribute-mappings/{mappingId:guid}/value-mappings", async (
+            string code,
             Guid catalogCategoryId,
             Guid mappingId,
             IListAttributeValueChannelMappingsHandler handler,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.ExecuteAsync(
-                new ListAttributeValueChannelMappingsQuery(key, catalogCategoryId, mappingId),
+                new ListAttributeValueChannelMappingsQuery(code, catalogCategoryId, mappingId),
                 cancellationToken);
 
             return result.ToHttpResult();

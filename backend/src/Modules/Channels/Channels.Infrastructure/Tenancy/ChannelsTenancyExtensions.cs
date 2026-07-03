@@ -1,5 +1,8 @@
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 using Microsoft.EntityFrameworkCore;
 
 namespace Channels.Infrastructure.Tenancy;

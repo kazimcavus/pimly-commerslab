@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
-using Channels.Application.Taxonomy.EnqueueTaxonomySync;
-using Channels.Application.Taxonomy.ProcessTaxonomySync;
+using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
+using Channels.Application.TaxonomySync.ProcessTaxonomySync;
 using Channels.Domain.Marketplaces;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +14,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
 {
     private const string GomlekExternalId = "221";
     private const string PhoneExternalId = "111";
-    private const string Marketplace = "trendyol";
+    private const string MarketplaceRouteCode = "TY";
 
     [SkippableFact]
     public async Task ExternalAttributesSync_ReturnsStubData()
@@ -23,7 +23,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
 
         var response = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/external-attributes");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/external-attributes");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var attributes = await response.Content.ReadFromJsonAsync<List<ExternalCategoryAttributeResponse>>();
@@ -45,7 +45,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_attribute",
@@ -71,7 +71,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var variantId = await CreateVariantWithValueAsync("Beden", "S");
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_variant",
@@ -93,7 +93,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateCategoryAsync();
 
         var response = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/external-attributes");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/external-attributes");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -108,7 +108,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var attributeId = await CreateAttributeWithValueAsync("Atanmamış Özellik", "Değer");
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_attribute",
@@ -130,7 +130,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_attribute",
@@ -159,7 +159,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             "attr-kumas");
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
             new
             {
                 values = new[]
@@ -174,7 +174,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             item.CatalogValueId == valueId && item.ExternalValueId == "val-pamuk");
 
         var listResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var listed = await listResponse.Content.ReadFromJsonAsync<List<AttributeValueChannelMappingResponse>>();
@@ -199,7 +199,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             "attr-marka");
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
             new
             {
                 values = new[]
@@ -229,7 +229,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             "attr-kumas");
 
         var upsertValuesResponse = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
             new
             {
                 values = new[]
@@ -240,11 +240,11 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         upsertValuesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var deleteResponse = await Client.DeleteAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var getFieldResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
         getFieldResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -266,18 +266,18 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             "attr-kumas");
 
         var getResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var listResponse = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings?source_type=catalog_attribute");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings?source_type=catalog_attribute");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var list = await listResponse.Content.ReadFromJsonAsync<PagedAttributeChannelMappingsResponse>();
         list!.Items.Should().ContainSingle(item => item.Id == fieldMapping.Id);
 
         var valueResponse = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings",
             new
             {
                 values = new[]
@@ -288,7 +288,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         valueResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var deleteResponse = await Client.DeleteAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}");
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
@@ -297,7 +297,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateCategoryAsync($"AttrMap-{Guid.NewGuid():N}");
 
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}",
             new { external_id = externalCategoryId });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -307,7 +307,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
     private async Task SyncExternalAttributesAsync(Guid catalogCategoryId)
     {
         var response = await Client.GetAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/external-attributes");
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/external-attributes");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -372,7 +372,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         string externalAttributeId)
     {
         var response = await Client.PutAsJsonAsync(
-            $"/api/v1/channels/marketplaces/{Marketplace}/category-mappings/{catalogCategoryId}/attribute-mappings",
+            $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = sourceType,
@@ -389,8 +389,8 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
     {
         await using var scope = Factory.Services.CreateAsyncScope();
         var enqueue = scope.ServiceProvider.GetRequiredService<IEnqueueTaxonomySyncHandler>();
-        var marketplaceKey = MarketplaceKey.Create(Marketplace).Value;
-        var enqueueResult = await enqueue.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplaceKey));
+        var marketplace = Marketplace.FromCode(MarketplaceRouteCode).Value;
+        var enqueueResult = await enqueue.ExecuteAsync(new EnqueueTaxonomySyncCommand(marketplace));
         enqueueResult.IsSuccess.Should().BeTrue();
 
         var process = scope.ServiceProvider.GetRequiredService<IProcessTaxonomySyncHandler>();
@@ -438,7 +438,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
     private sealed record AttributeChannelMappingResponse(
         Guid Id,
         Guid CatalogCategoryId,
-        string MarketplaceKey,
+        string MarketplaceCode,
         string SourceType,
         Guid CatalogSourceId,
         string ExternalAttributeId,

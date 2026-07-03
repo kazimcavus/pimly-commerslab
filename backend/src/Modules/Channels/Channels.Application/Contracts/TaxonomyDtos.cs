@@ -3,7 +3,7 @@ namespace Channels.Application.Contracts;
 /// <summary>Taxonomy sync job API yanıt modeli.</summary>
 public sealed record TaxonomySyncRunDto(
     Guid Id,
-    string MarketplaceKey,
+    string MarketplaceCode,
     string Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset? StartedAt,
@@ -14,7 +14,7 @@ public sealed record TaxonomySyncRunDto(
 
 /// <summary>Taxonomy sync özet durumu.</summary>
 public sealed record TaxonomyStatusDto(
-    string MarketplaceKey,
+    string MarketplaceCode,
     bool IsSyncActive,
     Guid? ActiveSyncRunId,
     DateTimeOffset? LastCompletedAt,

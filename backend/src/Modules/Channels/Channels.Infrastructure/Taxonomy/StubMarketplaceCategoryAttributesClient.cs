@@ -1,4 +1,4 @@
-using Channels.Application.Taxonomy;
+using Channels.Application.ExternalCatalog;
 using Channels.Domain.Marketplaces;
 using SharedKernel;
 
@@ -76,7 +76,7 @@ internal sealed class StubMarketplaceCategoryAttributesClient : IMarketplaceCate
         };
 
     public Task<Result<IReadOnlyList<MarketplaceCategoryAttributeNode>>> FetchCategoryAttributesAsync(
-        MarketplaceDefinition marketplace,
+        Marketplace marketplace,
         string externalCategoryId,
         CancellationToken cancellationToken = default)
     {

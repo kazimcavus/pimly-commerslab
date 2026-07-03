@@ -1,5 +1,8 @@
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
 using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -10,22 +13,22 @@ namespace Channels.Infrastructure.Repositories;
 internal sealed class CategoryChannelMappingRepository(ChannelsDbContext db) : ICategoryChannelMappingRepository
 {
     public Task<CategoryChannelMapping?> GetAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         Guid catalogCategoryId,
         CancellationToken cancellationToken = default) =>
         db.CategoryChannelMappings.FirstOrDefaultAsync(
             mapping =>
-                mapping.MarketplaceKey == marketplaceKey
+                mapping.Marketplace == marketplace
                 && mapping.CatalogCategoryId == catalogCategoryId,
             cancellationToken);
 
     public async Task<IReadOnlyList<CategoryChannelMapping>> ListAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         Guid? catalogCategoryId,
         Pagination pagination,
         CancellationToken cancellationToken = default)
     {
-        var query = FilterByMarketplace(db.CategoryChannelMappings, marketplaceKey, catalogCategoryId)
+        var query = FilterByMarketplace(db.CategoryChannelMappings, marketplace, catalogCategoryId)
             .OrderBy(mapping => mapping.CatalogCategoryId);
 
         return await query
@@ -35,18 +38,18 @@ internal sealed class CategoryChannelMappingRepository(ChannelsDbContext db) : I
     }
 
     public Task<int> CountAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         Guid? catalogCategoryId,
         CancellationToken cancellationToken = default) =>
-        FilterByMarketplace(db.CategoryChannelMappings, marketplaceKey, catalogCategoryId)
+        FilterByMarketplace(db.CategoryChannelMappings, marketplace, catalogCategoryId)
             .CountAsync(cancellationToken);
 
     public async Task<string?> ResolveExternalIdAsync(
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         Guid catalogCategoryId,
         CancellationToken cancellationToken = default)
     {
-        var mapping = await GetAsync(marketplaceKey, catalogCategoryId, cancellationToken);
+        var mapping = await GetAsync(marketplace, catalogCategoryId, cancellationToken);
         return mapping?.ExternalId;
     }
 
@@ -61,10 +64,10 @@ internal sealed class CategoryChannelMappingRepository(ChannelsDbContext db) : I
 
     private static IQueryable<CategoryChannelMapping> FilterByMarketplace(
         IQueryable<CategoryChannelMapping> query,
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         Guid? catalogCategoryId)
     {
-        query = query.Where(mapping => mapping.MarketplaceKey == marketplaceKey);
+        query = query.Where(mapping => mapping.Marketplace == marketplace);
 
         if (catalogCategoryId.HasValue)
         {

@@ -16,10 +16,10 @@ public sealed class ListMarketplacesHandler(
     {
         _ = query;
 
-        var configuredKeys = await connections.GetConfiguredMarketplaceKeysAsync(cancellationToken);
+        var configuredMarketplaces = await connections.GetConfiguredMarketplacesAsync(cancellationToken);
 
-        var dtos = MarketplaceRegistry.ListActive()
-            .Select(marketplace => marketplace.ToDto(configuredKeys.Contains(marketplace.Key)))
+        var dtos = Marketplace.AllSupported
+            .Select(marketplace => marketplace.ToDto(configuredMarketplaces.Contains(marketplace)))
             .ToList();
 
         return Result.Success<IReadOnlyList<MarketplaceDto>>(dtos);

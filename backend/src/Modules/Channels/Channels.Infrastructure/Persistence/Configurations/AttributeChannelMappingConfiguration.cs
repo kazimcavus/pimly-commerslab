@@ -1,7 +1,8 @@
-using Channels.Domain.Marketplaces;
-using Channels.Domain.Taxonomy;
+using Channels.Domain.AttributeChannelMappings;
+using Channels.Domain.CategoryChannelMappings;
+using Channels.Domain.ExternalCatalog;
+using Channels.Domain.TaxonomySync;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Channels.Infrastructure.Persistence.Configurations;
@@ -20,16 +21,8 @@ internal sealed class AttributeChannelMappingConfiguration : IEntityTypeConfigur
             .HasColumnName("tenant_id")
             .IsRequired();
 
-        var keyProperty = builder.Property(mapping => mapping.MarketplaceKey)
-            .HasColumnName("marketplace_key")
-            .HasConversion(key => key.Value, value => MarketplaceKey.FromPersistence(value))
-            .HasMaxLength(MarketplaceKey.MaxLength)
-            .IsRequired();
-
-        keyProperty.Metadata.SetValueComparer(new ValueComparer<MarketplaceKey>(
-            (left, right) => left!.Value == right!.Value,
-            key => key.Value.GetHashCode(StringComparison.Ordinal),
-            key => MarketplaceKey.FromPersistence(key.Value)));
+        builder.Property(mapping => mapping.Marketplace)
+            .ConfigureMarketplaceColumn();
 
         builder.Property(mapping => mapping.CatalogCategoryId)
             .HasColumnName("catalog_category_id")
@@ -55,13 +48,13 @@ internal sealed class AttributeChannelMappingConfiguration : IEntityTypeConfigur
         builder.HasIndex(mapping => new
         {
             mapping.TenantId,
-            mapping.MarketplaceKey,
+            mapping.Marketplace,
             mapping.CatalogCategoryId,
             mapping.SourceType,
             mapping.CatalogSourceId,
         }).IsUnique();
 
-        builder.HasIndex(mapping => new { mapping.TenantId, mapping.MarketplaceKey, mapping.CatalogCategoryId });
+        builder.HasIndex(mapping => new { mapping.TenantId, mapping.Marketplace, mapping.CatalogCategoryId });
     }
 
     private static string ToPersistence(AttributeMappingSourceType sourceType) =>

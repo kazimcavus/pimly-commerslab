@@ -11,11 +11,11 @@ internal static class ChannelsValidationRules
     public const int ApiSecretMaxLength = 500;
     public const int ExternalCategoryIdMaxLength = 100;
 
-    public static IRuleBuilderOptions<T, string> MarketplaceKey<T>(this IRuleBuilder<T, string> ruleBuilder) =>
+    public static IRuleBuilderOptions<T, string> MarketplaceCode<T>(this IRuleBuilder<T, string> ruleBuilder) =>
         ruleBuilder
             .NotEmpty()
             .WithErrorCode(ValidationErrorCodes.Required)
-            .WithMessage("Marketplace key is required.");
+            .WithMessage("Marketplace code is required.");
 
     public static IRuleBuilderOptions<T, string> ApiKey<T>(this IRuleBuilder<T, string> ruleBuilder) =>
         ruleBuilder

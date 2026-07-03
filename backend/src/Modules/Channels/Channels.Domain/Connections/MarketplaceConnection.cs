@@ -8,13 +8,13 @@ public sealed class MarketplaceConnection : AggregateRoot<Guid>
 {
     private MarketplaceConnection()
     {
-        MarketplaceKey = null!;
+        Marketplace = null!;
     }
 
     private MarketplaceConnection(
         Guid id,
         Guid tenantId,
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         string? sellerId,
         string apiKey,
         string? apiSecret,
@@ -22,7 +22,7 @@ public sealed class MarketplaceConnection : AggregateRoot<Guid>
         : base(id)
     {
         TenantId = tenantId;
-        MarketplaceKey = marketplaceKey;
+        Marketplace = marketplace;
         SellerId = sellerId;
         ApiKey = apiKey;
         ApiSecret = apiSecret;
@@ -33,7 +33,7 @@ public sealed class MarketplaceConnection : AggregateRoot<Guid>
     public Guid TenantId { get; private set; }
 
     /// <summary>Gets bağlı pazaryeri anahtarı.</summary>
-    public MarketplaceKey MarketplaceKey { get; private set; }
+    public Marketplace Marketplace { get; private set; }
 
     /// <summary>Gets satıcı / tedarikçi tanımlayıcısı.</summary>
     public string? SellerId { get; private set; }
@@ -50,7 +50,7 @@ public sealed class MarketplaceConnection : AggregateRoot<Guid>
     /// <summary>Yeni pazaryeri bağlantısı oluşturur.</summary>
     public static Result<MarketplaceConnection> Create(
         Guid tenantId,
-        MarketplaceKey marketplaceKey,
+        Marketplace marketplace,
         string? sellerId,
         string apiKey,
         string? apiSecret,
@@ -69,7 +69,7 @@ public sealed class MarketplaceConnection : AggregateRoot<Guid>
         var connection = new MarketplaceConnection(
             Guid.NewGuid(),
             tenantId,
-            marketplaceKey,
+            marketplace,
             NormalizeOptional(sellerId),
             apiKey.Trim(),
             NormalizeOptional(apiSecret),

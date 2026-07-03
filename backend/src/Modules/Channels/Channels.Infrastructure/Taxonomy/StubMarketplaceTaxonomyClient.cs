@@ -1,4 +1,4 @@
-using Channels.Application.Taxonomy;
+using Channels.Application.ExternalCatalog;
 using Channels.Domain.Marketplaces;
 using SharedKernel;
 
@@ -9,7 +9,7 @@ internal sealed class StubMarketplaceTaxonomyClient : IMarketplaceTaxonomyClient
 {
     /// <inheritdoc/>
     public Task<Result<IReadOnlyList<MarketplaceCategoryNode>>> FetchAllCategoriesAsync(
-        MarketplaceDefinition marketplace,
+        Marketplace marketplace,
         CancellationToken cancellationToken = default)
     {
         _ = marketplace;
