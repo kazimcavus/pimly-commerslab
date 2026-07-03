@@ -27,6 +27,16 @@ public interface ICategoryChannelMappingRepository
         Guid catalogCategoryId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Dış kategori kimliğine eşlenmiş mevcut mapping'i getirir (ters çözümleme).
+    /// Import dedup'ı bunu kullanır: aynı dış kategori tekrar görüldüğünde, ağaçtaki
+    /// konumundan bağımsız olarak daha önce eşlenen catalog kategorisi yeniden kullanılır.
+    /// </summary>
+    Task<CategoryChannelMapping?> GetByExternalIdAsync(
+        Marketplace marketplace,
+        string externalId,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(CategoryChannelMapping mapping, CancellationToken cancellationToken = default);
 
     void Update(CategoryChannelMapping mapping);

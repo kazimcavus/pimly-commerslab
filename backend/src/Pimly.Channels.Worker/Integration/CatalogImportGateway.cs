@@ -84,6 +84,10 @@ internal sealed class CatalogImportGateway(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> CategoryExistsAsync(Guid categoryId, CancellationToken cancellationToken = default) =>
+        await categories.GetByIdAsync(categoryId, cancellationToken) is not null;
+
+    /// <inheritdoc/>
     public async Task<Result<Guid>> EnsureAttributeAsync(string name, CancellationToken cancellationToken = default)
     {
         var existing = await attributes.ListAsync(cancellationToken);

@@ -79,6 +79,8 @@ export const api = {
   getTaxonomyStatus: (code) => req('GET', `${CHANNELS}/marketplaces/${code}/taxonomy/status`),
   enqueueTaxonomySync: (code) => req('POST', `${CHANNELS}/marketplaces/${code}/taxonomy/sync-runs`),
   // Ürün import'u: 202 + run döner; ilerleme getImportRun ile izlenir.
+  // Kategori ↔ pazaryeri kategorisi eşlemesi (404 = eşleme yok).
+  getCategoryMapping: (code, categoryId) => req('GET', `${CHANNELS}/marketplaces/${code}/category-mappings/${categoryId}`),
   startImport: (code) => req('POST', `${CHANNELS}/marketplaces/${code}/imports`),
   getImportRun: (code, runId) => req('GET', `${CHANNELS}/marketplaces/${code}/imports/${runId}`),
   listImportRuns: (code, limit = 20) => req('GET', `${CHANNELS}/marketplaces/${code}/imports?limit=${limit}`),

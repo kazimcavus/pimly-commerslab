@@ -339,16 +339,32 @@ public sealed class ProcessProductImportHandler(
                 $"Pazaryeri kategorisi cache'te yok (id: {externalCategoryId}). Önce kategori senkronizasyonu çalıştırılmalı."));
         }
 
-        var segments = externalCategory.Path
-            .Split('>', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList();
+        // Dedup önce EŞLEME üzerinden: bu dış kategori daha önce bir catalog kategorisine
+        // eşlendiyse, kullanıcı kategoriyi ağaçta taşımış/yeniden adlandırmış olsa bile
+        // aynı kategori yeniden kullanılır (mükerrer "Halı" oluşmaz).
+        var existingMapping = await categoryMappings.GetByExternalIdAsync(
+            context.Marketplace,
+            externalCategoryId,
+            cancellationToken);
 
-        if (segments.Count == 0)
+        if (existingMapping is not null)
         {
-            segments = [externalCategory.Name];
+            if (await catalog.CategoryExistsAsync(existingMapping.CatalogCategoryId, cancellationToken))
+            {
+                var mappedSetup = new CategorySetup(existingMapping.CatalogCategoryId, externalCategoryId);
+                context.Categories[externalCategoryId] = mappedSetup;
+                return Result.Success(mappedSetup);
+            }
+
+            // Eşlenen kategori kullanıcı tarafından silinmiş: ölü eşlemeyi temizle, aşağıda yenisi kurulur.
+            categoryMappings.Remove(existingMapping);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        var leafResult = await catalog.EnsureCategoryPathAsync(segments, cancellationToken);
+        // Eşleme yoksa (ya da eşlenen kategori silinmişse): Shopify koleksiyonu gibi DÜZ model —
+        // yalnızca yaprak kategori oluşturulur; Trendyol tarafındaki tam yol eşlemede
+        // (ExternalCategory.Path) zaten bilinir, üst zincir Pimly ağacına kopyalanmaz.
+        var leafResult = await catalog.EnsureCategoryPathAsync([externalCategory.Name], cancellationToken);
         if (leafResult.IsFailure)
         {
             return Result.Failure<CategorySetup>(leafResult.Error);

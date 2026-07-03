@@ -11,11 +11,14 @@ namespace Channels.Application.Ports;
 public interface ICatalogImportGateway
 {
     /// <summary>Kategori yolunu (kökten yaprağa) garanti eder ve yaprağın kimliğini döndürür.</summary>
-    /// <param name="pathSegments">Ör. ["Moda", "Erkek", "Gömlek"].</param>
+    /// <param name="pathSegments">Ör. ["Moda", "Erkek", "Gömlek"] veya düz model için tek eleman ["Gömlek"].</param>
     /// <param name="cancellationToken">Iptal belirteci.</param>
     Task<Result<Guid>> EnsureCategoryPathAsync(
         IReadOnlyList<string> pathSegments,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Kategorinin hâlâ var olup olmadığını döner (eşleme dedup doğrulaması için).</summary>
+    Task<bool> CategoryExistsAsync(Guid categoryId, CancellationToken cancellationToken = default);
 
     /// <summary>Özelliği ada göre garanti eder (anahtar addan türetilir).</summary>
     Task<Result<Guid>> EnsureAttributeAsync(string name, CancellationToken cancellationToken = default);

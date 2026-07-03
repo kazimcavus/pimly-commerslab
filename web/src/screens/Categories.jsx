@@ -16,6 +16,7 @@ export function Categories({ onToast }) {
   const [dialog, setDialog] = useState(null) // { mode: 'add' | 'edit', initial }
   const [assignOpen, setAssignOpen] = useState(false)
   const [expanded, setExpanded] = useState(readExpanded)
+  const [tyMapping, setTyMapping] = useState(null) // seçili kategorinin Trendyol eşlemesi
 
   const loadCats = () => api.listCategories().then((cs) => {
     setCats(cs)
@@ -23,6 +24,11 @@ export function Categories({ onToast }) {
   }).catch(() => {})
   useEffect(() => { loadCats(); api.listAttributes().then(setAllAttrs).catch(() => {}) }, [])
   useEffect(() => { if (sel) api.listCategoryAttributes(sel).then(setAttrs).catch(() => setAttrs([])) }, [sel])
+  // Seçili kategorinin Trendyol eşlemesi (import otomatik kurar; 404 = eşleme yok).
+  useEffect(() => {
+    setTyMapping(null)
+    if (sel) api.getCategoryMapping('TY', sel).then(setTyMapping).catch(() => setTyMapping(null))
+  }, [sel])
 
   const active = cats.find((c) => c.id === sel)
   const childrenOf = (id) => cats.filter((c) => (c.parent_id || null) === (id || null))
@@ -143,8 +149,28 @@ export function Categories({ onToast }) {
             </div>
           )}
           <div className="pim-card">
-            <div className="pim-card__header"><span className="pim-card__title">Pazaryeri eşlemesi</span><Badge status="draft">Trendyol</Badge></div>
-            <div className="pim-card__body"><div className="list-meta">Eşleme tabloları hazır; gönderim v2'de.</div></div>
+            <div className="pim-card__header">
+              <span className="pim-card__title">Pazaryeri eşlemesi</span>
+              <Badge status={tyMapping ? 'active' : 'draft'}>Trendyol</Badge>
+            </div>
+            <div className="pim-card__body">
+              {tyMapping ? (
+                <div className="stack" style={{ gap: 6 }}>
+                  <div style={{ color: 'var(--text-strong)', fontWeight: 600 }}>
+                    {tyMapping.external_category?.path || tyMapping.external_id}
+                  </div>
+                  <div className="list-meta">
+                    Trendyol kategori ID: <span className="mono">{tyMapping.external_id}</span>
+                    {' — '}gönderimde (v2) ürünler bu kategoriye açılır.
+                  </div>
+                </div>
+              ) : (
+                <div className="list-meta">
+                  Bu kategori henüz Trendyol'a eşlenmedi. Import sırasında otomatik kurulur;
+                  gönderim (v2) bu eşlemeyi kullanır.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

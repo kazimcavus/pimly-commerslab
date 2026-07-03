@@ -53,6 +53,16 @@ internal sealed class CategoryChannelMappingRepository(ChannelsDbContext db) : I
         return mapping?.ExternalId;
     }
 
+    public Task<CategoryChannelMapping?> GetByExternalIdAsync(
+        Marketplace marketplace,
+        string externalId,
+        CancellationToken cancellationToken = default) =>
+        db.CategoryChannelMappings.FirstOrDefaultAsync(
+            mapping =>
+                mapping.Marketplace == marketplace
+                && mapping.ExternalId == externalId,
+            cancellationToken);
+
     public async Task AddAsync(CategoryChannelMapping mapping, CancellationToken cancellationToken = default) =>
         await db.CategoryChannelMappings.AddAsync(mapping, cancellationToken);
 

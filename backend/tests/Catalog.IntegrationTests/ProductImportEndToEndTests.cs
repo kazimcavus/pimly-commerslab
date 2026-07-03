@@ -58,12 +58,13 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
             || p.Name.StartsWith("Pimly Akıllı Telefon 128 GB"));
         products.SelectMany(p => p.Items).Select(i => i.Barcode).Should().OnlyHaveUniqueItems();
 
-        // Kategori zinciri: Moda > Erkek > Gömlek ve Elektronik > Telefon > Akıllı Telefon.
+        // Düz kategori modeli (Shopify koleksiyonu gibi): yalnızca yaprak kategoriler oluşur,
+        // Trendyol tarafındaki tam yol kanal eşlemesinde tutulur. Üst zincir kopyalanmaz.
         var categories = await ListAsync<CategoryResponse>("/api/v1/catalog/categories?page=1&page_size=100");
-        categories.Select(c => c.Name).Should().Contain(
-            ["Moda", "Erkek", "Gömlek", "Elektronik", "Telefon", "Akıllı Telefon"]);
+        categories.Select(c => c.Name).Should().Contain(["Gömlek", "Akıllı Telefon"]);
+        categories.Select(c => c.Name).Should().NotContain(["Moda", "Erkek", "Elektronik", "Telefon"]);
         var gomlek = categories.Single(c => c.Name == "Gömlek");
-        categories.Single(c => c.Id == gomlek.ParentId!.Value).Name.Should().Be("Erkek");
+        gomlek.ParentId.Should().BeNull();
 
         // Varyantlar: Renk (renk stili + slicer) ve Beden; Renk değerleri iki kategoriden birleşir.
         var variants = await ListAsync<VariantTypeResponse>("/api/v1/catalog/variants?page=1&page_size=100");
