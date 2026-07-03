@@ -9,8 +9,8 @@ namespace Channels.Application.Imports.Planning;
 /// Kurallar:
 /// <list type="bullet">
 /// <item>Aynı ürünün varyantları ProductMainId ile gruplanır; ModelCode = ProductMainId.</item>
-/// <item>IsVariant=true attribute → varyant ekseni; diğerleri ürün düzeyi özellik.</item>
-/// <item>Renk/color adlı veya IsSlicer işaretli eksen → renk seçim stili + slicer (varsayılan davranış).</item>
+/// <item>IsVariant=true attribute VEYA Renk/color adlı attribute → varyant ekseni; diğerleri ürün düzeyi özellik.</item>
+/// <item>Renk/color adlı veya IsSlicer işaretli eksen → renk seçim stili + slicer (varsayılan davranış); kategori "variant" bayrağını taşımasa bile.</item>
 /// <item>Tek slicer: birden fazla aday varsa ilki kalır, diğerleri slicer'sız devam eder (uyarı).</item>
 /// <item>En fazla 3 eksen: fazlası kalem düzeyi özelliğe indirgenir (uyarı).</item>
 /// <item>CompareAtPrice yalnızca ListPrice &gt; SalePrice ise yazılır.</item>
@@ -87,10 +87,13 @@ public static class ProductImportPlanner
             }
         }
 
-        // Varyant eksen adayları: tanımda IsVariant olan ve satırlarda geçen attribute'lar.
+        // Varyant eksen adayları: tanımda IsVariant olan VEYA renk adlı attribute'lar.
+        // Trendyol'da renk her zaman slicer'dır; kategori "variant" bayrağını taşımasa bile
+        // rengi varsayılan olarak varyant eksenine alırız (kullanıcı sonradan düzenleyebilir).
         var axisCandidates = uniqueRows
             .SelectMany(row => row.Attributes)
-            .Where(attribute => defsById.TryGetValue(attribute.ExternalAttributeId, out var def) && def.IsVariant)
+            .Where(attribute => defsById.TryGetValue(attribute.ExternalAttributeId, out var def)
+                && (def.IsVariant || IsColorName(def.Name)))
             .GroupBy(attribute => attribute.ExternalAttributeId, StringComparer.Ordinal)
             .Select(group =>
             {

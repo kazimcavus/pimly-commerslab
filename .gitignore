@@ -18,6 +18,7 @@ dist/
 # Media blob files (not Media.Application/Storage source code)
 /storage/
 backend/storage/
+backend/src/**/storage/
 
 # OS / editor
 .DS_Store

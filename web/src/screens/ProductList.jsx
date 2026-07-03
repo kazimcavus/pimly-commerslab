@@ -34,8 +34,29 @@ export function ProductList({ onNavigate, onToast }) {
   for (const p of shown) { if (!byModel.has(p.group_id)) byModel.set(p.group_id, []); byModel.get(p.group_id).push(p) }
   const models = [...byModel.values()]
 
-  const colorLabel = (p) => { const parts = (p.name || '').split(' - '); return parts.length > 1 ? parts.slice(1).join(' - ') : null }
-  const modelTitle = (ps) => (ps[0].name || '').split(' - ')[0]
+  // Slicer ile bölünmüş ürünü yapısal olarak tanı: backend model kodunu her zaman
+  // "temelkod-renkslug" üretir (ProductCreateSplitter). Adın SON " - " parçası
+  // slug'lanıp model kodu son ekiyle eşleşiyorsa ürün bölünmüştür; eşleşmiyorsa
+  // addaki " - " başlığın parçasıdır (Trendyol başlıkları " - " içerebilir).
+  const slugify = (v) => [...(v || '').trim().toLowerCase()].filter((ch) => /[\p{L}\p{N}]/u.test(ch)).join('')
+  const splitInfo = (p) => {
+    const name = p.name || ''
+    const idx = name.lastIndexOf(' - ')
+    if (idx < 0) return null
+    const color = name.slice(idx + 3).trim()
+    const slug = slugify(color)
+    if (!slug) return null
+    const mc = (p.model_code || '').toLowerCase()
+    if (!mc.endsWith(`-${slug}`)) return null
+    return {
+      title: name.slice(0, idx).trim(),
+      color,
+      baseCode: p.model_code.slice(0, p.model_code.length - slug.length - 1),
+    }
+  }
+  const colorLabel = (p) => splitInfo(p)?.color || null
+  const modelTitle = (ps) => splitInfo(ps[0])?.title || ps[0].name || ''
+  const modelBaseCode = (ps) => splitInfo(ps[0])?.baseCode || null
 
   return (
     <div className="page">
@@ -79,6 +100,7 @@ export function ProductList({ onNavigate, onToast }) {
                       <td colSpan={5} style={{ background: 'var(--surface-subtle)' }}>
                         <span className="hstack" style={{ gap: 8, fontWeight: 700, color: 'var(--text-strong)' }}>
                           {I('package', { size: 15 })}{modelTitle(ps)}
+                          {modelBaseCode(ps) && <span className="mono list-meta" style={{ fontWeight: 500 }}>{modelBaseCode(ps)}</span>}
                           <span className="list-meta" style={{ fontWeight: 400 }}>· {ps.length} renk · {itemsTotal} varyant</span>
                         </span>
                       </td>

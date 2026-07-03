@@ -17,7 +17,8 @@ import { HelpProvider } from './help/Help.jsx'
 
 export function App() {
   const [session, setSession] = useState(null) // { user: { id, email, name }, tenant: { id, name } }
-  const [route, setRoute] = useState('dashboard')
+  // Aktif ekranı localStorage'da tut ki sayfa yenilenince aynı yerde kalınsın.
+  const [route, setRoute] = useState(() => localStorage.getItem('pimly_route') || 'dashboard')
   const [authView, setAuthView] = useState('login') // 'login' | 'register'
   const [toast, setToast] = useState(null)
   const [authError, setAuthError] = useState('')
@@ -39,6 +40,7 @@ export function App() {
 
   const navigate = (r) => {
     setRoute(r)
+    localStorage.setItem('pimly_route', r)
     document.querySelector('.app__content')?.scrollTo(0, 0)
   }
 
@@ -54,7 +56,7 @@ export function App() {
       const r = await api.login(email, password)
       setToken(r.token)
       setSession({ user: r.user, tenant: r.tenant || null })
-      setRoute('dashboard')
+      navigate('dashboard')
     } catch (e) {
       setAuthError(e.message || 'Giriş başarısız')
     } finally {
@@ -70,7 +72,7 @@ export function App() {
       const r = await api.register(form)
       setToken(r.token)
       setSession({ user: r.user, tenant: r.tenant || null })
-      setRoute('onboarding')
+      navigate('onboarding')
     } catch (e) {
       setAuthError(e.message || 'Kayıt başarısız')
     } finally {
@@ -78,7 +80,7 @@ export function App() {
     }
   }
 
-  const logout = () => { setToken(''); setSession(null); setRoute('dashboard'); setAuthView('login') }
+  const logout = () => { setToken(''); setSession(null); navigate('dashboard'); setAuthView('login') }
 
   const toggleTheme = () => {
     const el = document.documentElement

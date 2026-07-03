@@ -107,6 +107,29 @@ public class ProductImportPlannerTests
     }
 
     [Fact]
+    public void BuildPlan_ColorBecomesVariantAxis_EvenWhenNotFlaggedVariant()
+    {
+        // Trendyol kategorisi rengi "variant" işaretlemese bile (IsVariant=false),
+        // renk varsayılan olarak varyant ekseni + slicer olmalı; özelliğe düşmemeli.
+        var defs = new Dictionary<string, IReadOnlyList<ProductImportAttributeDef>>
+        {
+            ["221"] =
+            [
+                new("attr-renk", "Renk", true, false, IsVariant: false, IsSlicer: false),
+                new("attr-beden", "Beden", true, false, IsVariant: true, IsSlicer: false),
+                new("attr-kumas", "Kumaş", true, false, IsVariant: false, IsSlicer: false),
+            ],
+        };
+
+        var group = ProductImportPlanner.BuildPlan([Row("1")], defs).Groups.Single();
+
+        var renk = group.VariantAxes.Single(a => a.Name == "Renk");
+        renk.IsColor.Should().BeTrue();
+        renk.Slicer.Should().BeTrue();
+        group.AttributeValues.Should().NotContain(a => a.AttributeName == "Renk");
+    }
+
+    [Fact]
     public void BuildPlan_OnlyOneSlicerSurvives()
     {
         var defs = new Dictionary<string, IReadOnlyList<ProductImportAttributeDef>>

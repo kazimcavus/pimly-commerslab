@@ -197,8 +197,15 @@ internal sealed class CatalogImportGateway(
             return Result.Failure<Guid>(Error.NotFound("Variant type not found."));
         }
 
+        // Etiket eşleşmesi VEYA aynı slug-anahtara indirgenen mevcut değer → yeniden kullan.
+        // Trendyol'da yalnızca boşluk/noktalama ile ayrışan değerler (ör. "80x200" ↔ "80 x 200")
+        // aynı anahtarı üretir; bunları ayrı değer olarak eklemeye çalışmak anahtar çakışması
+        // ("Variant value key must be unique") verip ürünü hataya sokardı.
+        var trimmed = label.Trim();
+        var previewKey = VariantKey.TryPreview(trimmed);
         var match = variant.Values.FirstOrDefault(value =>
-            string.Equals(value.Label, label.Trim(), StringComparison.OrdinalIgnoreCase));
+            string.Equals(value.Label, trimmed, StringComparison.OrdinalIgnoreCase)
+            || (previewKey is not null && string.Equals(value.Key.Value, previewKey, StringComparison.OrdinalIgnoreCase)));
 
         if (match is not null)
         {
@@ -206,7 +213,7 @@ internal sealed class CatalogImportGateway(
         }
 
         var addResult = await addVariantValue.ExecuteAsync(
-            new AddVariantValueCommand(variantId, label.Trim(), Color: null, ImageUrl: null, Key: null, SortOrder: 0),
+            new AddVariantValueCommand(variantId, trimmed, Color: null, ImageUrl: null, Key: null, SortOrder: 0),
             cancellationToken);
 
         return addResult.IsFailure

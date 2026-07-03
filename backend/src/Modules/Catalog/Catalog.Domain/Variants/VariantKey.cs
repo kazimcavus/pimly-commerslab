@@ -31,6 +31,18 @@ public sealed class VariantKey : ValueObject
             ? FromName(fallbackName)
             : Create(key);
 
+    /// <summary>
+    /// Bir addan üretilecek slug anahtarını önizler (kalıcılaştırmadan). İçe aktarım gibi
+    /// çağıranlar, farklı etiketlerin aynı anahtara indirgenip indirgenmediğini bununla
+    /// eşleştirir. Ad geçersizse (anahtar üretilemezse) null döner.
+    /// </summary>
+    /// <param name="name">Anahtarı önizlenecek ad/etiket.</param>
+    public static string? TryPreview(string name)
+    {
+        var generateResult = CatalogKeyGenerator.GenerateFromName(name);
+        return generateResult.IsSuccess ? generateResult.Value : null;
+    }
+
     /// <summary>Ad metninden slug anahtar üretir.</summary>
     /// <param name="name">Türetim kaynağı ad.</param>
     internal static Result<VariantKey> FromName(string name)

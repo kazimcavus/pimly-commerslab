@@ -55,12 +55,34 @@ function safeParse(t) {
   }
 }
 
-// .NET liste uçları sayfalı zarf döndürür ({ items, page, total_count, ... });
-// frontend düz dizi bekliyor. Zarfı açıp diziyi döndür, değilse olduğu gibi bırak.
+// Backend sayfa boyutu üst sınırı (SharedKernel/Pagination.MaxPageSize).
+const MAX_PAGE_SIZE = 100
+
+function withPage(path, page, pageSize) {
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}page=${page}&page_size=${pageSize}`
+}
+
+// .NET liste uçları sayfalı zarf döndürür ({ items, page, page_size, total_count, ... });
+// frontend'de sayfalama UI'ı yok — hep tam liste beklenir. Zarfı açıp TÜM sayfaları
+// dolaşarak birleştir; endpoint sayfasız düz dizi dönerse olduğu gibi bırak.
 async function reqList(path) {
-  const data = await req('GET', path)
-  if (data && Array.isArray(data.items)) return data.items
-  return Array.isArray(data) ? data : []
+  const first = await req('GET', withPage(path, 1, MAX_PAGE_SIZE))
+  if (Array.isArray(first)) return first // sayfasız uç
+  if (!first || !Array.isArray(first.items)) return []
+  const items = first.items.slice()
+  const total = first.total_count ?? items.length
+  const pageSize = first.page_size || MAX_PAGE_SIZE
+  let page = first.page || 1
+  // total'a ulaşana kadar sonraki sayfaları çek; boş sayfa gelirse güvenlik için dur.
+  while (items.length < total) {
+    page += 1
+    const next = await req('GET', withPage(path, page, pageSize))
+    const chunk = Array.isArray(next?.items) ? next.items : []
+    if (chunk.length === 0) break
+    items.push(...chunk)
+  }
+  return items
 }
 
 export const api = {
