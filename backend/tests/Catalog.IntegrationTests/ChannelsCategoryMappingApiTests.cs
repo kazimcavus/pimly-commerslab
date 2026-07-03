@@ -28,7 +28,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
 
         upsertResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var mapping = await upsertResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>();
+        var mapping = await upsertResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>(CatalogJson.Options);
         mapping!.CatalogCategoryId.Should().Be(catalogCategoryId);
         mapping.ExternalId.Should().Be(LeafExternalId);
         mapping.MarketplaceCode.Should().Be("TY");
@@ -53,7 +53,7 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
             new { external_id = "211" });
         secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var updated = await secondResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>();
+        var updated = await secondResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>(CatalogJson.Options);
         updated!.ExternalId.Should().Be("211");
         updated.ExternalCategory!.Name.Should().Be("Elbise");
     }
@@ -112,14 +112,14 @@ public class ChannelsCategoryMappingApiTests(CatalogPostgresFixture fixture) : C
             $"/api/v1/channels/marketplaces/TY/category-mappings/{catalogCategoryId}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var getMapping = await getResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>();
+        var getMapping = await getResponse.Content.ReadFromJsonAsync<CategoryChannelMappingResponse>(CatalogJson.Options);
         getMapping!.ExternalId.Should().Be(LeafExternalId);
 
         var listResponse = await Client.GetAsync(
             $"/api/v1/channels/marketplaces/TY/category-mappings?catalog_category_id={catalogCategoryId}");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var list = await listResponse.Content.ReadFromJsonAsync<PagedCategoryChannelMappingsResponse>();
+        var list = await listResponse.Content.ReadFromJsonAsync<PagedCategoryChannelMappingsResponse>(CatalogJson.Options);
         list!.Items.Should().ContainSingle(item => item.CatalogCategoryId == catalogCategoryId);
 
         var deleteResponse = await Client.DeleteAsync(

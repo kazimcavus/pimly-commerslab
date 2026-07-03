@@ -20,7 +20,8 @@ public sealed record ExternalCategoryAttributeSummaryDto(
     string Name,
     bool Required,
     bool AllowCustom,
-    bool IsVariant);
+    bool IsVariant,
+    bool IsSlicer = false);
 
 public sealed record AttributeValueChannelMappingDto(
     Guid Id,

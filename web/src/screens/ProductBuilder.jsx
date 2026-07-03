@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Field, Input, Select, Banner } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
@@ -97,6 +97,36 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, chosen, typeById])
 
+  // Barkod üretici açıksa alanlar gerçekten dolu görünsün: eksik satırlar için
+  // sunucudan barkod tahsis edilir (tahsisler barcode_allocations'ta izlenir).
+  const allocatingRef = useRef(false)
+  useEffect(() => {
+    if (!bcOn || allocatingRef.current) return
+    if (mode === 'simple') {
+      if (simple.barcode) return
+      allocatingRef.current = true
+      api.allocateBarcodes(1)
+        .then((r) => { const b = r?.barcodes?.[0]; if (b) setSimple((s) => (s.barcode ? s : { ...s, barcode: b })) })
+        .catch(() => {})
+        .finally(() => { allocatingRef.current = false })
+      return
+    }
+    const missing = combos.map(comboKey).filter((k) => !(rowData[k]?.barcode))
+    if (missing.length === 0) return
+    allocatingRef.current = true
+    api.allocateBarcodes(missing.length)
+      .then((r) => {
+        const bs = r?.barcodes || []
+        setRowData((d) => {
+          const next = { ...d }
+          missing.forEach((k, i) => { if (!next[k]?.barcode && bs[i]) next[k] = { ...next[k], barcode: bs[i] } })
+          return next
+        })
+      })
+      .catch(() => {})
+      .finally(() => { allocatingRef.current = false })
+  }, [bcOn, mode, combos, rowData, simple.barcode])
+
   // SKU template preview (mirrors the backend assembly).
   const skuOn = skuCfg.enabled
   const isVarSeg = (t) => t === 'color' || t === 'size'
@@ -174,6 +204,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   const save = async () => {
     setError('')
     if (!title.trim()) { setError('Ürün başlığı gerekli.'); return }
+    if (!categoryId) { setError('Kategori seç — her ürün bir kategoriye bağlı olmalı.'); return }
     if (!skuOn && !groupCode.trim()) { setError('Ürün kodu gerekli — elle girin ya da Ayarlar\'dan ürün kodu üreticisini açın.'); return }
     const missingAttr = catAttrs.find((ca) => ca.required && !attrPick[ca.attribute_id])
     if (missingAttr) { setError(`"${missingAttr.name}" özelliği zorunlu — bir değer seç.`); return }
@@ -259,6 +290,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     // group_id is a shared "model" id (not an FK); the backend splits by the
     // slicer variant type (read from the DB) into one product per slicer value.
     const netProduct = {
+      category_id: categoryId,
       model_code: skuOn ? '' : (product.product_sku || groupCode || '').trim(),
       code_inputs: skuOn
         ? skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
@@ -324,7 +356,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
               <Field label="Başlık" required>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field>
-              <Field label="Kategori">
+              <Field label="Kategori" required>
                 <Select placeholder="Seç…" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
                   options={categories.map((c) => ({ value: c.id, label: c.name }))} />
               </Field>
@@ -570,8 +602,10 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
               <Input size="sm" mono suffix="₺" value={r.price} onChange={(e) => setRow(key, { price: e.target.value })} placeholder="0,00" />
               <Input size="sm" mono suffix="₺" value={r.compareAt} onChange={(e) => setRow(key, { compareAt: e.target.value })} placeholder="—" />
               <Input size="sm" mono value={r.stock} onChange={(e) => setRow(key, { stock: e.target.value })} />
-              <Input size="sm" mono value={r.sku} onChange={(e) => setRow(key, { sku: e.target.value })} placeholder={skuOn ? (variantSkuPreview(combo) || 'otomatik') : 'opsiyonel'} />
-              <Input size="sm" mono value={r.barcode} onChange={(e) => setRow(key, { barcode: e.target.value })} placeholder={bcOn ? 'otomatik' : 'zorunlu'} />
+              <Input size="sm" mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik üretilir (Ayarlar → Ürün Kodu Oluşturucu)' : undefined}
+                value={skuOn ? (variantSkuPreview(combo) || '') : r.sku}
+                onChange={(e) => { if (!skuOn) setRow(key, { sku: e.target.value }) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} />
+              <Input size="sm" mono value={r.barcode} onChange={(e) => setRow(key, { barcode: e.target.value })} placeholder={bcOn ? 'ayrılıyor…' : 'zorunlu'} />
             </div>
           )
         }

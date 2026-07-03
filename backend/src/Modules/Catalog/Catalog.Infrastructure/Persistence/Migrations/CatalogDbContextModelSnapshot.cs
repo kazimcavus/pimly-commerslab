@@ -321,6 +321,55 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.ToTable("product_items", "catalog");
                 });
 
+            modelBuilder.Entity("Catalog.Domain.Products.ProductItemChannelPrice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("CompareAtPrice")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("compare_at_price");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("MarketplaceKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("marketplace_key");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("price");
+
+                    b.Property<Guid>("ProductItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_item_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductItemId", "MarketplaceKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "MarketplaceKey");
+
+                    b.ToTable("product_item_channel_prices", "catalog");
+                });
+
             modelBuilder.Entity("Catalog.Domain.SkuGenerator.SkuGeneratorConfig", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -502,6 +551,15 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.HasOne("Catalog.Domain.Products.Product", null)
                         .WithMany("Items")
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Products.ProductItemChannelPrice", b =>
+                {
+                    b.HasOne("Catalog.Domain.Products.ProductItem", null)
+                        .WithMany()
+                        .HasForeignKey("ProductItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -56,6 +56,10 @@ internal sealed class ExternalCategoryAttributeConfiguration : IEntityTypeConfig
             .HasColumnName("is_variant")
             .IsRequired();
 
+        builder.Property(attribute => attribute.IsSlicer)
+            .HasColumnName("is_slicer")
+            .IsRequired();
+
         builder.Property(attribute => attribute.SyncedAt)
             .HasColumnName("synced_at")
             .IsRequired();

@@ -26,7 +26,7 @@ public class CatalogApiTests(CatalogPostgresFixture fixture) : CatalogIntegratio
         });
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
         created.Should().NotBeNull();
         created!.Name.Should().Be("Integration Category");
 
@@ -46,7 +46,7 @@ public class CatalogApiTests(CatalogPostgresFixture fixture) : CatalogIntegratio
             parent_id = (Guid?)null,
         });
         parentResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var parent = await parentResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var parent = await parentResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
 
         var childResponse = await Client.PostAsJsonAsync("/api/v1/catalog/categories", new
         {
@@ -54,11 +54,11 @@ public class CatalogApiTests(CatalogPostgresFixture fixture) : CatalogIntegratio
             parent_id = parent!.Id,
         });
         childResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var child = await childResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var child = await childResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
 
         var getResponse = await Client.GetAsync($"/api/v1/catalog/categories/{child!.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var fetched = await getResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var fetched = await getResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
         fetched!.ParentId.Should().Be(parent.Id);
 
         await Client.DeleteAsync($"/api/v1/catalog/categories/{child.Id}");
@@ -75,7 +75,7 @@ public class CatalogApiTests(CatalogPostgresFixture fixture) : CatalogIntegratio
             parent_id = (Guid?)null,
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
 
         var patchResponse = await Client.PatchAsJsonAsync($"/api/v1/catalog/categories/{created!.Id}", new
         {
@@ -86,7 +86,7 @@ public class CatalogApiTests(CatalogPostgresFixture fixture) : CatalogIntegratio
         patchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var getResponse = await Client.GetAsync($"/api/v1/catalog/categories/{created.Id}");
-        var updated = await getResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var updated = await getResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
         updated!.Name.Should().Be("Patched");
         updated.Code.Should().Be("NEW");
 

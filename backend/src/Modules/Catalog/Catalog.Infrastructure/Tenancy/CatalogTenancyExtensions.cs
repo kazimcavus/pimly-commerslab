@@ -22,6 +22,7 @@ internal static class CatalogTenancyExtensions
         ConfigureTenantRoot<Product>(modelBuilder, tenantId);
         ConfigureTenantRoot<ProductItem>(modelBuilder, tenantId);
         ConfigureTenantRoot<ProductImage>(modelBuilder, tenantId);
+        ConfigureTenantRoot<ProductItemChannelPrice>(modelBuilder, tenantId);
         ConfigureTenantRoot<BarcodeSequence>(modelBuilder, tenantId);
         ConfigureTenantRoot<BarcodeAllocation>(modelBuilder, tenantId);
         ConfigureTenantRoot<SkuGeneratorConfig>(modelBuilder, tenantId);
@@ -39,6 +40,12 @@ internal static class CatalogTenancyExtensions
             if (entry.Metadata.FindProperty(TenantEntityShadowProperty.Name) is null)
             {
                 continue;
+            }
+
+            if (tenantId == Guid.Empty)
+            {
+                throw new InvalidOperationException(
+                    "Tenant id is required to persist tenant-scoped catalog data.");
             }
 
             entry.Property(TenantEntityShadowProperty.Name).CurrentValue = tenantId;

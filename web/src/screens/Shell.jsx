@@ -14,6 +14,7 @@ const NAV = [
     ],
   },
   { id: 'catalog', title: 'Katalog', icon: 'package', items: [{ id: 'products', label: 'Ürünler', icon: 'package' }] },
+  { id: 'marketplaces', title: 'Pazaryerleri', icon: 'store', items: [{ id: 'channels', label: 'Pazaryerleri', icon: 'store' }] },
   { id: 'platform', title: 'Platform', icon: 'settings', items: [{ id: 'settings', label: 'Ayarlar', icon: 'settings' }] },
 ]
 
@@ -137,13 +138,13 @@ function Sidebar({ route, onNavigate, collapsed, pinned, onTogglePin, onHover })
   )
 }
 
-function TopBar({ user, onLogout, onToggleTheme }) {
+function TopBar({ user, tenant, onLogout, onToggleTheme }) {
   const name = user?.name || user?.email || 'pimly'
   return (
     <header className="tb">
-      <div className="tb__tenant">
+      <div className="tb__tenant" title={tenant?.name ? `Çalışma alanı: ${tenant.name}` : undefined}>
         <span className="tdot"></span>
-        {name}
+        {tenant?.name || name}
       </div>
       <div className="tb__spacer"></div>
       <div className="tb__search">
@@ -160,7 +161,7 @@ function TopBar({ user, onLogout, onToggleTheme }) {
   )
 }
 
-export function AppShell({ route, onNavigate, onLogout, onToggleTheme, user, children }) {
+export function AppShell({ route, onNavigate, onLogout, onToggleTheme, user, tenant, children }) {
   const [pinned, setPinned] = useState(() => readBool(PIN_KEY, true))
   const [hover, setHover] = useState(false)
   const hoverTimer = useRef(null)
@@ -193,7 +194,7 @@ export function AppShell({ route, onNavigate, onLogout, onToggleTheme, user, chi
         collapsed={collapsed} pinned={pinned} onTogglePin={togglePin} onHover={onHover}
       />
       <div className="app__main">
-        <TopBar user={user} onLogout={onLogout} onToggleTheme={onToggleTheme} />
+        <TopBar user={user} tenant={tenant} onLogout={onLogout} onToggleTheme={onToggleTheme} />
         <div className="app__content">{children}</div>
       </div>
     </div>

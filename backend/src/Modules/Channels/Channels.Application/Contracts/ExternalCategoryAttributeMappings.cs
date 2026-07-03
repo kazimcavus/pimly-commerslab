@@ -22,7 +22,8 @@ internal static class ExternalCategoryAttributeMappings
             values
                 .Where(value => value.ExternalAttributeId == attribute.ExternalAttributeId)
                 .Select(value => value.ToDto())
-                .ToList());
+                .ToList(),
+            attribute.IsSlicer);
 
     internal static ExternalAttributeValueDto ToDto(this ExternalAttributeValue value) =>
         new(

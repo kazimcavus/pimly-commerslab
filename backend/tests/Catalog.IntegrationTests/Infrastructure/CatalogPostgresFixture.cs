@@ -13,6 +13,8 @@ public sealed class CatalogPostgresFixture : IAsyncLifetime
 
     public bool IsAvailable { get; private set; }
 
+    public string ConnectionString { get; private set; } = string.Empty;
+
     public CatalogWebApplicationFactory Factory { get; private set; } = null!;
 
     public static void SkipIfUnavailable(CatalogPostgresFixture fixture)
@@ -25,12 +27,14 @@ public sealed class CatalogPostgresFixture : IAsyncLifetime
         try
         {
             await _postgres.StartAsync();
-            Factory = new CatalogWebApplicationFactory(_postgres.GetConnectionString());
+            ConnectionString = _postgres.GetConnectionString();
+            Factory = new CatalogWebApplicationFactory(ConnectionString);
             _ = Factory.CreateClient();
             IsAvailable = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine($"[CatalogPostgresFixture] Unavailable: {ex}");
             IsAvailable = false;
         }
     }

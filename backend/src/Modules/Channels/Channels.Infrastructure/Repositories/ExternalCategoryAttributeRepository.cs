@@ -62,6 +62,7 @@ internal sealed class ExternalCategoryAttributeRepository(ChannelsDbContext db) 
                     attribute.Required,
                     attribute.AllowCustom,
                     attribute.IsVariant,
+                    attribute.IsSlicer,
                     syncedAt);
             }
             else
@@ -74,6 +75,7 @@ internal sealed class ExternalCategoryAttributeRepository(ChannelsDbContext db) 
                     attribute.Required,
                     attribute.AllowCustom,
                     attribute.IsVariant,
+                    attribute.IsSlicer,
                     syncedAt);
 
                 if (createResult.IsSuccess)

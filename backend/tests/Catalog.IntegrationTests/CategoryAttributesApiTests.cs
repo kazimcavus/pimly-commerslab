@@ -17,7 +17,7 @@ public class CategoryAttributesApiTests(CatalogPostgresFixture fixture) : Catalo
             parent_id = (Guid?)null,
         });
         categoryResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var category = await categoryResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var category = await categoryResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
         category.Should().NotBeNull();
 
         var attributeResponse = await Client.PostAsJsonAsync("/api/v1/catalog/attributes", new
@@ -25,14 +25,14 @@ public class CategoryAttributesApiTests(CatalogPostgresFixture fixture) : Catalo
             name = $"Material {Guid.NewGuid():N}",
         });
         attributeResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var attribute = await attributeResponse.Content.ReadFromJsonAsync<AttributeSummaryResponse>();
+        var attribute = await attributeResponse.Content.ReadFromJsonAsync<AttributeSummaryResponse>(CatalogJson.Options);
         attribute.Should().NotBeNull();
 
         var assignResponse = await Client.PostAsJsonAsync(
             $"/api/v1/catalog/categories/{category!.Id}/attributes",
-            new { attributeId = attribute!.Id, required = true, sortOrder = 0 });
+            new { attribute_id = attribute!.Id, required = true, sort_order = 0 });
         assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var assignment = await assignResponse.Content.ReadFromJsonAsync<CategoryAttributeResponse>();
+        var assignment = await assignResponse.Content.ReadFromJsonAsync<CategoryAttributeResponse>(CatalogJson.Options);
         assignment.Should().NotBeNull();
         assignment!.AttributeId.Should().Be(attribute.Id);
         assignment.Required.Should().BeTrue();
@@ -42,9 +42,9 @@ public class CategoryAttributesApiTests(CatalogPostgresFixture fixture) : Catalo
 
         var patchResponse = await Client.PatchAsJsonAsync(
             $"/api/v1/catalog/category-attributes/{assignment.CategoryAttributeId}",
-            new { required = false, sortOrder = 1 });
+            new { required = false, sort_order = 1 });
         patchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updated = await patchResponse.Content.ReadFromJsonAsync<CategoryAttributeResponse>();
+        var updated = await patchResponse.Content.ReadFromJsonAsync<CategoryAttributeResponse>(CatalogJson.Options);
         updated!.Required.Should().BeFalse();
         updated.SortOrder.Should().Be(1);
 

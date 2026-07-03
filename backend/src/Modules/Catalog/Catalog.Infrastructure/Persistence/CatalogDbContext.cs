@@ -32,6 +32,23 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
         _tenantContext?.TenantId
         ?? throw new InvalidOperationException("Tenant id is not available in the current HTTP context.");
 
+    // Model cache anahtarı ve query filter kurulumu için fırlatmayan tenant erişimi.
+    // HTTP dışı bağlamlarda (migration, design-time) Guid.Empty döner.
+    internal Guid ModelCacheTenantId
+    {
+        get
+        {
+            try
+            {
+                return _tenantContext?.TenantId ?? Guid.Empty;
+            }
+            catch (InvalidOperationException)
+            {
+                return Guid.Empty;
+            }
+        }
+    }
+
     public DbSet<Category> Categories => Set<Category>();
 
     public DbSet<DomainAttribute> Attributes => Set<DomainAttribute>();
@@ -41,6 +58,8 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<ProductItem> ProductItems => Set<ProductItem>();
+
+    public DbSet<ProductItemChannelPrice> ProductItemChannelPrices => Set<ProductItemChannelPrice>();
 
     public DbSet<BarcodeSequence> BarcodeSequences => Set<BarcodeSequence>();
 
@@ -64,8 +83,7 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
     {
         modelBuilder.HasDefaultSchema("catalog");
 
-        var tenantId = _tenantContext?.TenantId ?? Guid.Empty;
-        modelBuilder.ApplyCatalogTenancy(tenantId);
+        modelBuilder.ApplyCatalogTenancy(ModelCacheTenantId);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
     }

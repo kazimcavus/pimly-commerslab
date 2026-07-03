@@ -175,12 +175,12 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var variantResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Slicer-{Guid.NewGuid():N}",
-            selectionStyle = "color",
-            sortOrder = 0,
+            selection_style = "color",
+            sort_order = 0,
             slicer = true,
         });
         variantResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var variant = await variantResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var variant = await variantResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
@@ -248,7 +248,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
+        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         var itemId = product!.Items[0].Id;
 
         var response = await Client.PatchAsJsonAsync($"/api/v1/catalog/items/{itemId}", new { price = -1m, stock = 1 });

@@ -1,5 +1,5 @@
 using Channels.Application.Options;
-using Channels.Application.Taxonomy.RunScheduledTaxonomySync;
+using Channels.Application.TaxonomySync.RunScheduledTaxonomySync;
 using Microsoft.Extensions.Options;
 
 namespace Pimly.Channels.Worker.Taxonomy;

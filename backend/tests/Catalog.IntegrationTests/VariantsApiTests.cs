@@ -14,19 +14,19 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var createVariantResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Color-{Guid.NewGuid():N}",
-            selectionStyle = "color",
-            sortOrder = 0,
+            selection_style = "color",
+            sort_order = 0,
             slicer = false,
         });
         createVariantResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var variant = await createVariantResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var variant = await createVariantResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
         variant.Should().NotBeNull();
 
         var createValueResponse = await Client.PostAsJsonAsync(
             $"/api/v1/catalog/variants/{variant!.Id}/values",
-            new { label = "Red", color = "#ff0000", sortOrder = 0 });
+            new { label = "Red", color = "#ff0000", sort_order = 0 });
         createValueResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var variantValue = await createValueResponse.Content.ReadFromJsonAsync<VariantValueResponse>();
+        var variantValue = await createValueResponse.Content.ReadFromJsonAsync<VariantValueResponse>(CatalogJson.Options);
         variantValue.Should().NotBeNull();
         variantValue!.Label.Should().Be("Red");
 
@@ -36,8 +36,8 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var patchVariantResponse = await Client.PatchAsJsonAsync($"/api/v1/catalog/variants/{variant.Id}", new
         {
             name = variant.Name,
-            selectionStyle = "color",
-            sortOrder = 1,
+            selection_style = "color",
+            sort_order = 1,
             slicer = true,
         });
         patchVariantResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -46,7 +46,7 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         {
             label = "Crimson",
             color = "#dc143c",
-            sortOrder = 1,
+            sort_order = 1,
         });
         patchValueResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -66,16 +66,16 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var createVariantResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Lookup-{Guid.NewGuid():N}",
-            selectionStyle = "list",
-            sortOrder = 0,
+            selection_style = "list",
+            sort_order = 0,
             slicer = false,
         });
         createVariantResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createVariantResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var created = await createVariantResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
         var getResponse = await Client.GetAsync($"/api/v1/catalog/variants/{created!.Id}");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var fetched = await getResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var fetched = await getResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
         fetched!.Id.Should().Be(created.Id);
         fetched.Name.Should().Be(created.Name);
 
@@ -88,18 +88,18 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var firstResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Slicer-A-{Guid.NewGuid():N}",
-            selectionStyle = "color",
-            sortOrder = 0,
+            selection_style = "color",
+            sort_order = 0,
             slicer = true,
         });
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var first = await firstResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var first = await firstResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
         var secondResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Slicer-B-{Guid.NewGuid():N}",
-            selectionStyle = "list",
-            sortOrder = 1,
+            selection_style = "list",
+            sort_order = 1,
             slicer = true,
         });
         await CatalogHttpAssertions.AssertProblemAsync(secondResponse, HttpStatusCode.Conflict, "conflict");
@@ -113,28 +113,28 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var slicerResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Slicer-A-{Guid.NewGuid():N}",
-            selectionStyle = "color",
-            sortOrder = 0,
+            selection_style = "color",
+            sort_order = 0,
             slicer = true,
         });
         slicerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var slicer = await slicerResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var slicer = await slicerResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
         var otherResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Other-{Guid.NewGuid():N}",
-            selectionStyle = "list",
-            sortOrder = 1,
+            selection_style = "list",
+            sort_order = 1,
             slicer = false,
         });
         otherResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var other = await otherResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var other = await otherResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
         var patchResponse = await Client.PatchAsJsonAsync($"/api/v1/catalog/variants/{other!.Id}", new
         {
             name = other.Name,
-            selectionStyle = "list",
-            sortOrder = 1,
+            selection_style = "list",
+            sort_order = 1,
             slicer = true,
         });
         await CatalogHttpAssertions.AssertProblemAsync(patchResponse, HttpStatusCode.Conflict, "conflict");

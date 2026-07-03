@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Button, Field, Input, Banner } from '../ds'
 import { I } from './icons.jsx'
 
-export function Login({ onSignIn, error, loading }) {
+export function Login({ onSignIn, onShowRegister, error, loading }) {
   const [email, setEmail] = useState('owner@acme.test')
   const [password, setPassword] = useState('')
 
@@ -43,7 +43,7 @@ export function Login({ onSignIn, error, loading }) {
           </Field>
           <Button variant="primary" fullWidth type="submit" loading={loading}>Giriş yap</Button>
           <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
-            Hesabın yok mu? <a href="#" onClick={(e) => e.preventDefault()}>Başvuru yap</a>
+            Hesabın yok mu? <a href="#" onClick={(e) => { e.preventDefault(); onShowRegister?.() }}>Hesap oluştur</a>
           </div>
         </form>
       </div>

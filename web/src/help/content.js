@@ -98,7 +98,36 @@ export const HELP = {
     ],
     tips: [
       '“Ayraç” (slicer) bir varyant tipini her değeri ayrı ürün olacak şekilde böler (örn. her renk ayrı ürün).',
-      'Barkod ve SKU üreticisi açıksa ilgili alanları boş bırakın; otomatik dolar.',
+      'Barkod üreticisi açıksa varyant satırı eklediğinizde barkodlar otomatik ayrılır ve alanda görünür; SKU alanı şablondan otomatik dolar.',
+      'Kategori seçimi zorunludur — özellikler ve pazaryeri eşlemeleri kategoriye bağlanır.',
+    ],
+  },
+  'channels': {
+    eyebrow: 'Pazaryerleri',
+    title: 'Pazaryerleri',
+    lead: 'Pazaryeri hesaplarınızı bağlar, ürünlerinizi Pimly kataloğuna aktarır ve import geçmişini izlersiniz. Gönderim (v2) için gereken kategori/özellik eşlemeleri import sırasında otomatik kurulur.',
+    video: 'Trendyol bağlama ve içe aktarma (2 dk)',
+    steps: [
+      '“Bağla ve içe aktar” ile Trendyol kurulum sihirbazını açın.',
+      'Import bitince geçmişte sayaçları görürsünüz: aktarılan, atlanan (zaten vardı), hatalı.',
+      'Yeni ürünleriniz olduğunda “Yeniden içe aktar” ile tekrar çekebilirsiniz; mevcut ürünler atlanır.',
+    ],
+    tips: ['Import bir arka plan işidir — ekranı kapatsanız da devam eder; buradan durumunu izleyebilirsiniz.'],
+  },
+  'trendyol-import': {
+    eyebrow: 'Pazaryerleri',
+    title: 'Trendyol Kurulumu',
+    lead: 'Trendyol mağazanızı bağlar ve tüm ürünlerinizi tek seferde Pimly kataloğuna aktarır. Kategoriler, özellikler ve varyantlar (Renk, Beden…) otomatik tanımlanır; Renk varsayılan olarak ayraçtır (her renk ayrı ürün kartı).',
+    video: 'Trendyol’dan ürün çekme (3 dk)',
+    steps: [
+      'Trendyol Satıcı Paneli → Hesap Bilgileri → Entegrasyon Bilgileri sayfasından Satıcı ID, API Key ve API Secret’ı kopyalayın.',
+      'Bilgileri forma girip “Bağlan ve devam et”e tıklayın.',
+      'Kategori eşitleme ve ürün aktarımı otomatik ilerler; ilerlemeyi ekrandan izleyin.',
+      'Özet ekranında sayıları kontrol edin; “Ürünlerime git” ile katalogda zenginleştirmeye başlayın.',
+    ],
+    tips: [
+      'Fiyatlar hem temel fiyat hem “Trendyol kanal fiyatı” olarak kaydedilir — ileride kanal bazlı farklı fiyat verebilirsiniz.',
+      'Aynı barkod/model kodu zaten kataloğunuzdaysa o ürün atlanır; iki kez içe aktarmak güvenlidir.',
     ],
   },
 }

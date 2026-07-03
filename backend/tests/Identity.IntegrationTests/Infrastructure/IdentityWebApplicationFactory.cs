@@ -11,18 +11,23 @@ public sealed class IdentityWebApplicationFactory(string connectionString) : Web
     {
         builder.UseEnvironment("Development");
 
-        builder.ConfigureAppConfiguration((_, configuration) =>
+        // Not: Minimal hosting'de (WebApplication.CreateBuilder) ConfigureAppConfiguration ile
+        // eklenen kaynaklar Program.cs gövdesi builder.Configuration'ı okurken henüz uygulanmaz;
+        // bağlantı dizesi gibi servis kaydı sırasında okunan değerler UseSetting ile verilmelidir.
+        var settings = new Dictionary<string, string?>
         {
-            configuration.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Database"] = connectionString,
-                ["ConnectionStrings:Identity"] = connectionString,
-                ["Catalog:AutoMigrate"] = "true",
-                ["Identity:AutoMigrate"] = "true",
-                ["Identity:Jwt:Secret"] = "integration-test-secret",
-                ["Identity:Jwt:ExpirationHours"] = "1",
-                ["Observability:Enabled"] = "false",
-            });
-        });
+            ["ConnectionStrings:Database"] = connectionString,
+            ["ConnectionStrings:Identity"] = connectionString,
+            ["Catalog:AutoMigrate"] = "true",
+            ["Identity:AutoMigrate"] = "true",
+            ["Identity:Jwt:Secret"] = "integration-test-secret-min-32-bytes-long",
+            ["Identity:Jwt:ExpirationHours"] = "1",
+            ["Observability:Enabled"] = "false",
+        };
+
+        foreach (var (key, value) in settings)
+        {
+            builder.UseSetting(key, value);
+        }
     }
 }

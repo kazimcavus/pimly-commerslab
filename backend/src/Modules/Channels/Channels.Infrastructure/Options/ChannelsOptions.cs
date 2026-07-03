@@ -8,9 +8,12 @@ public sealed class ChannelsOptions
     /// <summary>Gets worker poll aralığı (saniye).</summary>
     public int WorkerPollIntervalSeconds { get; init; } = 5;
 
-    /// <summary>Gets a value indicating whether geliştirme ortamında stub taxonomy client kullanılacağı.</summary>
+    /// <summary>
+    /// Gets a value indicating whether geliştirme ortamında stub client'ların kullanılacağı.
+    /// Taxonomy, kategori attribute ve ürün import client'larının tümünü birlikte stub/gerçek seçer.
+    /// </summary>
     public bool UseStubTaxonomyClient { get; init; } = true;
 
     /// <summary>Gets Trendyol API base URL.</summary>
-    public string TrendyolApiBaseUrl { get; init; } = "https://api.trendyol.com";
+    public string TrendyolApiBaseUrl { get; init; } = "https://apigw.trendyol.com";
 }

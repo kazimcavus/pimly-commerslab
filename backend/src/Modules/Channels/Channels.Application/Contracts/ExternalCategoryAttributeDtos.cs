@@ -9,7 +9,8 @@ public sealed record ExternalCategoryAttributeDto(
     bool AllowCustom,
     bool IsVariant,
     DateTimeOffset SyncedAt,
-    IReadOnlyList<ExternalAttributeValueDto> Values);
+    IReadOnlyList<ExternalAttributeValueDto> Values,
+    bool IsSlicer = false);
 
 /// <summary>Harici attribute değer DTO'su.</summary>
 public sealed record ExternalAttributeValueDto(

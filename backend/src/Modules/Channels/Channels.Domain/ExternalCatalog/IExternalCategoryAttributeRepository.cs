@@ -31,7 +31,8 @@ public sealed record ExternalCategoryAttributeUpsert(
     bool Required,
     bool AllowCustom,
     bool IsVariant,
-    IReadOnlyList<ExternalAttributeValueUpsert> Values);
+    IReadOnlyList<ExternalAttributeValueUpsert> Values,
+    bool IsSlicer = false);
 
 /// <summary>Harici attribute değer upsert girdisi.</summary>
 public sealed record ExternalAttributeValueUpsert(

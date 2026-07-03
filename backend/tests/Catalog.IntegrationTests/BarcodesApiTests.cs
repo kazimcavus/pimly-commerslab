@@ -14,7 +14,7 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     {
         var getResponse = await Client.GetAsync("/api/v1/catalog/barcode-sequence");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var current = await getResponse.Content.ReadFromJsonAsync<BarcodeSequenceResponse>();
+        var current = await getResponse.Content.ReadFromJsonAsync<BarcodeSequenceResponse>(CatalogJson.Options);
         current.Should().NotBeNull();
         current!.NextValue.Should().BeGreaterThan(0);
 
@@ -26,7 +26,7 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         });
 
         putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updated = await putResponse.Content.ReadFromJsonAsync<BarcodeSequenceResponse>();
+        var updated = await putResponse.Content.ReadFromJsonAsync<BarcodeSequenceResponse>(CatalogJson.Options);
         updated!.NextValue.Should().Be(nextValue);
         updated.NextPreview.Should().Be(nextValue.ToString(CultureInfo.InvariantCulture));
     }
@@ -57,12 +57,12 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         var singleResponse = await Client.PostAsJsonAsync("/api/v1/catalog/barcodes:allocate", new { count = 1 });
         singleResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var single = await singleResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>();
+        var single = await singleResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>(CatalogJson.Options);
         single!.Barcodes.Should().Equal(baseValue.ToString(CultureInfo.InvariantCulture));
 
         var batchResponse = await Client.PostAsJsonAsync("/api/v1/catalog/barcodes:allocate", new { count = 2 });
         batchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var batch = await batchResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>();
+        var batch = await batchResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>(CatalogJson.Options);
         batch!.Barcodes.Should().Equal(
             (baseValue + 1).ToString(CultureInfo.InvariantCulture),
             (baseValue + 2).ToString(CultureInfo.InvariantCulture));
@@ -78,7 +78,7 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         await SetSequenceAsync(baseValue);
 
         var allocateResponse = await Client.PostAsJsonAsync("/api/v1/catalog/barcodes:allocate", new { count = 1 });
-        var allocated = await allocateResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>();
+        var allocated = await allocateResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>(CatalogJson.Options);
         var barcode = allocated!.Barcodes.Single();
 
         var categoryId = await CreateCategoryAsync();
@@ -98,7 +98,7 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         });
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createResponse.Content.ReadFromJsonAsync<AllocatedBarcodeProductResponse>();
+        var created = await createResponse.Content.ReadFromJsonAsync<AllocatedBarcodeProductResponse>(CatalogJson.Options);
         created!.Items[0].Barcode.Should().Be(barcode);
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{created.Id}");

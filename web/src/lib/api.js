@@ -5,6 +5,7 @@
 const BASE = import.meta.env.VITE_API_BASE || ''
 const IDENTITY = '/api/v1/identity'
 const CATALOG = '/api/v1/catalog'
+const CHANNELS = '/api/v1/channels'
 
 let token = localStorage.getItem('pimly_token') || ''
 
@@ -64,9 +65,29 @@ async function reqList(path) {
 
 export const api = {
   // --- auth (Identity modülü) ---
-  // .NET LoginResult: { token, expires_at, user: { id, email, name } }
+  // .NET LoginResult: { token, expires_at, user: { id, email, name }, tenant: { id, name } }
   login: (email, password) => req('POST', `${IDENTITY}/login`, { body: { email, password } }),
+  // Kayıt: yeni kullanıcı + tenant oluşturur, otomatik login (LoginResult) döner.
+  register: (b) => req('POST', `${IDENTITY}/register`, { body: b }),
+  // MeDto: { user: {...}, tenant: {...} }
   me: () => req('GET', `${IDENTITY}/me`),
+
+  // --- pazaryerleri (Channels modülü) ---
+  listMarketplaces: () => reqList(`${CHANNELS}/marketplaces`),
+  getConnection: (code) => req('GET', `${CHANNELS}/marketplaces/${code}/connection`),
+  putConnection: (code, b) => req('PUT', `${CHANNELS}/marketplaces/${code}/connection`, { body: b }),
+  getTaxonomyStatus: (code) => req('GET', `${CHANNELS}/marketplaces/${code}/taxonomy/status`),
+  enqueueTaxonomySync: (code) => req('POST', `${CHANNELS}/marketplaces/${code}/taxonomy/sync-runs`),
+  // Ürün import'u: 202 + run döner; ilerleme getImportRun ile izlenir.
+  startImport: (code) => req('POST', `${CHANNELS}/marketplaces/${code}/imports`),
+  getImportRun: (code, runId) => req('GET', `${CHANNELS}/marketplaces/${code}/imports/${runId}`),
+  listImportRuns: (code, limit = 20) => req('GET', `${CHANNELS}/marketplaces/${code}/imports?limit=${limit}`),
+
+  // --- kanal fiyatları (Catalog modülü) ---
+  // Etkin satış fiyatı = kanal fiyatı ?? kalemin temel fiyatı.
+  listItemChannelPrices: (itemId) => req('GET', `${CATALOG}/items/${itemId}/channel-prices`),
+  putItemChannelPrice: (itemId, code, b) => req('PUT', `${CATALOG}/items/${itemId}/channel-prices/${code}`, { body: b }),
+  deleteItemChannelPrice: (itemId, code) => req('DELETE', `${CATALOG}/items/${itemId}/channel-prices/${code}`),
 
   // --- categories (Catalog modülü) ---
   listCategories: () => reqList(`${CATALOG}/categories`),

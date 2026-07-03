@@ -12,7 +12,7 @@ internal static class CatalogHttpAssertions
         HttpStatusCode expectedStatus,
         string? expectedCode = null)
     {
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>(CatalogJson.Options);
         response.StatusCode.Should().Be(expectedStatus);
         problem.Should().NotBeNull();
         if (expectedCode is not null)

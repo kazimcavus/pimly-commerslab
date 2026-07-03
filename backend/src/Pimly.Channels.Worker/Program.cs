@@ -1,17 +1,14 @@
-using Channels.Application;
+using Catalog.Infrastructure;
 using Channels.Infrastructure;
 using Pimly.Channels.Worker;
-using Pimly.Channels.Worker.Taxonomy;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddChannelsApplication();
-builder.Services.AddChannelsInfrastructure(builder.Configuration);
-builder.Services.AddHostedService<TaxonomySyncBackgroundService>();
-builder.Services.AddHostedService<ScheduledTaxonomySyncBackgroundService>();
+builder.Services.AddPimlyWorker(builder.Configuration);
 
 var host = builder.Build();
 
 await host.Services.ApplyChannelsMigrationsAsync(host.Services.GetRequiredService<IConfiguration>());
+await host.Services.ApplyCatalogMigrationsAsync(host.Services.GetRequiredService<IConfiguration>());
 
 await host.RunAsync();

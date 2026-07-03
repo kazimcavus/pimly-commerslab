@@ -1,4 +1,4 @@
-using Channels.Application.Taxonomy.ProcessTaxonomySync;
+using Channels.Application.TaxonomySync.ProcessTaxonomySync;
 using Channels.Infrastructure.Options;
 using Microsoft.Extensions.Options;
 

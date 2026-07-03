@@ -1,0 +1,115 @@
+using SharedKernel;
+
+namespace Channels.Application.Ports;
+
+/// <summary>
+/// Ürün import hattının Catalog modülüne yazma kapısı. Mevcut okuma gateway'leri gibi
+/// host kompozisyonunda (worker) Catalog handler/repolarına delege edilerek uygulanır;
+/// Channels modülü Catalog tiplerine doğrudan bağımlanmaz.
+/// Tüm işlemler idempotenttir: var olan kayıt yeniden kullanılır.
+/// </summary>
+public interface ICatalogImportGateway
+{
+    /// <summary>Kategori yolunu (kökten yaprağa) garanti eder ve yaprağın kimliğini döndürür.</summary>
+    /// <param name="pathSegments">Ör. ["Moda", "Erkek", "Gömlek"].</param>
+    /// <param name="cancellationToken">Iptal belirteci.</param>
+    Task<Result<Guid>> EnsureCategoryPathAsync(
+        IReadOnlyList<string> pathSegments,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Özelliği ada göre garanti eder (anahtar addan türetilir).</summary>
+    Task<Result<Guid>> EnsureAttributeAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Özellik değerini garanti eder.</summary>
+    Task<Result<Guid>> EnsureAttributeValueAsync(
+        Guid attributeId,
+        string valueName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Varyant eksenini garanti eder. Slicer istenip başka bir slicer ekseni zaten varsa
+    /// eksen slicer'sız oluşturulur ve <c>SlicerDemoted</c> true döner (tek slicer kuralı).
+    /// </summary>
+    Task<Result<EnsuredVariantSnapshot>> EnsureVariantAsync(
+        string name,
+        bool isColor,
+        bool slicer,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Varyant değerini garanti eder.</summary>
+    Task<Result<Guid>> EnsureVariantValueAsync(
+        Guid variantId,
+        string label,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Özelliği kategoriye atar; zaten atanmışsa başarı döner.</summary>
+    Task<Result> AssignAttributeToCategoryAsync(
+        Guid categoryId,
+        Guid attributeId,
+        bool required,
+        int sortOrder,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Model kodu veya barkodlardan biri zaten kayıtlıysa true döner (grup atlanır).</summary>
+    Task<bool> ProductGroupExistsAsync(
+        string modelCode,
+        IReadOnlyList<string> barcodes,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Ürün grubunu oluşturur (slicer ekseni Catalog tarafında ürünleri böler).</summary>
+    Task<Result<IReadOnlyList<CreatedProductSnapshot>>> CreateProductsBatchAsync(
+        CatalogProductBatchInput input,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Harici görseli indirip medya deposuna alır ve ürüne ekler.</summary>
+    Task<Result> AddProductImageAsync(
+        Guid productId,
+        string sourceUrl,
+        int sortOrder,
+        bool isPrimary,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Kalem için pazaryeri kanal fiyatını yazar.</summary>
+    Task<Result> UpsertItemChannelPriceAsync(
+        Guid productItemId,
+        string marketplaceKey,
+        decimal price,
+        decimal? compareAtPrice,
+        string? currency,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Garanti edilen varyant ekseninin anlık görüntüsü.</summary>
+public sealed record EnsuredVariantSnapshot(Guid Id, string Name, bool IsColor, bool Slicer, bool SlicerDemoted);
+
+/// <summary>Ürün grubu oluşturma girdisi (modül-bağımsız).</summary>
+public sealed record CatalogProductBatchInput(
+    Guid GroupId,
+    Guid CategoryId,
+    string ModelCode,
+    string Name,
+    string Status,
+    IReadOnlyList<CatalogSelectionInput> AttributeValues,
+    IReadOnlyList<CatalogVariantAxisInput> Variants,
+    IReadOnlyList<CatalogProductItemInput> Items);
+
+/// <summary>Ürünün kullandığı varyant ekseni.</summary>
+public sealed record CatalogVariantAxisInput(Guid VariantId, bool IsColor, bool Slicer);
+
+/// <summary>Özellik veya varyant değeri seçimi (kimlik çifti).</summary>
+public sealed record CatalogSelectionInput(Guid Id, Guid ValueId);
+
+/// <summary>Satılabilir kalem girdisi.</summary>
+public sealed record CatalogProductItemInput(
+    string? Sku,
+    string Barcode,
+    decimal Price,
+    decimal? CompareAtPrice,
+    int Stock,
+    IReadOnlyList<CatalogSelectionInput> VariantValues,
+    IReadOnlyList<CatalogSelectionInput> AttributeValues);
+
+/// <summary>Oluşturulan ürünün anlık görüntüsü; kalem kimlikleri barkod ile eşlidir.</summary>
+public sealed record CreatedProductSnapshot(
+    Guid ProductId,
+    IReadOnlyDictionary<string, Guid> ItemIdByBarcode);

@@ -37,7 +37,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         });
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
+        var created = await createResponse.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         created.Should().NotBeNull();
         created!.Name.Should().Be("Integration Product");
         created.CategoryId.Should().Be(categoryId);
@@ -110,7 +110,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         });
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
+        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         product!.Items.Should().HaveCount(1);
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{product.Id}");
@@ -130,11 +130,11 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
             name = $"Material {Guid.NewGuid():N}",
         });
         attributeResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var attribute = await attributeResponse.Content.ReadFromJsonAsync<AttributeResponse>();
+        var attribute = await attributeResponse.Content.ReadFromJsonAsync<AttributeResponse>(CatalogJson.Options);
 
         var valueResponse = await Client.PostAsJsonAsync($"/api/v1/catalog/attributes/{attribute!.Id}/values", new { name = "Cotton" });
         valueResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var value = await valueResponse.Content.ReadFromJsonAsync<AttributeValueResponse>();
+        var value = await valueResponse.Content.ReadFromJsonAsync<AttributeValueResponse>(CatalogJson.Options);
 
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
@@ -153,7 +153,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
+        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         await Client.DeleteAsync($"/api/v1/catalog/products/{product!.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
         await Client.DeleteAsync($"/api/v1/catalog/attributes/{attribute.Id}");
@@ -195,14 +195,14 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
             },
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
+        var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         var itemToDelete = product!.Items[0].Id;
 
         var deleteItemResponse = await Client.DeleteAsync($"/api/v1/catalog/items/{itemToDelete}");
         deleteItemResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var getProduct = await Client.GetAsync($"/api/v1/catalog/products/{product.Id}");
-        var updated = await getProduct.Content.ReadFromJsonAsync<ProductResponse>();
+        var updated = await getProduct.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         updated!.Items.Should().HaveCount(1);
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{product.Id}");
@@ -217,12 +217,12 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name,
-            selectionStyle = "list",
-            sortOrder = 0,
+            selection_style = "list",
+            sort_order = 0,
             slicer = false,
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<VariantResponse>())!;
+        return (await response.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options))!;
     }
 
     private async Task<VariantValueResponse> CreateVariantValue(Guid typeId, string label, string? color)
@@ -231,10 +231,10 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         {
             label,
             color,
-            sortOrder = 0,
+            sort_order = 0,
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<VariantValueResponse>())!;
+        return (await response.Content.ReadFromJsonAsync<VariantValueResponse>(CatalogJson.Options))!;
     }
 
     private static string NextNumericBarcode() =>

@@ -59,7 +59,7 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
         });
 
         batchResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var batchResult = await batchResponse.Content.ReadFromJsonAsync<SkuBatchCreateResponse>();
+        var batchResult = await batchResponse.Content.ReadFromJsonAsync<SkuBatchCreateResponse>(CatalogJson.Options);
         batchResult!.Products.Should().ContainSingle();
         batchResult.Products[0].ModelCode.Should().Be("261000");
         batchResult.Products[0].Items.Should().ContainSingle();
@@ -77,6 +77,9 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
 
     private async Task EnableSkuGeneratorAsync()
     {
+        // PUT, yapılandırma yoksa 404 döner; ilk GET başlangıç yapılandırmasını oluşturur.
+        (await Client.GetAsync("/api/v1/catalog/sku-config")).StatusCode.Should().Be(HttpStatusCode.OK);
+
         var response = await Client.PutAsJsonAsync("/api/v1/catalog/sku-config", new
         {
             enabled = true,
@@ -102,18 +105,18 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
         });
     }
 
-    private async Task<VariantResponse> CreateVariantType(string name, string selectionStyle, bool slicer)
+    private async Task<VariantResponse> CreateVariantType(string name, string selection_style, bool slicer)
     {
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name,
-            selectionStyle,
-            sortOrder = 0,
+            selection_style,
+            sort_order = 0,
             slicer,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<VariantResponse>())!;
+        return (await response.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options))!;
     }
 
     private async Task<VariantValueResponse> CreateVariantValue(
@@ -127,11 +130,11 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
             label,
             color,
             key,
-            sortOrder = 0,
+            sort_order = 0,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<VariantValueResponse>())!;
+        return (await response.Content.ReadFromJsonAsync<VariantValueResponse>(CatalogJson.Options))!;
     }
 
     private static string NextNumericBarcode() =>

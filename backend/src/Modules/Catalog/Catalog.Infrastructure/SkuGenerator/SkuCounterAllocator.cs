@@ -21,7 +21,7 @@ internal sealed class SkuCounterAllocator(
 
         var tenantId = tenantContext.TenantId;
 
-        var startRow = await db.Database
+        var startRow = (await db.Database
             .SqlQuery<CounterReserveRow>(
                 $"""
                  UPDATE catalog.sku_generator_config
@@ -29,7 +29,8 @@ internal sealed class SkuCounterAllocator(
                  WHERE tenant_id = {tenantId} AND id = {SkuGeneratorConfig.SingletonId}
                  RETURNING (counter_next_value - {count})::bigint AS "StartValue"
                  """)
-            .SingleOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .SingleOrDefault();
 
         if (startRow is null)
         {

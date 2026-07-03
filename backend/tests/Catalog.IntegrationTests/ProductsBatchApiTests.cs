@@ -52,7 +52,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
 
         batchResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var batchResult = await batchResponse.Content.ReadFromJsonAsync<BatchCreateResponse>();
+        var batchResult = await batchResponse.Content.ReadFromJsonAsync<BatchCreateResponse>(CatalogJson.Options);
         batchResult.Should().NotBeNull();
         batchResult!.Products.Should().HaveCount(2);
         batchResult.Products.Should().OnlyContain(p => p.Name.StartsWith("Batch Shirt - "));
@@ -109,7 +109,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         });
 
         batchResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var batchResult = await batchResponse.Content.ReadFromJsonAsync<BatchCreateResponse>();
+        var batchResult = await batchResponse.Content.ReadFromJsonAsync<BatchCreateResponse>(CatalogJson.Options);
         batchResult!.Products.Should().ContainSingle();
         batchResult.Products[0].ModelCode.Should().Be(modelCode);
 
@@ -163,7 +163,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         });
 
         batchResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var batchResult = await batchResponse.Content.ReadFromJsonAsync<BatchCreateResponse>();
+        var batchResult = await batchResponse.Content.ReadFromJsonAsync<BatchCreateResponse>(CatalogJson.Options);
         batchResult!.Products.Should().HaveCount(2);
         batchResult.Products.Should().OnlyContain(p => p.Name.StartsWith("Color Only Shirt - "));
 
@@ -183,13 +183,13 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name,
-            selectionStyle = "list",
-            sortOrder = 0,
+            selection_style = "list",
+            sort_order = 0,
             slicer,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<VariantResponse>())!;
+        return (await response.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options))!;
     }
 
     private async Task<VariantValueResponse> CreateVariantValue(Guid typeId, string label, string? color)
@@ -198,11 +198,11 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         {
             label,
             color,
-            sortOrder = 0,
+            sort_order = 0,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await response.Content.ReadFromJsonAsync<VariantValueResponse>())!;
+        return (await response.Content.ReadFromJsonAsync<VariantValueResponse>(CatalogJson.Options))!;
     }
 
     private static object Item(
@@ -240,7 +240,7 @@ internal sealed record BatchCreateResponse(IReadOnlyList<BatchProductResponse> P
 /// <summary>Toplu oluşturulan ürün API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record BatchProductResponse(
     Guid Id,
-    [property: System.Text.Json.Serialization.JsonPropertyName("modelCode")] string ModelCode,
+    string ModelCode,
     string Name,
     IReadOnlyList<BatchItemResponse> Items);
 

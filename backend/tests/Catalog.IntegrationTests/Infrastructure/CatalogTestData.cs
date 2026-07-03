@@ -16,7 +16,7 @@ internal static class CatalogTestData
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var category = await response.Content.ReadFromJsonAsync<CategoryResponse>();
+        var category = await response.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
         return category!.Id;
     }
 }

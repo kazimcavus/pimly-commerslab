@@ -16,6 +16,9 @@ using Channels.Application.Connections.GetMarketplaceConnection;
 using Channels.Application.Connections.UpsertMarketplaceConnection;
 using Channels.Application.ExternalCatalog.ListExternalCategoryAttributes;
 using Channels.Application.ExternalCatalog.SearchExternalCategories;
+using Channels.Application.Imports.EnqueueProductImport;
+using Channels.Application.Imports.GetProductImportRun;
+using Channels.Application.Imports.ListProductImportRuns;
 using Channels.Application.Marketplaces.ListMarketplaces;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.GetTaxonomyStatus;
@@ -58,6 +61,9 @@ public static class DependencyInjection
         services.AddScoped<IListAttributeValueChannelMappingsHandler, ListAttributeValueChannelMappingsHandler>();
         services.AddScoped<IDeleteAttributeValueChannelMappingHandler, DeleteAttributeValueChannelMappingHandler>();
         services.AddScoped<IResolveAttributeValueChannelMappingHandler, ResolveAttributeValueChannelMappingHandler>();
+        services.AddScoped<IEnqueueProductImportHandler, EnqueueProductImportHandler>();
+        services.AddScoped<IGetProductImportRunHandler, GetProductImportRunHandler>();
+        services.AddScoped<IListProductImportRunsHandler, ListProductImportRunsHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

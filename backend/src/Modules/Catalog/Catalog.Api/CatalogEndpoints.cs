@@ -23,6 +23,7 @@ public static class CatalogEndpoints
         group.MapProductEndpoints();
         group.MapProductImageEndpoints();
         group.MapProductItemEndpoints();
+        group.MapChannelPriceEndpoints();
         group.MapBarcodeEndpoints();
         group.MapSkuGeneratorEndpoints();
 

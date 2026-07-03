@@ -23,7 +23,8 @@ internal static class AttributeChannelMappingMappings
             attribute.Name,
             attribute.Required,
             attribute.AllowCustom,
-            attribute.IsVariant);
+            attribute.IsVariant,
+            attribute.IsSlicer);
 
     internal static ExternalAttributeValueSummaryDto ToSummaryDto(this ExternalAttributeValue value) =>
         new(value.ExternalValueId, value.Name);

@@ -70,35 +70,19 @@ public sealed class ListExternalCategoryAttributesHandler(
                 Error.NotFound("Category channel mapping required before listing external attributes."));
         }
 
-        var fetchResult = await clientResult.Value.FetchCategoryAttributesAsync(
+        // Ortak destek IsVariant/IsSlicer dahil cache'i tazeler; ürün import hattı da aynı yolu kullanır.
+        var refreshResult = await ExternalCategoryAttributeCacheSupport.RefreshAsync(
+            clientResult.Value,
+            externalAttributes,
             marketplace,
             externalCategoryId,
+            timeProvider.GetUtcNow(),
             cancellationToken);
 
-        if (fetchResult.IsFailure)
+        if (refreshResult.IsFailure)
         {
-            return Result.Failure<IReadOnlyList<ExternalCategoryAttributeDto>>(fetchResult.Error);
+            return Result.Failure<IReadOnlyList<ExternalCategoryAttributeDto>>(refreshResult.Error);
         }
-
-        var syncedAt = timeProvider.GetUtcNow();
-        var upserts = fetchResult.Value
-            .Select(attribute => new ExternalCategoryAttributeUpsert(
-                attribute.ExternalAttributeId,
-                attribute.Name,
-                attribute.Required,
-                attribute.AllowCustom,
-                attribute.IsVariant,
-                attribute.Values
-                    .Select(value => new ExternalAttributeValueUpsert(value.ExternalValueId, value.Name))
-                    .ToList()))
-            .ToList();
-
-        await externalAttributes.UpsertBatchAsync(
-            marketplace,
-            externalCategoryId,
-            upserts,
-            syncedAt,
-            cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

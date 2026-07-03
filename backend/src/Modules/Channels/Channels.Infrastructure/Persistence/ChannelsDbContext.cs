@@ -3,6 +3,7 @@ using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
+using Channels.Domain.Imports;
 using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -26,9 +27,28 @@ public sealed class ChannelsDbContext : DbContext, IUnitOfWork
         _tenantContext = tenantContext;
     }
 
+    // Model cache anahtarı ve query filter kurulumu için fırlatmayan tenant erişimi.
+    // HTTP dışı bağlamlarda (migration, design-time) Guid.Empty döner.
+    internal Guid ModelCacheTenantId
+    {
+        get
+        {
+            try
+            {
+                return _tenantContext?.TenantId ?? Guid.Empty;
+            }
+            catch (InvalidOperationException)
+            {
+                return Guid.Empty;
+            }
+        }
+    }
+
     public DbSet<MarketplaceConnection> MarketplaceConnections => Set<MarketplaceConnection>();
 
     public DbSet<TaxonomySyncRun> TaxonomySyncRuns => Set<TaxonomySyncRun>();
+
+    public DbSet<ProductImportRun> ProductImportRuns => Set<ProductImportRun>();
 
     public DbSet<ExternalCategory> ExternalCategories => Set<ExternalCategory>();
 
@@ -47,8 +67,7 @@ public sealed class ChannelsDbContext : DbContext, IUnitOfWork
     {
         modelBuilder.HasDefaultSchema("channels");
 
-        var tenantId = _tenantContext?.TenantId ?? Guid.Empty;
-        modelBuilder.ApplyChannelsTenancy(tenantId);
+        modelBuilder.ApplyChannelsTenancy(ModelCacheTenantId);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChannelsDbContext).Assembly);
     }

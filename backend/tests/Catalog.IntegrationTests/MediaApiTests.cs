@@ -16,7 +16,7 @@ public class MediaApiTests(CatalogPostgresFixture fixture) : CatalogIntegrationT
         var uploadResponse = await UploadPngAsync("product");
         uploadResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var uploaded = await uploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>();
+        var uploaded = await uploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>(CatalogJson.Options);
         uploaded.Should().NotBeNull();
         uploaded!.Url.Should().StartWith("/media/");
         uploaded.Url.Split('/').Should().HaveCountGreaterThan(4, "URL should include tenant segment");
@@ -44,7 +44,7 @@ public class MediaApiTests(CatalogPostgresFixture fixture) : CatalogIntegrationT
     public async Task ProductImageCrud_WithUploadedUrl_HappyPath()
     {
         var uploadResponse = await UploadPngAsync("product");
-        var uploaded = (await uploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>())!;
+        var uploaded = (await uploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>(CatalogJson.Options))!;
 
         var product = await CreateSimpleProductAsync();
 
@@ -57,12 +57,12 @@ public class MediaApiTests(CatalogPostgresFixture fixture) : CatalogIntegrationT
             variant_value_id = (Guid?)null,
         });
         addImageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var image = await addImageResponse.Content.ReadFromJsonAsync<ProductImageResponse>();
+        var image = await addImageResponse.Content.ReadFromJsonAsync<ProductImageResponse>(CatalogJson.Options);
         image!.Url.Should().Be(uploaded.Url);
         image.IsPrimary.Should().BeTrue();
 
         var getProduct = await Client.GetAsync($"/api/v1/catalog/products/{product.Id}");
-        var fetched = await getProduct.Content.ReadFromJsonAsync<ProductWithImagesResponse>();
+        var fetched = await getProduct.Content.ReadFromJsonAsync<ProductWithImagesResponse>(CatalogJson.Options);
         fetched!.Images.Should().ContainSingle(i => i.Id == image.Id);
 
         var patchResponse = await Client.PatchAsJsonAsync($"/api/v1/catalog/product-images/{image.Id}", new
@@ -101,26 +101,26 @@ public class MediaApiTests(CatalogPostgresFixture fixture) : CatalogIntegrationT
     public async Task VariantValueImageUrl_WithUploadedSwatch_Persists()
     {
         var uploadResponse = await UploadPngAsync("swatch");
-        var uploaded = (await uploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>())!;
+        var uploaded = (await uploadResponse.Content.ReadFromJsonAsync<UploadImageResponse>(CatalogJson.Options))!;
 
         var variant = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Swatch-{Guid.NewGuid():N}",
-            selectionStyle = "color",
-            sortOrder = 0,
+            selection_style = "color",
+            sort_order = 0,
             slicer = false,
         });
-        var variantType = (await variant.Content.ReadFromJsonAsync<VariantTypeResponse>())!;
+        var variantType = (await variant.Content.ReadFromJsonAsync<VariantTypeResponse>(CatalogJson.Options))!;
 
         var valueResponse = await Client.PostAsJsonAsync($"/api/v1/catalog/variants/{variantType.Id}/values", new
         {
             label = "Navy",
             color = "#001133",
-            imageUrl = uploaded.Url,
-            sortOrder = 0,
+            image_url = uploaded.Url,
+            sort_order = 0,
         });
         valueResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var value = await valueResponse.Content.ReadFromJsonAsync<VariantValueWithImageResponse>();
+        var value = await valueResponse.Content.ReadFromJsonAsync<VariantValueWithImageResponse>(CatalogJson.Options);
         value!.ImageUrl.Should().Be(uploaded.Url);
 
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{value.Id}");
@@ -159,7 +159,7 @@ public class MediaApiTests(CatalogPostgresFixture fixture) : CatalogIntegrationT
             },
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        return (await createResponse.Content.ReadFromJsonAsync<ProductWithImagesResponse>())!;
+        return (await createResponse.Content.ReadFromJsonAsync<ProductWithImagesResponse>(CatalogJson.Options))!;
     }
 
     private static string NextNumericBarcode() =>

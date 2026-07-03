@@ -25,6 +25,15 @@ internal sealed class MarketplaceConnectionRepository(ChannelsDbContext db) : IM
         return keys.ToHashSet();
     }
 
+    public Task<MarketplaceConnection?> GetAnyEnabledAsync(
+        Marketplace marketplace,
+        CancellationToken cancellationToken = default) =>
+        db.MarketplaceConnections
+            .IgnoreQueryFilters()
+            .Where(connection => connection.Marketplace == marketplace && connection.IsEnabled)
+            .OrderByDescending(connection => connection.ApiSecret != null)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task AddAsync(MarketplaceConnection connection, CancellationToken cancellationToken = default) =>
         await db.MarketplaceConnections.AddAsync(connection, cancellationToken);
 

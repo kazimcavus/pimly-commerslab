@@ -27,21 +27,21 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
             $"/api/v1/channels/marketplaces/TY/taxonomy/sync-runs/{syncRun.Id}");
         getRunResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var completedRun = await getRunResponse.Content.ReadFromJsonAsync<TaxonomySyncRunResponse>();
+        var completedRun = await getRunResponse.Content.ReadFromJsonAsync<TaxonomySyncRunResponse>(CatalogJson.Options);
         completedRun!.Status.Should().Be("completed");
         completedRun.ProcessedCount.Should().BeGreaterThan(0);
 
         var statusResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/taxonomy/status");
         statusResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var status = await statusResponse.Content.ReadFromJsonAsync<TaxonomyStatusResponse>();
+        var status = await statusResponse.Content.ReadFromJsonAsync<TaxonomyStatusResponse>(CatalogJson.Options);
         status!.CachedCategoryCount.Should().BeGreaterThan(0);
         status.IsSyncActive.Should().BeFalse();
 
         var searchResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/categories?q=Telefon");
         searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var categories = await searchResponse.Content.ReadFromJsonAsync<List<ExternalCategoryResponse>>();
+        var categories = await searchResponse.Content.ReadFromJsonAsync<List<ExternalCategoryResponse>>(CatalogJson.Options);
         categories.Should().NotBeEmpty();
         categories!.Should().Contain(category => category.Name.Contains("Telefon", StringComparison.OrdinalIgnoreCase));
     }
@@ -58,7 +58,7 @@ public class ChannelsTaxonomyApiTests(CatalogPostgresFixture fixture) : CatalogI
             $"/api/v1/channels/marketplaces/TY/taxonomy/sync-runs/{syncRun.Id}");
         getRunResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var completedRun = await getRunResponse.Content.ReadFromJsonAsync<TaxonomySyncRunResponse>();
+        var completedRun = await getRunResponse.Content.ReadFromJsonAsync<TaxonomySyncRunResponse>(CatalogJson.Options);
         completedRun!.Status.Should().Be("completed");
         completedRun.ProcessedCount.Should().BeGreaterThan(0);
     }

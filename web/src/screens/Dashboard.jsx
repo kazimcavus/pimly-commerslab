@@ -31,6 +31,22 @@ export function Dashboard({ onNavigate, user }) {
         sub={`${user?.name || 'Mağaza'} kataloğunun anlık durumu.`}
         actions={<Button variant="accent" iconLeft={I('plus')} onClick={() => onNavigate('builder')}>Ürün Oluştur</Button>}
       />
+      {total === 0 && (
+        <Card style={{ marginBottom: 16 }}>
+          <CardBody>
+            <div className="between" style={{ flexWrap: 'wrap', gap: 12 }}>
+              <div className="hstack" style={{ gap: 12 }}>
+                <span className="thumb" style={{ width: 40, height: 40 }}>{I('store', { size: 20 })}</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-strong)' }}>Trendyol'dan ürünlerini çek</div>
+                  <div className="list-meta">Mağazanı bağla; kategoriler, özellikler ve varyantlar otomatik tanımlansın, ürünlerin içeri aktarılsın.</div>
+                </div>
+              </div>
+              <Button variant="primary" iconLeft={I('download')} onClick={() => onNavigate('onboarding')}>İçe aktarmayı başlat</Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
       <div className="stats">
         {stats.map((s) => (
           <div className="stat" key={s.label}>
@@ -73,13 +89,13 @@ export function Dashboard({ onNavigate, user }) {
             </CardBody>
           </Card>
           <Card>
-            <CardHeader title="Pazaryeri" />
+            <CardHeader title="Pazaryeri" actions={<Button variant="ghost" size="sm" iconRight={I('arrow-right')} onClick={() => onNavigate('channels')}>Yönet</Button>} />
             <CardBody>
               <div className="between" style={{ marginBottom: 10 }}>
                 <div className="hstack">{I('store')}<span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>Trendyol</span></div>
-                <Badge status="draft">Yakında</Badge>
+                <Badge status="active">İçe aktarma hazır</Badge>
               </div>
-              <div className="list-meta">Eşleme tabloları hazır · gönderim v2'de.</div>
+              <div className="list-meta">Ürünlerini içeri aktar; gönderim (v2) eşlemeleri otomatik kurulur.</div>
             </CardBody>
           </Card>
         </div>

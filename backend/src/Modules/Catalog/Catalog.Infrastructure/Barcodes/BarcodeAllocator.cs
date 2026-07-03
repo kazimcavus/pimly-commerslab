@@ -24,7 +24,7 @@ internal sealed class BarcodeAllocator(
 
         var tenantId = tenantContext.TenantId;
 
-        var startRow = await db.Database
+        var startRow = (await db.Database
             .SqlQuery<SequenceReserveRow>(
                 $"""
                  UPDATE catalog.barcode_sequence
@@ -32,7 +32,8 @@ internal sealed class BarcodeAllocator(
                  WHERE tenant_id = {tenantId} AND id = {BarcodeSequence.SingletonId}
                  RETURNING (next_value - {count})::bigint AS "StartValue"
                  """)
-            .SingleOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .SingleOrDefault();
 
         if (startRow is null)
         {

@@ -20,7 +20,8 @@ internal sealed class StubMarketplaceCategoryAttributesClient : IMarketplaceCate
                     [
                         new MarketplaceAttributeValueNode("val-siyah", "Siyah"),
                         new MarketplaceAttributeValueNode("val-beyaz", "Beyaz"),
-                    ]),
+                    ],
+                    IsSlicer: true),
                 new MarketplaceCategoryAttributeNode(
                     "attr-hafiza",
                     "Hafıza",
@@ -61,7 +62,8 @@ internal sealed class StubMarketplaceCategoryAttributesClient : IMarketplaceCate
                     [
                         new MarketplaceAttributeValueNode("val-mavi", "Mavi"),
                         new MarketplaceAttributeValueNode("val-beyaz-gomlek", "Beyaz"),
-                    ]),
+                    ],
+                    IsSlicer: true),
                 new MarketplaceCategoryAttributeNode(
                     "attr-kumas",
                     "Kumaş",

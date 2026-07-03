@@ -26,7 +26,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/external-attributes");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var attributes = await response.Content.ReadFromJsonAsync<List<ExternalCategoryAttributeResponse>>();
+        var attributes = await response.Content.ReadFromJsonAsync<List<ExternalCategoryAttributeResponse>>(CatalogJson.Options);
         attributes.Should().NotBeNull();
         attributes!.Should().Contain(item => item.ExternalAttributeId == "attr-beden");
         attributes.Should().Contain(item => item.ExternalAttributeId == "attr-kumas");
@@ -41,22 +41,22 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Kumaş Tipi", "Pamuk");
-        await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
+        var attribute_id = await CreateAttributeWithValueAsync("Kumaş Tipi", "Pamuk");
+        await AssignAttributeToCategoryAsync(catalogCategoryId, attribute_id);
 
         var response = await Client.PutAsJsonAsync(
             $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_attribute",
-                catalog_source_id = attributeId,
+                catalog_source_id = attribute_id,
                 external_attribute_id = "attr-kumas",
             });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var mapping = await response.Content.ReadFromJsonAsync<AttributeChannelMappingResponse>();
+        var mapping = await response.Content.ReadFromJsonAsync<AttributeChannelMappingResponse>(CatalogJson.Options);
         mapping!.SourceType.Should().Be("catalog_attribute");
-        mapping.CatalogSourceId.Should().Be(attributeId);
+        mapping.CatalogSourceId.Should().Be(attribute_id);
         mapping.ExternalAttributeId.Should().Be("attr-kumas");
         mapping.ExternalAttribute!.Name.Should().Be("Kumaş");
     }
@@ -80,7 +80,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var mapping = await response.Content.ReadFromJsonAsync<AttributeChannelMappingResponse>();
+        var mapping = await response.Content.ReadFromJsonAsync<AttributeChannelMappingResponse>(CatalogJson.Options);
         mapping!.SourceType.Should().Be("catalog_variant");
         mapping.CatalogVariant!.Id.Should().Be(variantId.VariantId);
         mapping.ExternalAttribute!.IsVariant.Should().BeTrue();
@@ -105,14 +105,14 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Atanmamış Özellik", "Değer");
+        var attribute_id = await CreateAttributeWithValueAsync("Atanmamış Özellik", "Değer");
 
         var response = await Client.PutAsJsonAsync(
             $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_attribute",
-                catalog_source_id = attributeId,
+                catalog_source_id = attribute_id,
                 external_attribute_id = "attr-kumas",
             });
 
@@ -126,15 +126,15 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Renk", "Mavi");
-        await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
+        var attribute_id = await CreateAttributeWithValueAsync("Renk", "Mavi");
+        await AssignAttributeToCategoryAsync(catalogCategoryId, attribute_id);
 
         var response = await Client.PutAsJsonAsync(
             $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings",
             new
             {
                 source_type = "catalog_attribute",
-                catalog_source_id = attributeId,
+                catalog_source_id = attribute_id,
                 external_attribute_id = "missing-attribute",
             });
 
@@ -148,14 +148,14 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Kumaş", "Pamuk");
-        var valueId = await GetAttributeValueIdAsync(attributeId, "Pamuk");
-        await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
+        var attribute_id = await CreateAttributeWithValueAsync("Kumaş", "Pamuk");
+        var valueId = await GetAttributeValueIdAsync(attribute_id, "Pamuk");
+        await AssignAttributeToCategoryAsync(catalogCategoryId, attribute_id);
 
         var fieldMapping = await UpsertFieldMappingAsync(
             catalogCategoryId,
             "catalog_attribute",
-            attributeId,
+            attribute_id,
             "attr-kumas");
 
         var response = await Client.PutAsJsonAsync(
@@ -169,7 +169,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var valueMappings = await response.Content.ReadFromJsonAsync<List<AttributeValueChannelMappingResponse>>();
+        var valueMappings = await response.Content.ReadFromJsonAsync<List<AttributeValueChannelMappingResponse>>(CatalogJson.Options);
         valueMappings!.Should().ContainSingle(item =>
             item.CatalogValueId == valueId && item.ExternalValueId == "val-pamuk");
 
@@ -177,7 +177,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings/{fieldMapping.Id}/value-mappings");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var listed = await listResponse.Content.ReadFromJsonAsync<List<AttributeValueChannelMappingResponse>>();
+        var listed = await listResponse.Content.ReadFromJsonAsync<List<AttributeValueChannelMappingResponse>>(CatalogJson.Options);
         listed!.Should().ContainSingle(item => item.ExternalValueId == "val-pamuk");
     }
 
@@ -188,14 +188,14 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(PhoneExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Marka", "Özel Marka");
-        var valueId = await GetAttributeValueIdAsync(attributeId, "Özel Marka");
-        await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
+        var attribute_id = await CreateAttributeWithValueAsync("Marka", "Özel Marka");
+        var valueId = await GetAttributeValueIdAsync(attribute_id, "Özel Marka");
+        await AssignAttributeToCategoryAsync(catalogCategoryId, attribute_id);
 
         var fieldMapping = await UpsertFieldMappingAsync(
             catalogCategoryId,
             "catalog_attribute",
-            attributeId,
+            attribute_id,
             "attr-marka");
 
         var response = await Client.PutAsJsonAsync(
@@ -218,14 +218,14 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Kumaş", "Pamuk");
-        var valueId = await GetAttributeValueIdAsync(attributeId, "Pamuk");
-        await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
+        var attribute_id = await CreateAttributeWithValueAsync("Kumaş", "Pamuk");
+        var valueId = await GetAttributeValueIdAsync(attribute_id, "Pamuk");
+        await AssignAttributeToCategoryAsync(catalogCategoryId, attribute_id);
 
         var fieldMapping = await UpsertFieldMappingAsync(
             catalogCategoryId,
             "catalog_attribute",
-            attributeId,
+            attribute_id,
             "attr-kumas");
 
         var upsertValuesResponse = await Client.PutAsJsonAsync(
@@ -255,14 +255,14 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var catalogCategoryId = await CreateMappedCategoryAsync(GomlekExternalId);
         await SyncExternalAttributesAsync(catalogCategoryId);
 
-        var attributeId = await CreateAttributeWithValueAsync("Kumaş", "Pamuk");
-        var valueId = await GetAttributeValueIdAsync(attributeId, "Pamuk");
-        await AssignAttributeToCategoryAsync(catalogCategoryId, attributeId);
+        var attribute_id = await CreateAttributeWithValueAsync("Kumaş", "Pamuk");
+        var valueId = await GetAttributeValueIdAsync(attribute_id, "Pamuk");
+        await AssignAttributeToCategoryAsync(catalogCategoryId, attribute_id);
 
         var fieldMapping = await UpsertFieldMappingAsync(
             catalogCategoryId,
             "catalog_attribute",
-            attributeId,
+            attribute_id,
             "attr-kumas");
 
         var getResponse = await Client.GetAsync(
@@ -273,7 +273,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             $"/api/v1/channels/marketplaces/{MarketplaceRouteCode}/category-mappings/{catalogCategoryId}/attribute-mappings?source_type=catalog_attribute");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var list = await listResponse.Content.ReadFromJsonAsync<PagedAttributeChannelMappingsResponse>();
+        var list = await listResponse.Content.ReadFromJsonAsync<PagedAttributeChannelMappingsResponse>(CatalogJson.Options);
         list!.Items.Should().ContainSingle(item => item.Id == fieldMapping.Id);
 
         var valueResponse = await Client.PutAsJsonAsync(
@@ -316,7 +316,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
     {
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/attributes", new { name = attributeName });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var attribute = await createResponse.Content.ReadFromJsonAsync<AttributeResponse>();
+        var attribute = await createResponse.Content.ReadFromJsonAsync<AttributeResponse>(CatalogJson.Options);
 
         var valueResponse = await Client.PostAsJsonAsync(
             $"/api/v1/catalog/attributes/{attribute!.Id}/values",
@@ -326,20 +326,20 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         return attribute.Id;
     }
 
-    private async Task<Guid> GetAttributeValueIdAsync(Guid attributeId, string valueName)
+    private async Task<Guid> GetAttributeValueIdAsync(Guid attribute_id, string valueName)
     {
-        var listResponse = await Client.GetAsync($"/api/v1/catalog/attributes/{attributeId}/values");
+        var listResponse = await Client.GetAsync($"/api/v1/catalog/attributes/{attribute_id}/values");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var values = await listResponse.Content.ReadFromJsonAsync<PagedAttributeValuesResponse>();
+        var values = await listResponse.Content.ReadFromJsonAsync<PagedAttributeValuesResponse>(CatalogJson.Options);
         return values!.Items.Single(item => item.Name == valueName).Id;
     }
 
-    private async Task AssignAttributeToCategoryAsync(Guid categoryId, Guid attributeId)
+    private async Task AssignAttributeToCategoryAsync(Guid categoryId, Guid attribute_id)
     {
         var response = await Client.PostAsJsonAsync(
             $"/api/v1/catalog/categories/{categoryId}/attributes",
-            new { attribute_id = attributeId, required = true, sort_order = 0 });
+            new { attribute_id = attribute_id, required = true, sort_order = 0 });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
@@ -349,18 +349,18 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
         var createVariantResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"{variantName}-{Guid.NewGuid():N}",
-            selectionStyle = "list",
-            sortOrder = 0,
+            selection_style = "list",
+            sort_order = 0,
             slicer = true,
         });
         createVariantResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var variant = await createVariantResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var variant = await createVariantResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
         var createValueResponse = await Client.PostAsJsonAsync(
             $"/api/v1/catalog/variants/{variant!.Id}/values",
-            new { label = valueLabel, sortOrder = 0 });
+            new { label = valueLabel, sort_order = 0 });
         createValueResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var value = await createValueResponse.Content.ReadFromJsonAsync<VariantValueResponse>();
+        var value = await createValueResponse.Content.ReadFromJsonAsync<VariantValueResponse>(CatalogJson.Options);
 
         return (variant.Id, value!.Id);
     }
@@ -381,7 +381,7 @@ public class ChannelsAttributeMappingApiTests(CatalogPostgresFixture fixture) : 
             });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var mapping = await response.Content.ReadFromJsonAsync<AttributeChannelMappingResponse>();
+        var mapping = await response.Content.ReadFromJsonAsync<AttributeChannelMappingResponse>(CatalogJson.Options);
         return mapping!;
     }
 

@@ -14,7 +14,7 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var response = await Client.GetAsync("/api/v1/channels/marketplaces");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var marketplaces = await response.Content.ReadFromJsonAsync<List<MarketplaceResponse>>();
+        var marketplaces = await response.Content.ReadFromJsonAsync<List<MarketplaceResponse>>(CatalogJson.Options);
         marketplaces.Should().NotBeNull();
         marketplaces!.Should().ContainSingle(m =>
             m.Code == "TY"
@@ -40,7 +40,7 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         });
         upsertResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var upserted = await upsertResponse.Content.ReadFromJsonAsync<MarketplaceConnectionResponse>();
+        var upserted = await upsertResponse.Content.ReadFromJsonAsync<MarketplaceConnectionResponse>(CatalogJson.Options);
         upserted.Should().NotBeNull();
         upserted!.MarketplaceCode.Should().Be("TY");
         upserted.SellerId.Should().Be("seller-123");
@@ -52,12 +52,12 @@ public class ChannelsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var getResponse = await Client.GetAsync("/api/v1/channels/marketplaces/TY/connection");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var fetched = await getResponse.Content.ReadFromJsonAsync<MarketplaceConnectionResponse>();
+        var fetched = await getResponse.Content.ReadFromJsonAsync<MarketplaceConnectionResponse>(CatalogJson.Options);
         fetched!.Id.Should().Be(upserted.Id);
         fetched.ApiKeyHint.Should().Be("5678");
 
         var listResponse = await Client.GetAsync("/api/v1/channels/marketplaces");
-        var marketplaces = await listResponse.Content.ReadFromJsonAsync<List<MarketplaceResponse>>();
+        var marketplaces = await listResponse.Content.ReadFromJsonAsync<List<MarketplaceResponse>>(CatalogJson.Options);
         marketplaces!.Should().ContainSingle(m => m.Code == "TY" && m.IsConfigured);
     }
 

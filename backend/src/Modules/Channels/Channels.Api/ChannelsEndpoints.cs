@@ -11,15 +11,22 @@ using Channels.Application.CategoryChannelMappings.ListCategoryChannelMappings;
 using Channels.Application.CategoryChannelMappings.UpsertCategoryChannelMapping;
 using Channels.Application.Connections.GetMarketplaceConnection;
 using Channels.Application.Connections.UpsertMarketplaceConnection;
+using Channels.Application.Contracts;
 using Channels.Application.ExternalCatalog.ListExternalCategoryAttributes;
 using Channels.Application.ExternalCatalog.SearchExternalCategories;
+using Channels.Application.Imports.EnqueueProductImport;
+using Channels.Application.Imports.GetProductImportRun;
+using Channels.Application.Imports.ListProductImportRuns;
 using Channels.Application.Marketplaces.ListMarketplaces;
+using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.GetTaxonomyStatus;
 using Channels.Application.TaxonomySync.GetTaxonomySyncRun;
+using Channels.Domain.Marketplaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pimly.AspNetCore;
+using SharedKernel;
 
 namespace Channels.Api;
 
@@ -85,6 +92,62 @@ public static class ChannelsEndpoints
         {
             var result = await handler.ExecuteAsync(
                 new GetTaxonomySyncRunQuery(code, syncRunId),
+                cancellationToken);
+
+            return result.ToHttpResult();
+        });
+
+        // Onboarding sihirbazının kategori senkronizasyonunu tetiklemesi için HTTP giriş noktası;
+        // worker kuyruğu (taxonomy_sync_runs) yeni pending kaydı poll ederek işler.
+        group.MapPost("/marketplaces/{code}/taxonomy/sync-runs", async (
+            string code,
+            IEnqueueTaxonomySyncHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var marketplaceResult = Marketplace.FromCode(code);
+            if (marketplaceResult.IsFailure)
+            {
+                return Result.Failure<TaxonomySyncRunDto>(marketplaceResult.Error).ToHttpResult();
+            }
+
+            var result = await handler.ExecuteAsync(
+                new EnqueueTaxonomySyncCommand(marketplaceResult.Value),
+                cancellationToken);
+
+            return result.ToHttpResult(dto => Results.Accepted(
+                $"/api/v1/channels/marketplaces/{code}/taxonomy/sync-runs/{dto.Id}",
+                dto));
+        });
+
+        group.MapPost("/marketplaces/{code}/imports", async (
+            string code,
+            IEnqueueProductImportHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await handler.ExecuteAsync(new EnqueueProductImportCommand(code), cancellationToken);
+            return result.ToHttpResult(dto => Results.Accepted(
+                $"/api/v1/channels/marketplaces/{code}/imports/{dto.Id}",
+                dto));
+        });
+
+        group.MapGet("/marketplaces/{code}/imports/{runId:guid}", async (
+            string code,
+            Guid runId,
+            IGetProductImportRunHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await handler.ExecuteAsync(new GetProductImportRunQuery(code, runId), cancellationToken);
+            return result.ToHttpResult();
+        });
+
+        group.MapGet("/marketplaces/{code}/imports", async (
+            string code,
+            int? limit,
+            IListProductImportRunsHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await handler.ExecuteAsync(
+                new ListProductImportRunsQuery(code, limit ?? 20),
                 cancellationToken);
 
             return result.ToHttpResult();

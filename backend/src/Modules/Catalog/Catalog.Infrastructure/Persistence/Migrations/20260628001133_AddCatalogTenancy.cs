@@ -17,7 +17,7 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     catalog.product_images,
                     catalog.product_items,
                     catalog.products,
-                    catalog.category_attribute_assignments,
+                    catalog.category_attributes,
                     catalog.categories,
                     catalog.attribute_values,
                     catalog.attributes,

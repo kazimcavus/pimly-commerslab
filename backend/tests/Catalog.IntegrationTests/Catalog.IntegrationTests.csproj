@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pimly.Api\Pimly.Api.csproj" />
+    <ProjectReference Include="..\..\src\Pimly.Channels.Worker\Pimly.Channels.Worker.csproj" />
   </ItemGroup>
 
 </Project>

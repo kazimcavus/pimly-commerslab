@@ -38,7 +38,7 @@ public class AttributesApiValidationTests(CatalogPostgresFixture fixture) : Cata
             name = $"Material {Guid.NewGuid():N}",
         });
         attributeResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var attribute = await attributeResponse.Content.ReadFromJsonAsync<AttributeResponse>();
+        var attribute = await attributeResponse.Content.ReadFromJsonAsync<AttributeResponse>(CatalogJson.Options);
 
         (await Client.PostAsJsonAsync($"/api/v1/catalog/attributes/{attribute!.Id}/values", new { name = "Cotton" }))
             .StatusCode.Should().Be(HttpStatusCode.Created);
@@ -59,8 +59,8 @@ public class VariantsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = "  ",
-            selectionStyle = "list",
-            sortOrder = 0,
+            selection_style = "list",
+            sort_order = 0,
             slicer = false,
         });
 
@@ -73,8 +73,8 @@ public class VariantsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Invalid-{Guid.NewGuid():N}",
-            selectionStyle = "unknown",
-            sortOrder = 0,
+            selection_style = "unknown",
+            sort_order = 0,
             slicer = false,
         });
 
@@ -94,17 +94,17 @@ public class VariantsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var variantResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Color-{Guid.NewGuid():N}",
-            selectionStyle = "color",
-            sortOrder = 0,
+            selection_style = "color",
+            sort_order = 0,
             slicer = false,
         });
         variantResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var variant = await variantResponse.Content.ReadFromJsonAsync<VariantResponse>();
+        var variant = await variantResponse.Content.ReadFromJsonAsync<VariantResponse>(CatalogJson.Options);
 
-        (await Client.PostAsJsonAsync($"/api/v1/catalog/variants/{variant!.Id}/values", new { label = "Red", color = "#ff0000", sortOrder = 0 }))
+        (await Client.PostAsJsonAsync($"/api/v1/catalog/variants/{variant!.Id}/values", new { label = "Red", color = "#ff0000", sort_order = 0 }))
             .StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var duplicate = await Client.PostAsJsonAsync($"/api/v1/catalog/variants/{variant.Id}/values", new { label = "red", color = "#00ff00", sortOrder = 1 });
+        var duplicate = await Client.PostAsJsonAsync($"/api/v1/catalog/variants/{variant.Id}/values", new { label = "red", color = "#00ff00", sort_order = 1 });
         await CatalogHttpAssertions.AssertProblemAsync(duplicate, HttpStatusCode.Conflict, "conflict");
 
         await Client.DeleteAsync($"/api/v1/catalog/variants/{variant.Id}");
@@ -153,28 +153,28 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
     public async Task AssignCategoryAttribute_DuplicateAssign_Returns409()
     {
         var category = await Client.PostAsJsonAsync("/api/v1/catalog/categories", new { name = $"Cat {Guid.NewGuid():N}", parent_id = (Guid?)null });
-        var categoryId = (await category.Content.ReadFromJsonAsync<CategoryResponse>())!.Id;
+        var categoryId = (await category.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options))!.Id;
 
         var attribute = await Client.PostAsJsonAsync("/api/v1/catalog/attributes", new { name = $"Attr {Guid.NewGuid():N}" });
-        var attributeId = (await attribute.Content.ReadFromJsonAsync<AttributeSummaryResponse>())!.Id;
+        var attribute_id = (await attribute.Content.ReadFromJsonAsync<AttributeSummaryResponse>(CatalogJson.Options))!.Id;
 
         (await Client.PostAsJsonAsync($"/api/v1/catalog/categories/{categoryId}/attributes", new
         {
-            attributeId,
+            attribute_id,
             required = true,
-            sortOrder = 0,
+            sort_order = 0,
         })).StatusCode.Should().Be(HttpStatusCode.Created);
 
         var duplicate = await Client.PostAsJsonAsync($"/api/v1/catalog/categories/{categoryId}/attributes", new
         {
-            attributeId,
+            attribute_id,
             required = false,
-            sortOrder = 1,
+            sort_order = 1,
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(duplicate, HttpStatusCode.Conflict, "conflict");
 
-        await Client.DeleteAsync($"/api/v1/catalog/attributes/{attributeId}");
+        await Client.DeleteAsync($"/api/v1/catalog/attributes/{attribute_id}");
         await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
@@ -187,11 +187,11 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
             parent_id = (Guid?)null,
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        var created = await createResponse.Content.ReadFromJsonAsync<CategoryResponse>(CatalogJson.Options);
 
         var listResponse = await Client.GetAsync("/api/v1/catalog/categories?page=1&page_size=10");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var page = await listResponse.Content.ReadFromJsonAsync<PagedResultResponse<CategoryResponse>>();
+        var page = await listResponse.Content.ReadFromJsonAsync<PagedResultResponse<CategoryResponse>>(CatalogJson.Options);
         page.Should().NotBeNull();
         page!.Page.Should().Be(1);
         page.PageSize.Should().Be(10);
@@ -208,7 +208,7 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
     {
         var response = await Client.GetAsync("/api/v1/catalog/categories");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var page = await response.Content.ReadFromJsonAsync<PagedResultResponse<CategoryResponse>>();
+        var page = await response.Content.ReadFromJsonAsync<PagedResultResponse<CategoryResponse>>(CatalogJson.Options);
         page.Should().NotBeNull();
         page!.Page.Should().Be(1);
         page.PageSize.Should().Be(20);

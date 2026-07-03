@@ -41,7 +41,9 @@ public sealed class AddProductImageHandler(
             return Result.Failure<ProductImageDto>(addResult.Error);
         }
 
-        products.Update(product);
+        // Anahtarı domain'de atanan yeni görsel, change tracking keşfinde Modified sayılır
+        // (UPDATE 0 satır → DbUpdateConcurrencyException); açıkça Added olarak izlemeye alınır.
+        await products.AddImageAsync(addResult.Value, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(addResult.Value.ToDto());

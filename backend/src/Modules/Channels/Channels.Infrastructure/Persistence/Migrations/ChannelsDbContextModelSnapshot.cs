@@ -23,51 +23,6 @@ namespace Channels.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Channels.Domain.Connections.MarketplaceConnection", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("ApiKey")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("api_key");
-
-                    b.Property<string>("ApiSecret")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("api_secret");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_enabled");
-
-                    b.Property<string>("Marketplace")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasColumnName("marketplace_code");
-
-                    b.Property<string>("SellerId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("seller_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "Marketplace")
-                        .IsUnique();
-
-                    b.ToTable("marketplace_connections", "channels");
-                });
-
             modelBuilder.Entity("Channels.Domain.AttributeChannelMappings.AttributeChannelMapping", b =>
                 {
                     b.Property<Guid>("Id")
@@ -186,6 +141,51 @@ namespace Channels.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "Marketplace", "ExternalId");
 
                     b.ToTable("category_channel_mappings", "channels");
+                });
+
+            modelBuilder.Entity("Channels.Domain.Connections.MarketplaceConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("api_key");
+
+                    b.Property<string>("ApiSecret")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("api_secret");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<string>("Marketplace")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
+
+                    b.Property<string>("SellerId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("seller_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Marketplace")
+                        .IsUnique();
+
+                    b.ToTable("marketplace_connections", "channels");
                 });
 
             modelBuilder.Entity("Channels.Domain.ExternalCatalog.ExternalAttributeValue", b =>
@@ -316,6 +316,10 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("external_category_id");
 
+                    b.Property<bool>("IsSlicer")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_slicer");
+
                     b.Property<bool>("IsVariant")
                         .HasColumnType("boolean")
                         .HasColumnName("is_variant");
@@ -349,6 +353,76 @@ namespace Channels.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("IX_external_category_attributes_marketplace_code_external_cat~1");
 
                     b.ToTable("external_category_attributes", "channels");
+                });
+
+            modelBuilder.Entity("Channels.Domain.Imports.ProductImportRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<int>("FailedProducts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_products");
+
+                    b.Property<int>("ImportedProducts")
+                        .HasColumnType("integer")
+                        .HasColumnName("imported_products");
+
+                    b.Property<string>("Marketplace")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
+
+                    b.Property<int>("ProcessedProducts")
+                        .HasColumnType("integer")
+                        .HasColumnName("processed_products");
+
+                    b.Property<int>("SkippedProducts")
+                        .HasColumnType("integer")
+                        .HasColumnName("skipped_products");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int?>("TotalProducts")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_products");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("TenantId", "Marketplace", "CreatedAt")
+                        .IsDescending(false, false, true);
+
+                    b.ToTable("product_import_runs", "channels");
                 });
 
             modelBuilder.Entity("Channels.Domain.TaxonomySync.TaxonomySyncRun", b =>
@@ -402,6 +476,48 @@ namespace Channels.Infrastructure.Persistence.Migrations
                     b.HasIndex("Marketplace", "Status");
 
                     b.ToTable("taxonomy_sync_runs", "channels");
+                });
+
+            modelBuilder.Entity("Channels.Domain.Imports.ProductImportRun", b =>
+                {
+                    b.OwnsMany("Channels.Domain.Imports.ProductImportError", "Errors", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("Barcode")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("barcode");
+
+                            b1.Property<string>("Message")
+                                .IsRequired()
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("message");
+
+                            b1.Property<string>("ProductMainId")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("product_main_id");
+
+                            b1.Property<Guid>("product_import_run_id")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("product_import_run_id");
+
+                            b1.ToTable("product_import_run_errors", "channels");
+
+                            b1.WithOwner()
+                                .HasForeignKey("product_import_run_id");
+                        });
+
+                    b.Navigation("Errors");
                 });
 #pragma warning restore 612, 618
         }

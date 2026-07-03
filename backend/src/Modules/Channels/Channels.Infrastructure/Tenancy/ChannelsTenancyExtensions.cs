@@ -1,8 +1,7 @@
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
-using Channels.Domain.ExternalCatalog;
-using Channels.Domain.TaxonomySync;
+using Channels.Domain.Imports;
 using Microsoft.EntityFrameworkCore;
 
 namespace Channels.Infrastructure.Tenancy;
@@ -19,6 +18,11 @@ internal static class ChannelsTenancyExtensions
 
         modelBuilder.Entity<MarketplaceConnection>()
             .HasQueryFilter(connection => connection.TenantId == tenantId);
+
+        // Worker tenant'sız çalıştığı için (tenantId == Guid.Empty) kuyruk claim'i filtreden etkilenmez;
+        // API tarafında ise run'lar yalnızca sahibi tenant'a görünür.
+        modelBuilder.Entity<ProductImportRun>()
+            .HasQueryFilter(run => run.TenantId == tenantId);
 
         modelBuilder.Entity<CategoryChannelMapping>()
             .HasQueryFilter(mapping => mapping.TenantId == tenantId);

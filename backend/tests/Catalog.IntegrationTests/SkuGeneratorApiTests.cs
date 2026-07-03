@@ -14,7 +14,7 @@ public class SkuGeneratorApiTests(CatalogPostgresFixture fixture) : CatalogInteg
     {
         var getResponse = await Client.GetAsync("/api/v1/catalog/sku-config");
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var current = await getResponse.Content.ReadFromJsonAsync<SkuGeneratorConfigResponse>();
+        var current = await getResponse.Content.ReadFromJsonAsync<SkuGeneratorConfigResponse>(CatalogJson.Options);
         current.Should().NotBeNull();
 
         var putResponse = await Client.PutAsJsonAsync("/api/v1/catalog/sku-config", new
@@ -30,7 +30,7 @@ public class SkuGeneratorApiTests(CatalogPostgresFixture fixture) : CatalogInteg
         });
 
         putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updated = await putResponse.Content.ReadFromJsonAsync<SkuGeneratorConfigResponse>();
+        var updated = await putResponse.Content.ReadFromJsonAsync<SkuGeneratorConfigResponse>(CatalogJson.Options);
         updated!.Enabled.Should().BeTrue();
         updated.Segments.Should().HaveCount(3);
         updated.CounterNextValue.Should().Be(1000);
@@ -39,6 +39,9 @@ public class SkuGeneratorApiTests(CatalogPostgresFixture fixture) : CatalogInteg
     [SkippableFact]
     public async Task SkuConfig_UpdateCounterBelowCurrent_Returns409()
     {
+        // PUT, yapılandırma yoksa 404 döner; ilk GET başlangıç yapılandırmasını oluşturur.
+        (await Client.GetAsync("/api/v1/catalog/sku-config")).StatusCode.Should().Be(HttpStatusCode.OK);
+
         await Client.PutAsJsonAsync("/api/v1/catalog/sku-config", new
         {
             enabled = true,

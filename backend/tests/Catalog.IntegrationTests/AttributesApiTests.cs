@@ -17,17 +17,19 @@ public class AttributesApiTests(CatalogPostgresFixture fixture) : CatalogIntegra
         });
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var created = await createResponse.Content.ReadFromJsonAsync<AttributeResponse>();
+        var created = await createResponse.Content.ReadFromJsonAsync<AttributeResponse>(CatalogJson.Options);
         created.Should().NotBeNull();
         created!.Name.Should().StartWith("Yaka Tipi");
-        created.Key.Should().StartWith("yaka_tipi");
+
+        // CatalogKeyGenerator anahtarı addan BÜYÜK HARF snake_case olarak üretir.
+        created.Key.Should().StartWith("YAKA_TIPI");
 
         var addValueResponse = await Client.PostAsJsonAsync($"/api/v1/catalog/attributes/{created.Id}/values", new
         {
             name = "V Yaka",
         });
         addValueResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var value = await addValueResponse.Content.ReadFromJsonAsync<AttributeValueResponse>();
+        var value = await addValueResponse.Content.ReadFromJsonAsync<AttributeValueResponse>(CatalogJson.Options);
         value.Should().NotBeNull();
         value!.Name.Should().Be("V Yaka");
 

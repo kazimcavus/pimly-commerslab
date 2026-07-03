@@ -1,4 +1,6 @@
 using System;
+using Identity.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +8,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Identity.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(IdentityDbContext))]
+    [Migration("20260628180000_RemoveTenantSlug")]
     public partial class RemoveTenantSlug : Migration
     {
         /// <inheritdoc />

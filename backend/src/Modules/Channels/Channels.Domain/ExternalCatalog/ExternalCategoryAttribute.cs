@@ -23,6 +23,7 @@ public sealed class ExternalCategoryAttribute : Entity<Guid>
         bool required,
         bool allowCustom,
         bool isVariant,
+        bool isSlicer,
         DateTimeOffset syncedAt)
         : base(id)
     {
@@ -33,6 +34,7 @@ public sealed class ExternalCategoryAttribute : Entity<Guid>
         Required = required;
         AllowCustom = allowCustom;
         IsVariant = isVariant;
+        IsSlicer = isSlicer;
         SyncedAt = syncedAt;
     }
 
@@ -50,6 +52,8 @@ public sealed class ExternalCategoryAttribute : Entity<Guid>
 
     public bool IsVariant { get; private set; }
 
+    public bool IsSlicer { get; private set; }
+
     public DateTimeOffset SyncedAt { get; private set; }
 
     public static Result<ExternalCategoryAttribute> Create(
@@ -60,6 +64,7 @@ public sealed class ExternalCategoryAttribute : Entity<Guid>
         bool required,
         bool allowCustom,
         bool isVariant,
+        bool isSlicer,
         DateTimeOffset syncedAt)
     {
         if (string.IsNullOrWhiteSpace(externalCategoryId))
@@ -86,6 +91,7 @@ public sealed class ExternalCategoryAttribute : Entity<Guid>
             required,
             allowCustom,
             isVariant,
+            isSlicer,
             syncedAt));
     }
 
@@ -94,12 +100,14 @@ public sealed class ExternalCategoryAttribute : Entity<Guid>
         bool required,
         bool allowCustom,
         bool isVariant,
+        bool isSlicer,
         DateTimeOffset syncedAt)
     {
         Name = name.Trim();
         Required = required;
         AllowCustom = allowCustom;
         IsVariant = isVariant;
+        IsSlicer = isSlicer;
         SyncedAt = syncedAt;
     }
 }
