@@ -144,6 +144,8 @@ public class VariantsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     }
 }
 
+/// <summary>Variant type API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record VariantResponse(Guid Id, string Name, bool Slicer);
 
+/// <summary>Variant value API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record VariantValueResponse(Guid Id, string Label, string? Color);

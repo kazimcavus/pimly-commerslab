@@ -1,4 +1,5 @@
 using Catalog.Infrastructure.Persistence;
+using Catalog.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -17,6 +18,6 @@ public sealed class CatalogDbContextFactory : IDesignTimeDbContextFactory<Catalo
         optionsBuilder.UseNpgsql(connectionString, npgsql =>
             npgsql.MigrationsHistoryTable("__ef_migrations_history", "catalog"));
 
-        return new CatalogDbContext(optionsBuilder.Options);
+        return new CatalogDbContext(optionsBuilder.Options, new DesignTimeTenantContext());
     }
 }

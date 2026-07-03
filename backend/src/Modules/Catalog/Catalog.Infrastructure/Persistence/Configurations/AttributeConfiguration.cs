@@ -2,6 +2,7 @@ using Catalog.Domain.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 using DomainAttribute = Catalog.Domain.Attributes.Attribute;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
@@ -29,7 +30,7 @@ internal sealed class AttributeConfiguration : IEntityTypeConfiguration<DomainAt
             key => key.Value.GetHashCode(StringComparison.Ordinal),
             key => AttributeKey.FromPersistence(key.Value)));
 
-        builder.HasIndex(a => a.Key).IsUnique();
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(DomainAttribute.Key)).IsUnique();
 
         builder.Navigation(a => a.Values)
             .UsePropertyAccessMode(PropertyAccessMode.Field)

@@ -125,18 +125,17 @@ export function Categories({ onToast }) {
                 </div>
                 <div className="pim-table-wrap">
                   <table className="pim-table">
-                    <thead><tr><th>Özellik</th><th>Anahtar</th><th>Zorunlu</th><th>MP zorunlu</th><th></th></tr></thead>
+                    <thead><tr><th>Özellik</th><th>Anahtar</th><th>Zorunlu</th><th></th></tr></thead>
                     <tbody>
                       {attrs.map((a) => (
                         <tr key={a.category_attribute_id}>
                           <td className="pim-td-strong">{a.name}</td>
                           <td className="pim-td-mono">{a.key}</td>
                           <td>{a.required ? I('check') : <span className="subtle">—</span>}</td>
-                          <td>{a.marketplace_required ? I('check') : <span className="subtle">—</span>}</td>
                           <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => { await api.deleteCategoryAttribute(a.category_attribute_id); setAttrs(attrs.filter((x) => x.category_attribute_id !== a.category_attribute_id)) }}>{I('trash-2')}</button></div></td>
                         </tr>
                       ))}
-                      {attrs.length === 0 && <tr><td colSpan={5} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
+                      {attrs.length === 0 && <tr><td colSpan={4} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -179,17 +178,15 @@ function CategoryDialog({ open, mode, initial, onClose, onSubmit, cats, excludeI
 function AssignAttrDialog({ open, onClose, onAssign, attrs }) {
   const [attrId, setAttrId] = useState('')
   const [required, setRequired] = useState(false)
-  const [mpReq, setMpReq] = useState(false)
-  useEffect(() => { if (open) { setAttrId(''); setRequired(false); setMpReq(false) } }, [open])
+  useEffect(() => { if (open) { setAttrId(''); setRequired(false) } }, [open])
   return (
     <Dialog open={open} title="Özellik ata" confirmLabel="Ata" cancelLabel="İptal" onClose={onClose}
-      onConfirm={() => attrId && onAssign({ attribute_id: attrId, required, marketplace_required: mpReq, sort_order: 0 })}>
+      onConfirm={() => attrId && onAssign({ attribute_id: attrId, required, sort_order: 0 })}>
       <Field label="Özellik" required>
         <Select value={attrId} placeholder="Seç…" onChange={(e) => setAttrId(e.target.value)} options={attrs.map((a) => ({ value: a.id, label: a.name }))} />
       </Field>
-      <div style={{ display: 'flex', gap: 18, marginTop: 4 }}>
+      <div style={{ marginTop: 4 }}>
         <Checkbox label="Zorunlu" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-        <Checkbox label="MP zorunlu" checked={mpReq} onChange={(e) => setMpReq(e.target.checked)} />
       </div>
     </Dialog>
   )

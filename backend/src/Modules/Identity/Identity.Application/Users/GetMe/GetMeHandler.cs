@@ -1,23 +1,41 @@
 using Identity.Application.Contracts;
 using Identity.Domain;
+using Identity.Domain.Tenants;
 using SharedKernel;
 
 namespace Identity.Application.Users.GetMe;
 
-/// <summary>Aktif kullanıcı bilgisini getiren handler.</summary>
-public sealed class GetMeHandler(IUserRepository users) : IGetMeHandler
+/// <summary>Aktif kullanıcı ve tenant bilgisini getiren handler.</summary>
+public sealed class GetMeHandler(
+    IUserRepository users,
+    ITenantRepository tenants,
+    ITenantMembershipRepository memberships) : IGetMeHandler
 {
     /// <inheritdoc/>
-    public async Task<Result<UserDto>> ExecuteAsync(
+    public async Task<Result<MeDto>> ExecuteAsync(
         GetMeQuery query,
         CancellationToken cancellationToken = default)
     {
         var user = await users.GetByIdAsync(query.UserId, cancellationToken);
         if (user is null)
         {
-            return Result.Failure<UserDto>(Error.NotFound("User not found."));
+            return Result.Failure<MeDto>(Error.NotFound("User not found."));
         }
 
-        return Result.Success(new UserDto(user.Id, user.Email, user.Name));
+        var membership = await memberships.GetPrimaryForUserAsync(user.Id, cancellationToken);
+        if (membership is null || membership.TenantId != query.TenantId)
+        {
+            return Result.Failure<MeDto>(Error.Unauthorized("Tenant access denied."));
+        }
+
+        var tenant = await tenants.GetByIdAsync(query.TenantId, cancellationToken);
+        if (tenant is null)
+        {
+            return Result.Failure<MeDto>(Error.NotFound("Tenant not found."));
+        }
+
+        return Result.Success(new MeDto(
+            new UserDto(user.Id, user.Email, user.Name),
+            new TenantDto(tenant.Id, tenant.Name)));
     }
 }

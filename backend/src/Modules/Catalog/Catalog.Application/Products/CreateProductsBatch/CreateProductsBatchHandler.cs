@@ -12,6 +12,7 @@ namespace Catalog.Application.Products.CreateProductsBatch;
 public sealed class CreateProductsBatchHandler(
     IValidator<CreateProductsBatchCommand> validator,
     IProductRepository products,
+    ICategoryRepository categories,
     IVariantRepository variantTypes,
     IAttributeRepository attributes,
     ISkuGeneratorService skuGenerator,
@@ -32,9 +33,21 @@ public sealed class CreateProductsBatchHandler(
         var seenModelCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenBarcodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenVariantSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var verifiedCategoryIds = new Dictionary<Guid, bool>();
 
         foreach (var item in command.Products)
         {
+            if (!verifiedCategoryIds.TryGetValue(item.CategoryId, out var exists))
+            {
+                exists = await categories.GetByIdAsync(item.CategoryId, cancellationToken) is not null;
+                verifiedCategoryIds[item.CategoryId] = exists;
+            }
+
+            if (!exists)
+            {
+                return Result.Failure<CreateProductsBatchResult>(Error.NotFound("Category not found."));
+            }
+
             var resolvedTypesResult = await ProductCreationSupport.ResolveVariantsAsync(
                 variantTypes,
                 item.Variants,
@@ -104,6 +117,7 @@ public sealed class CreateProductsBatchHandler(
 
                 planEntries.Add(new PlanEntry(
                     plan,
+                    item.CategoryId,
                     ProductMappings.ParseStatus(item.Status),
                     attributeValuesResult.Value));
             }
@@ -114,6 +128,7 @@ public sealed class CreateProductsBatchHandler(
         {
             var createResult = Product.Create(
                 command.GroupId,
+                entry.CategoryId,
                 entry.Plan.ModelCode,
                 entry.Plan.Name,
                 entry.Status,
@@ -172,6 +187,7 @@ public sealed class CreateProductsBatchHandler(
 
     private sealed record PlanEntry(
         ProductCreatePlan Plan,
+        Guid CategoryId,
         ProductStatus Status,
         IReadOnlyList<AttributeValue> AttributeValues);
 }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Catalog.Infrastructure.Repositories;
 
+/// <summary>SKU üretici yapılandırması için veritabanı erişim katmanı.</summary>
 internal sealed class SkuGeneratorConfigRepository(CatalogDbContext db) : ISkuGeneratorConfigRepository
 {
     public async Task<SkuGeneratorConfig?> GetAsync(CancellationToken cancellationToken = default) =>

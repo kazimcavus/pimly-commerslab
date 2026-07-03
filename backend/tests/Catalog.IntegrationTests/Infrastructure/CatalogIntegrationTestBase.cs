@@ -6,6 +6,11 @@ public abstract class CatalogIntegrationTestBase(CatalogPostgresFixture fixture)
 {
     protected HttpClient Client { get; } = CreateClient(fixture);
 
+    protected CatalogWebApplicationFactory Factory { get; } = fixture.Factory;
+
+    protected Task<Guid> CreateCategoryAsync(string? name = null) =>
+        CatalogTestData.CreateCategoryAsync(Client, name);
+
     private static HttpClient CreateClient(CatalogPostgresFixture fixture)
     {
         CatalogPostgresFixture.SkipIfUnavailable(fixture);

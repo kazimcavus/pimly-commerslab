@@ -57,11 +57,13 @@ public class SkuGeneratorApiTests(CatalogPostgresFixture fixture) : CatalogInteg
     }
 }
 
+/// <summary>SKU üretici yapılandırma API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record SkuGeneratorConfigResponse(
     bool Enabled,
     IReadOnlyList<SkuSegmentResponse> Segments,
     [property: JsonPropertyName("counter_next_value")] long CounterNextValue);
 
+/// <summary>SKU segment tanımı API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record SkuSegmentResponse(
     string Type,
     string? Label,

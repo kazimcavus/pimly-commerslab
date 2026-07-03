@@ -12,11 +12,13 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         await db.Products
             .Include(p => p.Items)
+            .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
     public async Task<PagedResult<Product>> ListAsync(Pagination pagination, CancellationToken cancellationToken = default) =>
         await db.Products
             .Include(p => p.Items)
+            .Include(p => p.Images)
             .OrderBy(p => p.GroupId)
             .ThenBy(p => p.Name)
             .ToPagedResultAsync(pagination, cancellationToken);
@@ -26,6 +28,7 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
         var code = ModelCode.FromPersistence(modelCode.Trim());
         return await db.Products
             .Include(p => p.Items)
+            .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.ModelCode == code, cancellationToken);
     }
 
@@ -37,6 +40,21 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
         var productId = await db.ProductItems
             .Where(v => v.Id == itemId)
             .Select(v => EF.Property<Guid>(v, "ProductId"))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (productId == Guid.Empty)
+        {
+            return null;
+        }
+
+        return await GetByIdAsync(productId, cancellationToken);
+    }
+
+    public async Task<Product?> GetByImageIdAsync(Guid imageId, CancellationToken cancellationToken = default)
+    {
+        var productId = await db.Set<ProductImage>()
+            .Where(i => i.Id == imageId)
+            .Select(i => EF.Property<Guid>(i, "ProductId"))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (productId == Guid.Empty)

@@ -6,6 +6,7 @@ namespace Catalog.Api.Requests;
 /// <summary>Ürün oluşturma isteği.</summary>
 public sealed record CreateProductRequest(
     [property: JsonPropertyName("group_id")] Guid GroupId,
+    [property: JsonPropertyName("category_id")] Guid CategoryId,
     [property: JsonPropertyName("model_code")] string ModelCode,
     string Name,
     string Status,
@@ -21,6 +22,7 @@ public sealed record CreateProductsBatchRequest(
 
 /// <summary>Toplu oluşturma isteğindeki tek ürün girdisi.</summary>
 public sealed record BatchProductRequest(
+    [property: JsonPropertyName("category_id")] Guid CategoryId,
     [property: JsonPropertyName("model_code")] string ModelCode,
     string Name,
     string Status,
@@ -31,6 +33,7 @@ public sealed record BatchProductRequest(
 
 /// <summary>Ürün güncelleme isteği.</summary>
 public sealed record UpdateProductRequest(
+    [property: JsonPropertyName("category_id")] Guid CategoryId,
     string Name,
     string Status,
     [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues);

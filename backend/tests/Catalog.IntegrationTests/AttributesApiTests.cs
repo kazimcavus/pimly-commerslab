@@ -60,11 +60,13 @@ public class AttributesApiTests(CatalogPostgresFixture fixture) : CatalogIntegra
     }
 }
 
+/// <summary>API attribute yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record AttributeResponse(
     Guid Id,
     string Key,
     string Name);
 
+/// <summary>API attribute value yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record AttributeValueResponse(
     Guid Id,
     Guid AttributeId,

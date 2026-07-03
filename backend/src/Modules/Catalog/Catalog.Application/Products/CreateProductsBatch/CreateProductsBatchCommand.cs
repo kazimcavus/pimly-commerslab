@@ -10,6 +10,7 @@ public sealed record CreateProductsBatchCommand(
 
 /// <summary>Toplu oluşturma girdisindeki tek ürün tanımı.</summary>
 public sealed record CreateProductsBatchItem(
+    Guid CategoryId,
     string ModelCode,
     string Name,
     string Status,

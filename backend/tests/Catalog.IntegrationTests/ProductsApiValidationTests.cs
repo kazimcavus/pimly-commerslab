@@ -17,12 +17,13 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
     }
 
     [SkippableFact]
-    public async Task CreateProduct_EmptyModelCode_Returns400()
+    public async Task CreateProduct_EmptyCategoryId_Returns400()
     {
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
-            model_code = "  ",
+            category_id = Guid.Empty,
+            model_code = $"SKU-{Guid.NewGuid():N}",
             name = "Invalid",
             status = "draft",
             attribute_values = Array.Empty<object>(),
@@ -34,11 +35,54 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
     }
 
     [SkippableFact]
-    public async Task CreateProduct_EmptyItems_Returns400()
+    public async Task CreateProduct_UnknownCategoryId_Returns404()
     {
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = Guid.NewGuid(),
+            model_code = $"SKU-{Guid.NewGuid():N}",
+            name = "Invalid",
+            status = "draft",
+            attribute_values = Array.Empty<object>(),
+            variants = Array.Empty<object>(),
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
+        });
+
+        await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.NotFound, "not_found");
+    }
+
+    [SkippableFact]
+    public async Task CreateProduct_EmptyModelCode_Returns400()
+    {
+        var categoryId = await CreateCategoryAsync();
+
+        var response = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
+        {
+            group_id = Guid.NewGuid(),
+            category_id = categoryId,
+            model_code = "  ",
+            name = "Invalid",
+            status = "draft",
+            attribute_values = Array.Empty<object>(),
+            variants = Array.Empty<object>(),
+            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
+        });
+
+        await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
+
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
+    }
+
+    [SkippableFact]
+    public async Task CreateProduct_EmptyItems_Returns400()
+    {
+        var categoryId = await CreateCategoryAsync();
+
+        var response = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
+        {
+            group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"SKU-{Guid.NewGuid():N}",
             name = "Invalid",
             status = "draft",
@@ -48,16 +92,20 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
+
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task CreateProduct_DuplicateModelCode_Returns409()
     {
+        var categoryId = await CreateCategoryAsync();
         var groupId = Guid.NewGuid();
         var modelCode = $"DUP-{Guid.NewGuid():N}";
         var payload = new
         {
             group_id = groupId,
+            category_id = categoryId,
             model_code = modelCode,
             name = "First",
             status = "draft",
@@ -71,6 +119,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var duplicate = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = groupId,
+            category_id = categoryId,
             model_code = modelCode,
             name = "Second",
             status = "draft",
@@ -80,15 +129,19 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(duplicate, HttpStatusCode.Conflict, "conflict");
+
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task CreateProduct_DuplicateBarcode_Returns409()
     {
+        var categoryId = await CreateCategoryAsync();
         var barcode = (8880000000L + Random.Shared.Next(1, 100000)).ToString(CultureInfo.InvariantCulture);
         var first = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"SKU-A-{Guid.NewGuid():N}",
             name = "First",
             status = "draft",
@@ -101,6 +154,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var second = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"SKU-B-{Guid.NewGuid():N}",
             name = "Second",
             status = "draft",
@@ -110,11 +164,14 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(second, HttpStatusCode.Conflict, "conflict");
+
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task CreateProduct_WithSlicerVariantType_Returns400()
     {
+        var categoryId = await CreateCategoryAsync();
         var variantResponse = await Client.PostAsJsonAsync("/api/v1/catalog/variants", new
         {
             name = $"Slicer-{Guid.NewGuid():N}",
@@ -128,6 +185,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"SKU-{Guid.NewGuid():N}",
             name = "Invalid Slicer Product",
             status = "draft",
@@ -139,19 +197,25 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
 
         await Client.DeleteAsync($"/api/v1/catalog/variants/{variant.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task PatchProduct_UnknownId_Returns404()
     {
+        var categoryId = await CreateCategoryAsync();
+
         var response = await Client.PatchAsJsonAsync($"/api/v1/catalog/products/{Guid.NewGuid()}", new
         {
+            category_id = categoryId,
             name = "Missing",
             status = "draft",
             attribute_values = Array.Empty<object>(),
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.NotFound, "not_found");
+
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
@@ -171,9 +235,11 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
     [SkippableFact]
     public async Task PatchProductItem_NegativePrice_Returns400()
     {
+        var categoryId = await CreateCategoryAsync();
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"SKU-{Guid.NewGuid():N}",
             name = "Item Validation",
             status = "draft",
@@ -190,6 +256,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{product.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]

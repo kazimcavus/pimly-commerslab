@@ -52,6 +52,7 @@ internal static class ProductEndpoints
                 : ProductInputMapper.MapAttributeValues(request.AttributeValues);
             var result = await handler.ExecuteAsync(new UpdateProductCommand(
                 id,
+                request.CategoryId,
                 request.Name,
                 request.Status,
                 attributeValues));
@@ -68,6 +69,7 @@ internal static class ProductEndpoints
     private static CreateProductCommand MapCreateProductCommand(CreateProductRequest request) =>
         new(
             request.GroupId,
+            request.CategoryId,
             request.ModelCode,
             request.Name,
             request.Status,
@@ -78,6 +80,7 @@ internal static class ProductEndpoints
 
     private static CreateProductsBatchItem MapBatchItem(BatchProductRequest request) =>
         new(
+            request.CategoryId,
             request.ModelCode,
             request.Name,
             request.Status,

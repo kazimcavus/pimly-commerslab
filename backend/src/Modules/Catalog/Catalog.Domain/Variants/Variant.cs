@@ -48,6 +48,12 @@ public sealed class Variant : AggregateRoot<Guid>
     /// <summary>Gets türe ait seçilebilir değerler.</summary>
     public IReadOnlyCollection<VariantValue> Values => _values.AsReadOnly();
 
+    /// <summary>Yeni varyant türü oluşturur ve <see cref="VariantCreated"/> alan olayını yayımlar.</summary>
+    /// <param name="name">Varyant türü adı.</param>
+    /// <param name="selectionStyle">Kullanıcı arayüzü seçim stili.</param>
+    /// <param name="sortOrder">Görüntüleme sırası.</param>
+    /// <param name="slicer">Filtreleme (slicer) olarak kullanılsın mı.</param>
+    /// <param name="key">Açık anahtar; boş bırakılırsa adından türetilir.</param>
     public static Result<Variant> Create(
         string name,
         SelectionStyle selectionStyle,
@@ -79,6 +85,11 @@ public sealed class Variant : AggregateRoot<Guid>
         return Result.Success(variant);
     }
 
+    /// <summary>Varyant türünün adını, seçim stilini, sırasını ve slicer bayrağını günceller.</summary>
+    /// <param name="name">Yeni tür adı.</param>
+    /// <param name="selectionStyle">Yeni seçim stili.</param>
+    /// <param name="sortOrder">Yeni görüntüleme sırası.</param>
+    /// <param name="slicer">Filtreleme (slicer) olarak kullanılsın mı.</param>
     public Result Rename(string name, SelectionStyle selectionStyle, int sortOrder, bool slicer)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -93,6 +104,12 @@ public sealed class Variant : AggregateRoot<Guid>
         return Result.Success();
     }
 
+    /// <summary>Varyant türüne yeni seçilebilir değer ekler.</summary>
+    /// <param name="label">Değer etiketi.</param>
+    /// <param name="color">Görsel renk kodu; opsiyonel.</param>
+    /// <param name="imageUrl">Görsel URL'si; opsiyonel.</param>
+    /// <param name="key">Değer anahtarı; boş bırakılırsa etiketten türetilir.</param>
+    /// <param name="sortOrder">Tür içindeki görüntüleme sırası.</param>
     public Result<VariantValue> AddValue(
         string label,
         string? color,
@@ -136,6 +153,13 @@ public sealed class Variant : AggregateRoot<Guid>
         return Result.Success(value);
     }
 
+    /// <summary>Mevcut varyant değerinin etiket, görsel ve anahtar bilgilerini günceller.</summary>
+    /// <param name="valueId">Güncellenecek değer tanımlayıcısı.</param>
+    /// <param name="label">Yeni değer etiketi.</param>
+    /// <param name="color">Yeni renk kodu; opsiyonel.</param>
+    /// <param name="imageUrl">Yeni görsel URL'si; opsiyonel.</param>
+    /// <param name="key">Yeni değer anahtarı; boş bırakılırsa etiketten türetilir.</param>
+    /// <param name="sortOrder">Yeni görüntüleme sırası.</param>
     public Result UpdateValue(
         Guid valueId,
         string label,
@@ -184,6 +208,8 @@ public sealed class Variant : AggregateRoot<Guid>
         return Result.Success();
     }
 
+    /// <summary>Varyant türünden bir değeri kaldırır.</summary>
+    /// <param name="valueId">Kaldırılacak değer tanımlayıcısı.</param>
     public Result RemoveValue(Guid valueId)
     {
         var value = _values.FirstOrDefault(v => v.Id == valueId);
@@ -196,6 +222,8 @@ public sealed class Variant : AggregateRoot<Guid>
         return Result.Success();
     }
 
+    /// <summary>Kalıcı depodan yüklenen değerleri aggregate'e bağlar.</summary>
+    /// <param name="values">Türe ait değer koleksiyonu.</param>
     internal void LoadValues(IEnumerable<VariantValue> values)
     {
         _values.Clear();

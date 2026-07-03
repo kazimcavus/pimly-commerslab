@@ -34,6 +34,7 @@ public sealed class CreateProductsBatchItemValidator : AbstractValidator<CreateP
             .WithErrorCode(ValidationErrorCodes.MaxLength)
             .WithMessage(ValidationMessages.MaxLength("ModelCode", CatalogValidationRules.ModelCodeMaxLength))
             .When(x => !string.IsNullOrWhiteSpace(x.ModelCode));
+        RuleFor(x => x.CategoryId).RequiredCategoryId();
         RuleFor(x => x.Name).ProductName();
         RuleFor(x => x.Status).ProductStatus();
         RuleFor(x => x.Items).NotEmpty()

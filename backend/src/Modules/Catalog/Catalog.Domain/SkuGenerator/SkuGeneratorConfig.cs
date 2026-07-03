@@ -30,9 +30,12 @@ public sealed class SkuGeneratorConfig : Entity<int>
     /// <summary>Gets bir sonraki counter token değeri.</summary>
     public long CounterNextValue { get; private set; }
 
+    /// <summary>Varsayılan ayarlarla kapalı başlangıç yapılandırması oluşturur.</summary>
     public static SkuGeneratorConfig CreateInitial() =>
         new(SingletonId, false, [], 1);
 
+    /// <summary>Segment listesindeki ilk counter segmentinin başlangıç değerini döner; yoksa 1.</summary>
+    /// <param name="segments">Segment şablonu.</param>
     public static long DefaultCounterStart(IReadOnlyList<SkuSegment> segments)
     {
         foreach (var segment in segments)
@@ -46,9 +49,14 @@ public sealed class SkuGeneratorConfig : Entity<int>
         return 1;
     }
 
+    /// <summary>Gets şablondaki counter segment sayısı.</summary>
     public int CounterSegmentCount =>
         Segments.Count(segment => segment.IsCounterSegment);
 
+    /// <summary>Generator durumunu, segment şablonunu ve opsiyonel counter değerini günceller.</summary>
+    /// <param name="enabled">Generator açık mı.</param>
+    /// <param name="segments">Yeni segment şablonu.</param>
+    /// <param name="counterNextValue">Yeni counter değeri; null ise mevcut veya varsayılan değer korunur.</param>
     public Result UpdateSettings(bool enabled, IReadOnlyList<SkuSegment> segments, long? counterNextValue)
     {
         if (segments.Count == 0 && enabled)
@@ -82,6 +90,7 @@ public sealed class SkuGeneratorConfig : Entity<int>
         return Result.Success();
     }
 
+    /// <summary>Counter değeri geçersizse segment şablonundan varsayılan başlangıç değerini atar.</summary>
     public void EnsureCounterInitialized()
     {
         if (CounterNextValue < 1)
@@ -90,5 +99,7 @@ public sealed class SkuGeneratorConfig : Entity<int>
         }
     }
 
+    /// <summary>Bir sonraki counter token değerini doğrudan ayarlar.</summary>
+    /// <param name="value">Yeni counter değeri.</param>
     public void SetCounterNextValue(long value) => CounterNextValue = value;
 }

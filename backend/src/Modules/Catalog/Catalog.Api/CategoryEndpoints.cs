@@ -60,7 +60,6 @@ internal static class CategoryEndpoints
                 id,
                 request.AttributeId,
                 request.Required,
-                request.MarketplaceRequired,
                 request.SortOrder));
             return result.ToCreatedResult(dto => $"/api/v1/catalog/category-attributes/{dto.CategoryAttributeId}");
         });
@@ -83,7 +82,6 @@ internal static class CategoryEndpoints
             var result = await handler.ExecuteAsync(new UpdateCategoryAttributeCommand(
                 id,
                 request.Required,
-                request.MarketplaceRequired,
                 request.SortOrder));
             return result.ToHttpResult();
         });

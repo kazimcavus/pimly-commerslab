@@ -13,6 +13,7 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
     public CreateProductCommandValidator()
     {
         RuleFor(x => x.GroupId).RequiredGroupId();
+        RuleFor(x => x.CategoryId).RequiredCategoryId();
         RuleFor(x => x.ModelCode)
             .MaximumLength(CatalogValidationRules.ModelCodeMaxLength)
             .WithErrorCode(ValidationErrorCodes.MaxLength)

@@ -81,9 +81,11 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var allocated = await allocateResponse.Content.ReadFromJsonAsync<AllocateBarcodesResponse>();
         var barcode = allocated!.Barcodes.Single();
 
+        var categoryId = await CreateCategoryAsync();
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"INDEP-{Guid.NewGuid():N}",
             name = "Independent Flow Product",
             status = "draft",
@@ -100,6 +102,7 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         created!.Items[0].Barcode.Should().Be(barcode);
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{created.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     private async Task SetSequenceAsync(long nextValue, bool clientAllocationRequired = false)
@@ -114,15 +117,19 @@ public class BarcodesApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     }
 }
 
+/// <summary>Barkod sırası API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record BarcodeSequenceResponse(
     [property: System.Text.Json.Serialization.JsonPropertyName("next_value")] long NextValue,
     [property: System.Text.Json.Serialization.JsonPropertyName("client_allocation_required")] bool ClientAllocationRequired,
     [property: System.Text.Json.Serialization.JsonPropertyName("next_preview")] string NextPreview);
 
+/// <summary>Toplu barkod tahsis API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record AllocateBarcodesResponse(IReadOnlyList<string> Barcodes);
 
+/// <summary>Tahsis edilen barkodlu ürün API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record AllocatedBarcodeProductResponse(
     Guid Id,
     IReadOnlyList<AllocatedBarcodeItemResponse> Items);
 
+/// <summary>Tahsis edilen ürün kalemi barkod API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record AllocatedBarcodeItemResponse(string Barcode);

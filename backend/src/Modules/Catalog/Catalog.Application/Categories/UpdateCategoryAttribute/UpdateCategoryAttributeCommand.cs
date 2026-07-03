@@ -1,8 +1,7 @@
 namespace Catalog.Application.Categories.UpdateCategoryAttribute;
 
-/// <summary>Kategori-özellik atamasını güncelleme komutu.</summary>
+/// <summary>Kategori-özellik ataması güncelleme komutu.</summary>
 public sealed record UpdateCategoryAttributeCommand(
     Guid Id,
     bool Required,
-    bool MarketplaceRequired,
     int SortOrder);

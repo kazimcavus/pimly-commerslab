@@ -2,6 +2,7 @@ using Catalog.Application.Attributes.AddAttributeValue;
 using Catalog.Application.Attributes.UpdateAttribute;
 using Catalog.Application.Attributes.UpdateAttributeValue;
 using Catalog.Application.Categories.UpdateCategory;
+using Catalog.Application.Options;
 using Catalog.Application.Products.UpdateProduct;
 using Catalog.Application.Products.UpdateProductItem;
 using Catalog.Application.Validation;
@@ -10,26 +11,36 @@ using Catalog.Application.Variants.UpdateVariantType;
 using Catalog.Application.Variants.UpdateVariantValue;
 using FluentAssertions;
 using SharedKernel;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Application.UnitTests;
 
 /// <summary>UpdateProductCommandValidator için birim testleri.</summary>
 public class UpdateProductCommandValidatorTests
 {
+    private static readonly Guid TestCategoryId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly UpdateProductCommandValidator _validator = new();
 
     [Fact]
     public void Validate_EmptyId_Fails()
     {
-        var result = _validator.Validate(new UpdateProductCommand(Guid.Empty, "Title", "draft", null));
+        var result = _validator.Validate(new UpdateProductCommand(Guid.Empty, TestCategoryId, "Title", "draft", null));
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Id");
     }
 
     [Fact]
+    public void Validate_EmptyCategoryId_Fails()
+    {
+        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), Guid.Empty, "Title", "draft", null));
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "CategoryId");
+    }
+
+    [Fact]
     public void Validate_EmptyName_Fails()
     {
-        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), "  ", "draft", null));
+        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), TestCategoryId, "  ", "draft", null));
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Name");
     }
@@ -37,7 +48,7 @@ public class UpdateProductCommandValidatorTests
     [Fact]
     public void Validate_InvalidStatus_Fails()
     {
-        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), "Title", "invalid", null));
+        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), TestCategoryId, "Title", "invalid", null));
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Status");
     }
@@ -45,7 +56,7 @@ public class UpdateProductCommandValidatorTests
     [Fact]
     public void Validate_ValidCommand_Succeeds()
     {
-        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), "Title", "active", null));
+        var result = _validator.Validate(new UpdateProductCommand(Guid.NewGuid(), TestCategoryId, "Title", "active", null));
         result.IsValid.Should().BeTrue();
     }
 }
@@ -177,7 +188,9 @@ public class AddAttributeValueCommandValidatorTests
 /// <summary>AddVariantValueCommandValidator için birim testleri.</summary>
 public class AddVariantValueCommandValidatorTests
 {
-    private readonly AddVariantValueCommandValidator _validator = new();
+    private readonly AddVariantValueCommandValidator _validator = new(
+        Microsoft.Extensions.Options.Options.Create(new MediaUrlOptions { AllowedUrlPrefix = "/media/" }),
+        new ValidatorTestTenantContext());
 
     [Fact]
     public void Validate_EmptyLabel_Fails()
@@ -227,7 +240,9 @@ public class UpdateVariantTypeCommandValidatorTests
 /// <summary>UpdateVariantValueCommandValidator için birim testleri.</summary>
 public class UpdateVariantValueCommandValidatorTests
 {
-    private readonly UpdateVariantValueCommandValidator _validator = new();
+    private readonly UpdateVariantValueCommandValidator _validator = new(
+        Microsoft.Extensions.Options.Options.Create(new MediaUrlOptions { AllowedUrlPrefix = "/media/" }),
+        new ValidatorTestTenantContext());
 
     [Fact]
     public void Validate_EmptyLabel_Fails()
@@ -243,4 +258,9 @@ public class UpdateVariantValueCommandValidatorTests
         var result = _validator.Validate(new UpdateVariantValueCommand(Guid.NewGuid(), "Crimson", "#dc143c", null, null, 1));
         result.IsValid.Should().BeTrue();
     }
+}
+
+internal sealed class ValidatorTestTenantContext : ITenantContext
+{
+    public Guid TenantId { get; } = Guid.Parse("11111111-1111-1111-1111-111111111111");
 }

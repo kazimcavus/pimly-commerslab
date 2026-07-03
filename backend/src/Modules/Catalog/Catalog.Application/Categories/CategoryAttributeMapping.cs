@@ -15,6 +15,5 @@ internal static class CategoryAttributeMapping
             attribute.Key.Value,
             attribute.Name,
             assignment.Required,
-            assignment.MarketplaceRequired,
             assignment.SortOrder);
 }

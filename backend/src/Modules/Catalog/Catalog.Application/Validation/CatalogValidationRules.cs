@@ -17,6 +17,8 @@ internal static class CatalogValidationRules
     public const int VariantValueLabelMaxLength = 200;
     public const int VariantValueColorMaxLength = 50;
     public const int VariantValueImageUrlMaxLength = 2000;
+    public const int ProductImageUrlMaxLength = 2000;
+    public const int ProductImageAltTextMaxLength = 500;
     public const int VariantValueKeyMaxLength = 200;
     public const int ModelCodeMaxLength = 200;
     public const int ProductNameMaxLength = 500;
@@ -104,11 +106,38 @@ internal static class CatalogValidationRules
             .WithMessage(ValidationMessages.MaxLength("Color", VariantValueColorMaxLength));
 
     public static IRuleBuilderOptions<T, string?> OptionalVariantValueImageUrl<T>(
-        this IRuleBuilder<T, string?> ruleBuilder) =>
+        this IRuleBuilder<T, string?> ruleBuilder,
+        string allowedUrlPrefix,
+        Guid tenantId) =>
         ruleBuilder
             .MaximumLength(VariantValueImageUrlMaxLength)
             .WithErrorCode(ValidationErrorCodes.MaxLength)
-            .WithMessage(ValidationMessages.MaxLength("ImageUrl", VariantValueImageUrlMaxLength));
+            .WithMessage(ValidationMessages.MaxLength("ImageUrl", VariantValueImageUrlMaxLength))
+            .Must(url => string.IsNullOrWhiteSpace(url) || IsAllowedMediaUrl(url, allowedUrlPrefix, tenantId))
+            .WithErrorCode(ValidationErrorCodes.InvalidFormat)
+            .WithMessage("ImageUrl must reference an uploaded media asset.");
+
+    public static IRuleBuilderOptions<T, string> ProductImageUrl<T>(
+        this IRuleBuilder<T, string> ruleBuilder,
+        string allowedUrlPrefix,
+        Guid tenantId) =>
+        ruleBuilder
+            .NotEmpty()
+            .WithErrorCode(ValidationErrorCodes.Required)
+            .WithMessage(ValidationMessages.Required("Url"))
+            .MaximumLength(ProductImageUrlMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Url", ProductImageUrlMaxLength))
+            .Must(url => IsAllowedMediaUrl(url, allowedUrlPrefix, tenantId))
+            .WithErrorCode(ValidationErrorCodes.InvalidFormat)
+            .WithMessage("Url must reference an uploaded media asset.");
+
+    public static IRuleBuilderOptions<T, string?> OptionalProductImageAltText<T>(
+        this IRuleBuilder<T, string?> ruleBuilder) =>
+        ruleBuilder
+            .MaximumLength(ProductImageAltTextMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("AltText", ProductImageAltTextMaxLength));
 
     public static IRuleBuilderOptions<T, string?> OptionalVariantTypeKey<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
         ruleBuilder
@@ -127,6 +156,12 @@ internal static class CatalogValidationRules
             .NotEmpty()
             .WithErrorCode(ValidationErrorCodes.InvalidId)
             .WithMessage(ValidationMessages.InvalidId("GroupId"));
+
+    public static IRuleBuilderOptions<T, Guid> RequiredCategoryId<T>(this IRuleBuilder<T, Guid> ruleBuilder) =>
+        ruleBuilder
+            .NotEmpty()
+            .WithErrorCode(ValidationErrorCodes.InvalidId)
+            .WithMessage(ValidationMessages.InvalidId("CategoryId"));
 
     public static IRuleBuilderOptions<T, string> ModelCode<T>(this IRuleBuilder<T, string> ruleBuilder) =>
         ruleBuilder
@@ -182,6 +217,31 @@ internal static class CatalogValidationRules
 
     private static bool BeNumericBarcode(string value) =>
         BarcodeAllocation.IsNumericBarcode(value.Trim());
+
+    private static bool IsAllowedMediaUrl(string url, string allowedUrlPrefix, Guid tenantId)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        var trimmed = url.Trim();
+        var tenantPrefix = $"{allowedUrlPrefix.TrimEnd('/')}/{tenantId:N}/";
+
+        if (trimmed.StartsWith(tenantPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var absoluteUri))
+        {
+            return absoluteUri.AbsolutePath.StartsWith(
+                tenantPrefix,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
 
     private static bool BeValidProductStatus(string value)
     {

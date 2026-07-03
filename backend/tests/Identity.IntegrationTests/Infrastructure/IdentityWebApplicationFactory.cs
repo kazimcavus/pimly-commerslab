@@ -21,6 +21,7 @@ public sealed class IdentityWebApplicationFactory(string connectionString) : Web
                 ["Identity:AutoMigrate"] = "true",
                 ["Identity:Jwt:Secret"] = "integration-test-secret",
                 ["Identity:Jwt:ExpirationHours"] = "1",
+                ["Observability:Enabled"] = "false",
             });
         });
     }

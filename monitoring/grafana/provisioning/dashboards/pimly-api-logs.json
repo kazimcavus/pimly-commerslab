@@ -1,0 +1,72 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [
+    {
+      "icon": "external link",
+      "keepTime": true,
+      "title": "API Overview (metrikler)",
+      "type": "link",
+      "url": "/d/pimly-api-overview/pimly-api-overview"
+    },
+    {
+      "icon": "external link",
+      "keepTime": true,
+      "title": "Explore Traces (Tempo)",
+      "type": "link",
+      "url": "/explore?orgId=1&left=%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22queryType%22%3A%22search%22%2C%22serviceName%22%3A%22pimly-api%22%7D%5D%7D"
+    }
+  ],
+  "panels": [
+    {
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**Log kaynağı:** Docker container adı `pimly-api` olmalıdır (`docker ps`). Host'ta `dotnet run` ile çalışan API burada görünmez.\n\n**Test:** Postman veya Swagger ile `/api/v1/identity/login` veya `/api/v1/catalog/...` isteği atın. `/healthz`, `/ready`, `/metrics` loglanmaz.\n\n**Sorgu:** `{container=\"pimly-api\"}` · Zaman aralığını **Last 15 minutes** yapın.",
+        "mode": "markdown"
+      },
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 22, "w": 24, "x": 0, "y": 3 },
+      "id": 2,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{container=\"pimly-api\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "pimly-api logs",
+      "type": "logs"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["pimly", "logs", "loki"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Pimly API Logs",
+  "uid": "pimly-api-logs",
+  "version": 1
+}

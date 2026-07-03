@@ -22,11 +22,13 @@ internal static class CatalogHttpAssertions
     }
 }
 
+/// <summary>RFC 7807 problem details API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record ProblemDetailsResponse(
     string? Title,
     int? Status,
     string? Detail);
 
+/// <summary>Sayfalanmış API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record PagedResultResponse<T>(
     IReadOnlyList<T> Items,
     int Page,

@@ -30,7 +30,7 @@ public class CategoryAttributesApiTests(CatalogPostgresFixture fixture) : Catalo
 
         var assignResponse = await Client.PostAsJsonAsync(
             $"/api/v1/catalog/categories/{category!.Id}/attributes",
-            new { attributeId = attribute!.Id, required = true, marketplaceRequired = false, sortOrder = 0 });
+            new { attributeId = attribute!.Id, required = true, sortOrder = 0 });
         assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var assignment = await assignResponse.Content.ReadFromJsonAsync<CategoryAttributeResponse>();
         assignment.Should().NotBeNull();
@@ -42,8 +42,11 @@ public class CategoryAttributesApiTests(CatalogPostgresFixture fixture) : Catalo
 
         var patchResponse = await Client.PatchAsJsonAsync(
             $"/api/v1/catalog/category-attributes/{assignment.CategoryAttributeId}",
-            new { required = false, marketplaceRequired = true, sortOrder = 1 });
+            new { required = false, sortOrder = 1 });
         patchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await patchResponse.Content.ReadFromJsonAsync<CategoryAttributeResponse>();
+        updated!.Required.Should().BeFalse();
+        updated.SortOrder.Should().Be(1);
 
         var removeResponse = await Client.DeleteAsync(
             $"/api/v1/catalog/category-attributes/{assignment.CategoryAttributeId}");
@@ -54,9 +57,12 @@ public class CategoryAttributesApiTests(CatalogPostgresFixture fixture) : Catalo
     }
 }
 
+/// <summary>Kategori-attribute ilişkisinde özet attribute API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record AttributeSummaryResponse(Guid Id);
 
+/// <summary>Kategoriye atanmış attribute API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record CategoryAttributeResponse(
     Guid CategoryAttributeId,
     Guid AttributeId,
-    bool Required);
+    bool Required,
+    int SortOrder);

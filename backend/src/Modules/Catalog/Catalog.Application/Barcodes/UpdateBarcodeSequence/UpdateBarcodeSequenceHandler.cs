@@ -1,6 +1,7 @@
 using Catalog.Application.Contracts;
 using Catalog.Application.Validation;
 using Catalog.Domain;
+using Catalog.Domain.Barcodes;
 using FluentValidation;
 using SharedKernel;
 
@@ -27,7 +28,9 @@ public sealed class UpdateBarcodeSequenceHandler(
         var sequence = await sequences.GetAsync(cancellationToken);
         if (sequence is null)
         {
-            return Result.Failure<BarcodeSequenceDto>(Error.NotFound("Barcode sequence is not configured."));
+            sequence = BarcodeSequence.CreateInitial();
+            await sequences.AddAsync(sequence, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
         var maxAllocated = await allocations.MaxNumericBarcodeAsync(cancellationToken);

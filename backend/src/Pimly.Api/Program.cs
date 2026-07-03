@@ -4,19 +4,40 @@ using System.Text.Json;
 using Catalog.Api;
 using Catalog.Application;
 using Catalog.Infrastructure;
+using Channels.Api;
+using Channels.Application;
+using Channels.Application.Ports;
+using Channels.Infrastructure;
 using Identity.Api;
 using Identity.Application;
 using Identity.Infrastructure;
+using Media.Api;
+using Media.Application;
+using Media.Application.Options;
+using Media.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Pimly.Api.ExceptionHandling;
+using Pimly.Api.Integration;
+using Pimly.AspNetCore.Observability;
+using Pimly.AspNetCore.Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddPimlyObservability();
+
 builder.Services.AddCatalogApplication();
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
+builder.Services.AddChannelsApplication();
+builder.Services.AddChannelsInfrastructure(builder.Configuration);
+builder.Services.AddScoped<ICatalogCategoryGateway, CatalogCategoryGateway>();
+builder.Services.AddScoped<ICatalogAttributeGateway, CatalogAttributeGateway>();
+builder.Services.AddScoped<ICatalogVariantGateway, CatalogVariantGateway>();
 builder.Services.AddIdentityApplication();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
+builder.Services.AddMediaApplication();
+builder.Services.AddMediaInfrastructure(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
@@ -52,10 +73,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddPimlyTenancy();
 
 var app = builder.Build();
 
 await app.Services.ApplyCatalogMigrationsAsync(app.Configuration);
+await app.Services.ApplyChannelsMigrationsAsync(app.Configuration);
 await app.Services.ApplyIdentityMigrationsAsync(app.Configuration);
 
 app.UseExceptionHandler();
@@ -67,12 +90,25 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UsePimlyObservability();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+var mediaStoragePath = Path.GetFullPath(
+    builder.Configuration.GetSection(MediaOptions.SectionName).GetValue<string>("StoragePath")
+        ?? "./storage/media");
+Directory.CreateDirectory(mediaStoragePath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    RequestPath = "/media",
+    FileProvider = new PhysicalFileProvider(mediaStoragePath),
+});
+
 app.MapCatalogEndpoints();
+app.MapChannelsEndpoints();
 app.MapIdentityEndpoints();
+app.MapMediaEndpoints();
 
 app.Run();
 

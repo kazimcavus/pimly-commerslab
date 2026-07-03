@@ -12,6 +12,7 @@ public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProd
     public UpdateProductCommandValidator()
     {
         RuleFor(x => x.Id).RequiredId();
+        RuleFor(x => x.CategoryId).RequiredCategoryId();
         RuleFor(x => x.Name).ProductName();
         RuleFor(x => x.Status).ProductStatus();
     }

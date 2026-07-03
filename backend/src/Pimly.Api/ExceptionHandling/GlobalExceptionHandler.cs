@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Pimly.AspNetCore;
 using SharedKernel;
 
 namespace Pimly.Api.ExceptionHandling;
@@ -14,26 +15,30 @@ internal sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
+        var traceId = HttpContextObservability.GetTraceId(httpContext);
+
         logger.LogError(
             exception,
-            "Unhandled exception while processing {Method} {Path}",
+            "Unhandled exception while processing {Method} {Path}. TraceId={TraceId} UserId={UserId}",
             httpContext.Request.Method,
-            httpContext.Request.Path);
+            httpContext.Request.Path,
+            traceId,
+            HttpContextObservability.GetUserId(httpContext.User) ?? "(anonymous)");
 
         var (statusCode, title, detail) = MapException(exception);
+        var error = new Error(title, detail);
 
-        var problem = new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = detail,
-        };
+        httpContext.Items[HttpContextObservability.FailureLoggedItemKey] = true;
+
+        var problem = ProblemDetailsFactory.Create(error, traceId);
 
         if (environment.IsDevelopment())
         {
             problem.Extensions["exception"] = exception.GetType().Name;
             problem.Extensions["stackTrace"] = exception.StackTrace;
         }
+
+        HttpContextObservability.AppendTraceIdHeader(httpContext, traceId);
 
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/problem+json";

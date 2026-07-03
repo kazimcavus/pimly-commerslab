@@ -3,11 +3,14 @@ using Catalog.Domain.Barcodes;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Infrastructure.Barcodes;
 
 /// <summary>PostgreSQL üzerinde atomik barkod tahsisi gerçekleştirir.</summary>
-internal sealed class BarcodeAllocator(CatalogDbContext db) : IBarcodeAllocator
+internal sealed class BarcodeAllocator(
+    CatalogDbContext db,
+    ITenantContext tenantContext) : IBarcodeAllocator
 {
     public async Task<Result<IReadOnlyList<AllocatedBarcode>>> AllocateAsync(
         int count,
@@ -19,12 +22,14 @@ internal sealed class BarcodeAllocator(CatalogDbContext db) : IBarcodeAllocator
                 Error.Validation("Count must be at least 1."));
         }
 
+        var tenantId = tenantContext.TenantId;
+
         var startRow = await db.Database
             .SqlQuery<SequenceReserveRow>(
                 $"""
                  UPDATE catalog.barcode_sequence
                  SET next_value = next_value + {count}
-                 WHERE id = {BarcodeSequence.SingletonId}
+                 WHERE tenant_id = {tenantId} AND id = {BarcodeSequence.SingletonId}
                  RETURNING (next_value - {count})::bigint AS "StartValue"
                  """)
             .SingleOrDefaultAsync(cancellationToken);
@@ -54,9 +59,10 @@ internal sealed class BarcodeAllocator(CatalogDbContext db) : IBarcodeAllocator
 
         await db.BarcodeAllocations.AddRangeAsync(allocations, cancellationToken);
 
-        var trackedSequence = await db.BarcodeSequences.FindAsync(
-            [BarcodeSequence.SingletonId],
-            cancellationToken);
+        var trackedSequence = await db.BarcodeSequences
+            .FirstOrDefaultAsync(
+                sequence => sequence.Id == BarcodeSequence.SingletonId,
+                cancellationToken);
 
         if (trackedSequence is not null)
         {

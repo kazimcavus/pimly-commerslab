@@ -6,6 +6,7 @@ namespace Catalog.Application.Products.CreateProduct;
 /// <summary>Yeni ürün oluşturma komutu.</summary>
 public sealed record CreateProductCommand(
     Guid GroupId,
+    Guid CategoryId,
     string ModelCode,
     string Name,
     string Status,

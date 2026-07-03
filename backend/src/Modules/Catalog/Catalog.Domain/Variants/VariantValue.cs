@@ -45,6 +45,12 @@ public sealed class VariantValue : Entity<Guid>
     /// <summary>Gets tür içindeki görüntüleme sırası.</summary>
     public int SortOrder { get; private set; }
 
+    /// <summary>Değerin etiket, görsel, anahtar ve sıra bilgilerini günceller.</summary>
+    /// <param name="key">Yeni değer anahtarı.</param>
+    /// <param name="label">Yeni değer etiketi.</param>
+    /// <param name="color">Yeni renk kodu; opsiyonel.</param>
+    /// <param name="imageUrl">Yeni görsel URL'si; opsiyonel.</param>
+    /// <param name="sortOrder">Yeni görüntüleme sırası.</param>
     internal void Update(
         VariantKey key,
         string label,

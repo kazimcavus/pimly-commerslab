@@ -17,6 +17,11 @@ public sealed record ProductCreatePlan(
 /// </example>
 public static class ProductCreateSplitter
 {
+    /// <summary>Slicer eksenine göre ürün oluşturma girdisini bir veya birden fazla plana böler.</summary>
+    /// <param name="baseModelCode">Temel model kodu.</param>
+    /// <param name="baseName">Temel ürün adı.</param>
+    /// <param name="variants">Ürün eksen tanım anlık görüntüleri.</param>
+    /// <param name="items">Bölünecek satılabilir kalemler.</param>
     public static Result<IReadOnlyList<ProductCreatePlan>> Split(
         string baseModelCode,
         string baseName,

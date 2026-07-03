@@ -2,10 +2,12 @@ using System.Security.Claims;
 using Identity.Api.Requests;
 using Identity.Application.Users.GetMe;
 using Identity.Application.Users.Login;
+using Identity.Application.Users.Register;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pimly.AspNetCore;
+using SharedKernel.Tenancy;
 
 namespace Identity.Api;
 
@@ -24,14 +26,25 @@ public static class IdentityEndpoints
             return result.ToHttpResult();
         });
 
+        group.MapPost("/register", async (RegisterUserRequest request, IRegisterUserHandler handler) =>
+        {
+            var result = await handler.ExecuteAsync(new RegisterUserCommand(
+                request.Email,
+                request.Password,
+                request.Name,
+                request.TenantName));
+
+            return result.ToHttpResult(dto => Results.Created("/api/v1/identity/me", dto));
+        });
+
         group.MapGet("/me", async (ClaimsPrincipal principal, IGetMeHandler handler) =>
         {
-            if (!TryGetUserId(principal, out var userId))
+            if (!TryGetUserId(principal, out var userId) || !TryGetTenantId(principal, out var tenantId))
             {
                 return Results.Unauthorized();
             }
 
-            var result = await handler.ExecuteAsync(new GetMeQuery(userId));
+            var result = await handler.ExecuteAsync(new GetMeQuery(userId, tenantId));
             return result.ToHttpResult();
         }).RequireAuthorization();
 
@@ -44,5 +57,11 @@ public static class IdentityEndpoints
             ?? principal.FindFirstValue("sub");
 
         return Guid.TryParse(subject, out userId);
+    }
+
+    private static bool TryGetTenantId(ClaimsPrincipal principal, out Guid tenantId)
+    {
+        var tenant = principal.FindFirstValue(TenantClaimTypes.TenantId);
+        return Guid.TryParse(tenant, out tenantId);
     }
 }

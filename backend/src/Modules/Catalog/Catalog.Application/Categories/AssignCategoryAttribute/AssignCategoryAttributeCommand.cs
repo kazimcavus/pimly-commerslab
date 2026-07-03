@@ -5,5 +5,4 @@ public sealed record AssignCategoryAttributeCommand(
     Guid CategoryId,
     Guid AttributeId,
     bool Required,
-    bool MarketplaceRequired,
     int SortOrder);

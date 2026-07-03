@@ -1,31 +1,30 @@
-using Identity.Application.Auth;
-using Identity.Domain;
-using Identity.Domain.Users;
+using Identity.Application.Users.Register;
 using Microsoft.Extensions.DependencyInjection;
+using SharedKernel;
 
 namespace Identity.IntegrationTests.Infrastructure;
 
 /// <summary>Integration testleri için kullanıcı seed yardımcıları.</summary>
 internal static class IdentityTestUsers
 {
-    internal static async Task<User> SeedAsync(
+    internal static async Task SeedAsync(
         IServiceProvider services,
         string email,
         string password,
+        string? name = null,
+        string? tenantName = null,
         CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
-        var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var passwords = scope.ServiceProvider.GetRequiredService<IPasswordService>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var register = scope.ServiceProvider.GetRequiredService<IRegisterUserHandler>();
 
-        var draft = User.Create(email, string.Empty).Value;
-        var passwordHash = passwords.HashPassword(draft, password);
-        var user = User.Create(email, passwordHash).Value;
+        var result = await register.ExecuteAsync(
+            new RegisterUserCommand(email, password, name, tenantName ?? name ?? email.Split('@')[0]),
+            cancellationToken);
 
-        await users.AddAsync(user, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return user;
+        if (result.IsFailure && result.Error.Code != ErrorCodes.Conflict)
+        {
+            throw new InvalidOperationException($"Failed to seed test user: {result.Error.Message}");
+        }
     }
 }

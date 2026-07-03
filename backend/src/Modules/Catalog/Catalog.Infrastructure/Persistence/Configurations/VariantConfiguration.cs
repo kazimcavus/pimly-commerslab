@@ -2,6 +2,7 @@ using Catalog.Domain.Variants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
 
@@ -30,9 +31,9 @@ internal sealed class VariantConfiguration : IEntityTypeConfiguration<Variant>
             key => key.Value.GetHashCode(StringComparison.Ordinal),
             key => VariantKey.FromPersistence(key.Value)));
 
-        builder.HasIndex(v => v.Key).IsUnique();
-        builder.HasIndex(v => v.Name).IsUnique();
-        builder.HasIndex(v => v.Slicer)
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(Variant.Key)).IsUnique();
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(Variant.Name)).IsUnique();
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(Variant.Slicer))
             .IsUnique()
             .HasFilter("slicer = true");
 

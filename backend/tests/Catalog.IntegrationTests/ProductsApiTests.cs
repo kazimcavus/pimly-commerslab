@@ -14,10 +14,12 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     public async Task ProductCrud_HappyPath()
     {
         var groupId = Guid.NewGuid();
+        var categoryId = await CreateCategoryAsync();
 
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = groupId,
+            category_id = categoryId,
             model_code = $"INT-{Guid.NewGuid():N}",
             name = "Integration Product",
             status = "draft",
@@ -38,6 +40,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var created = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
         created.Should().NotBeNull();
         created!.Name.Should().Be("Integration Product");
+        created.CategoryId.Should().Be(categoryId);
         created.Items.Should().HaveCount(1);
 
         var getResponse = await Client.GetAsync($"/api/v1/catalog/products/{created.Id}");
@@ -45,6 +48,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         var patchResponse = await Client.PatchAsJsonAsync($"/api/v1/catalog/products/{created.Id}", new
         {
+            category_id = categoryId,
             name = "Updated Product",
             status = "active",
             attribute_values = Array.Empty<object>(),
@@ -64,11 +68,13 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         var deleteResponse = await Client.DeleteAsync($"/api/v1/catalog/products/{created.Id}");
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task CreateVariantProduct_WithColorAndSize_Succeeds()
     {
+        var categoryId = await CreateCategoryAsync();
         var colorVariant = await CreateVariantType($"Color-{Guid.NewGuid():N}");
         var sizeVariant = await CreateVariantType($"Size-{Guid.NewGuid():N}");
         var red = await CreateVariantValue(colorVariant.Id, "Red", "#ff0000");
@@ -77,6 +83,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"VAR-{Guid.NewGuid():N}",
             name = "Variant Shirt",
             status = "draft",
@@ -107,6 +114,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         product!.Items.Should().HaveCount(1);
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{product.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{red.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{small.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{colorVariant.Id}");
@@ -116,6 +124,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
     [SkippableFact]
     public async Task CreateProduct_WithAttributeValues_Succeeds()
     {
+        var categoryId = await CreateCategoryAsync();
         var attributeResponse = await Client.PostAsJsonAsync("/api/v1/catalog/attributes", new
         {
             name = $"Material {Guid.NewGuid():N}",
@@ -130,6 +139,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"ATTR-{Guid.NewGuid():N}",
             name = "Attributed Product",
             status = "draft",
@@ -145,12 +155,14 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 
         var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>();
         await Client.DeleteAsync($"/api/v1/catalog/products/{product!.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
         await Client.DeleteAsync($"/api/v1/catalog/attributes/{attribute.Id}");
     }
 
     [SkippableFact]
     public async Task DeleteProductItem_FromVariantProduct_Succeeds()
     {
+        var categoryId = await CreateCategoryAsync();
         var sizeVariant = await CreateVariantType($"Size-{Guid.NewGuid():N}");
         var small = await CreateVariantValue(sizeVariant.Id, "S", null);
         var medium = await CreateVariantValue(sizeVariant.Id, "M", null);
@@ -158,6 +170,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
         {
             group_id = Guid.NewGuid(),
+            category_id = categoryId,
             model_code = $"DEL-{Guid.NewGuid():N}",
             name = "Deletable Items",
             status = "draft",
@@ -193,6 +206,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
         updated!.Items.Should().HaveCount(1);
 
         await Client.DeleteAsync($"/api/v1/catalog/products/{product.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{small.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{medium.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{sizeVariant.Id}");
@@ -231,6 +245,7 @@ public class ProductsApiTests(CatalogPostgresFixture fixture) : CatalogIntegrati
 internal sealed record ProductResponse(
     Guid Id,
     Guid GroupId,
+    Guid CategoryId,
     string ModelCode,
     string Name,
     string Status,

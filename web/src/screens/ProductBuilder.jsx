@@ -152,7 +152,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     setAttrPick((p) => ({ ...p, [attrId]: v.id }))
   }
   const assignAttribute = async (attrId) => {
-    const ca = await api.assignCategoryAttribute(categoryId, { attribute_id: attrId, required: false, marketplace_required: false, sort_order: catAttrs.length })
+    const ca = await api.assignCategoryAttribute(categoryId, { attribute_id: attrId, required: false, sort_order: catAttrs.length })
     setCatAttrs((c) => [...c, ca])
     const vs = await api.listAttributeValues(attrId).catch(() => [])
     setAttrVals((m) => ({ ...m, [attrId]: vs }))
@@ -443,7 +443,6 @@ function CategoryAttributesSection({ categoryId, catAttrs, attrVals, attrPick, a
           <div key={ca.category_attribute_id} className="vtype">
             <div className="between" style={{ marginBottom: 8 }}>
               <span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>{ca.name}{ca.required && <span style={{ color: 'var(--danger-fg)' }}> *</span>}</span>
-              {ca.marketplace_required && <span className="list-meta">pazaryeri zorunlu</span>}
             </div>
             <div className="chipset" style={{ alignItems: 'center' }}>
               {vals.map((v) => (

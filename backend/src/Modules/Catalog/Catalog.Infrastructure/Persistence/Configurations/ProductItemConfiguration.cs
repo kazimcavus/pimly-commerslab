@@ -1,6 +1,7 @@
 using Catalog.Domain.Products;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
 
@@ -25,8 +26,8 @@ internal sealed class ProductItemConfiguration : IEntityTypeConfiguration<Produc
         builder.Property(v => v.Stock).HasColumnName("stock").IsRequired();
         builder.Ignore(v => v.DomainEvents);
 
-        builder.HasIndex(v => v.Barcode).IsUnique();
-        builder.HasIndex(v => v.Sku)
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(ProductItem.Barcode)).IsUnique();
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(ProductItem.Sku))
             .IsUnique()
             .HasFilter("sku IS NOT NULL");
 

@@ -83,6 +83,9 @@ public static class SkuCodeAssembler
         return (raw ?? string.Empty).Trim().ToUpperInvariant();
     }
 
+    /// <summary>Manual segment girdilerinin eksiksiz olup olmadığını doğrular.</summary>
+    /// <param name="segments">Segment şablonu.</param>
+    /// <param name="codeInputs">Manual segment değerleri; segment sırasına göre.</param>
     public static Result ValidateManualInputs(
         IReadOnlyList<SkuSegment> segments,
         IReadOnlyList<string>? codeInputs)
@@ -109,6 +112,9 @@ public static class SkuCodeAssembler
         return Result.Success();
     }
 
+    /// <summary>Key kaynağı kullanan varyant segmentleri için değer anahtarlarının tanımlı olup olmadığını doğrular.</summary>
+    /// <param name="segments">Segment şablonu.</param>
+    /// <param name="variantSelections">Ürün kalemindeki varyant seçimleri.</param>
     public static Result ValidateVariantCodes(
         IReadOnlyList<SkuSegment> segments,
         IReadOnlyList<SkuVariantSelection> variantSelections)

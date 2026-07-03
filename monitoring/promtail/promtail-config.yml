@@ -1,0 +1,55 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: container
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: stream
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/pimly-api'
+        action: keep
+    pipeline_stages:
+      - docker: {}
+      - json:
+          expressions:
+            service: service
+            request_method: RequestMethod
+            request_path: RequestPath
+            status_code: StatusCode
+            error_code: ErrorCode
+            validation_fields: ValidationFields
+            user_id: UserId
+      - regex:
+          expression: '"@t":"(?P<timestamp>[^"]+)"'
+      - regex:
+          expression: '"@l":"(?P<level>[^"]+)"'
+      - regex:
+          expression: '"@tr":"(?P<trace_id>[^"]+)"'
+      - regex:
+          expression: '"@mt":"(?P<message>(?:\\.|[^"\\])*)"'
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      - template:
+          source: output
+          template: '{{ if .error_code }}{{ .request_method }} {{ .request_path }} → {{ .status_code }} [{{ .error_code }}] {{ .validation_fields }}{{ else if .request_method }}{{ .request_method }} {{ .request_path }} → {{ .status_code }} trace_id={{ .trace_id }}{{ else if .message }}{{ .message }} trace_id={{ .trace_id }}{{ else }}log trace_id={{ .trace_id }}{{ end }}'
+      - labels:
+          level:
+          service:
+          trace_id:
+      - output:
+          source: output

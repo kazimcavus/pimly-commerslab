@@ -6,6 +6,7 @@ namespace Catalog.Domain.Products;
 /// <example>GOMlek-001.</example>
 public sealed class ModelCode : ValueObject
 {
+    /// <summary>Gets normalize edilmiş model kodu metni.</summary>
     public string Value { get; }
 
     private ModelCode(string value)
@@ -13,8 +14,12 @@ public sealed class ModelCode : ValueObject
         Value = value;
     }
 
+    /// <summary>Kalıcı depodan okunan model kodu değerini yeniden oluşturur; doğrulama yapmaz.</summary>
+    /// <param name="value">Depodan okunan model kodu.</param>
     public static ModelCode FromPersistence(string value) => new(value);
 
+    /// <summary>Model kodu metnini doğrulayarak yeni değer nesnesi oluşturur.</summary>
+    /// <param name="value">Oluşturulacak model kodu.</param>
     public static Result<ModelCode> Create(string value)
     {
         if (string.IsNullOrWhiteSpace(value))

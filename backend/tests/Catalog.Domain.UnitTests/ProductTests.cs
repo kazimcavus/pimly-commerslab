@@ -9,6 +9,8 @@ namespace Catalog.Domain.UnitTests;
 /// <summary>Product aggregate kökü için birim testleri.</summary>
 public class ProductTests
 {
+    private static readonly Guid TestCategoryId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
     private static ProductItemDraft BasicVariant(string barcode = "BC-001") =>
         new(null, barcode, null, null, null, null, 10m, null, 5, null, null);
 
@@ -17,6 +19,7 @@ public class ProductTests
     {
         var result = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "  ",
             "Title",
             ProductStatus.Draft,
@@ -33,6 +36,7 @@ public class ProductTests
     {
         var result = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-001",
             "Basic",
             ProductStatus.Draft,
@@ -49,6 +53,7 @@ public class ProductTests
     {
         var result = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-001",
             "Basic",
             ProductStatus.Draft,
@@ -66,6 +71,7 @@ public class ProductTests
         var variantTypes = new[] { new ProductVariantType(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Color", SelectionStyle.Color) };
         var result = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-002",
             "Variant",
             ProductStatus.Draft,
@@ -89,6 +95,7 @@ public class ProductTests
         };
         var result = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-003",
             "Variant",
             ProductStatus.Draft,
@@ -105,6 +112,7 @@ public class ProductTests
     {
         var product = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-004",
             "Basic",
             ProductStatus.Draft,
@@ -124,6 +132,7 @@ public class ProductTests
     {
         var result = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-005",
             "Basic",
             ProductStatus.Draft,
@@ -139,6 +148,7 @@ public class ProductTests
     {
         var product = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-006",
             "Basic",
             ProductStatus.Draft,
@@ -146,10 +156,46 @@ public class ProductTests
             [],
             [BasicVariant()]).Value;
 
-        var result = product.UpdateDetails("  ", ProductStatus.Active, null);
+        var result = product.UpdateDetails(TestCategoryId, "  ", ProductStatus.Active, null);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("validation");
+    }
+
+    [Fact]
+    public void Create_WithEmptyCategoryId_Fails()
+    {
+        var result = Product.Create(
+            Guid.NewGuid(),
+            Guid.Empty,
+            "SKU-001",
+            "Basic",
+            ProductStatus.Draft,
+            null,
+            [],
+            [BasicVariant()]);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("Category id is required");
+    }
+
+    [Fact]
+    public void UpdateDetails_EmptyCategoryId_Fails()
+    {
+        var product = Product.Create(
+            Guid.NewGuid(),
+            TestCategoryId,
+            "SKU-010",
+            "Basic",
+            ProductStatus.Draft,
+            null,
+            [],
+            [BasicVariant()]).Value;
+
+        var result = product.UpdateDetails(Guid.Empty, "Updated Title", ProductStatus.Active, null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("Category id is required");
     }
 
     [Fact]
@@ -157,6 +203,7 @@ public class ProductTests
     {
         var product = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-007",
             "Basic",
             ProductStatus.Draft,
@@ -164,11 +211,13 @@ public class ProductTests
             [],
             [BasicVariant()]).Value;
 
-        var result = product.UpdateDetails("Updated Title", ProductStatus.Active, null);
+        var newCategoryId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var result = product.UpdateDetails(newCategoryId, "Updated Title", ProductStatus.Active, null);
 
         result.IsSuccess.Should().BeTrue();
         product.Name.Should().Be("Updated Title");
         product.Status.Should().Be(ProductStatus.Active);
+        product.CategoryId.Should().Be(newCategoryId);
     }
 
     [Fact]
@@ -176,6 +225,7 @@ public class ProductTests
     {
         var product = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-008",
             "Basic",
             ProductStatus.Draft,
@@ -195,6 +245,7 @@ public class ProductTests
         var sizeType = new ProductVariantType(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Size", SelectionStyle.List);
         var product = Product.Create(
             Guid.NewGuid(),
+            TestCategoryId,
             "SKU-009",
             "Variant",
             ProductStatus.Draft,

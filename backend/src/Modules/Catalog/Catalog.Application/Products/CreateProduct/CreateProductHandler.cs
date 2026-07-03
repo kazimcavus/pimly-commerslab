@@ -12,6 +12,7 @@ namespace Catalog.Application.Products.CreateProduct;
 public sealed class CreateProductHandler(
     IValidator<CreateProductCommand> validator,
     IProductRepository products,
+    ICategoryRepository categories,
     IVariantRepository variantTypes,
     IAttributeRepository attributes,
     ISkuGeneratorService skuGenerator,
@@ -26,6 +27,12 @@ public sealed class CreateProductHandler(
         if (validationResult.IsFailure)
         {
             return Result.Failure<ProductDto>(validationResult.Error);
+        }
+
+        var categoryExists = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
+        if (categoryExists is null)
+        {
+            return Result.Failure<ProductDto>(Error.NotFound("Category not found."));
         }
 
         var resolvedTypesResult = await ProductCreationSupport.ResolveVariantsAsync(
@@ -93,6 +100,7 @@ public sealed class CreateProductHandler(
         var status = ProductMappings.ParseStatus(command.Status);
         var createResult = Product.Create(
             command.GroupId,
+            command.CategoryId,
             plan.ModelCode,
             plan.Name,
             status,

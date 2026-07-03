@@ -162,7 +162,6 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
         {
             attributeId,
             required = true,
-            marketplaceRequired = false,
             sortOrder = 0,
         })).StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -170,7 +169,6 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
         {
             attributeId,
             required = false,
-            marketplaceRequired = false,
             sortOrder = 1,
         });
 
@@ -231,6 +229,7 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
     [SkippableFact]
     public async Task ProductsBatch_DuplicateBarcodeInRequest_Returns409()
     {
+        var categoryId = await CreateCategoryAsync();
         var barcode = (8890000000L + Random.Shared.Next(1, 100000)).ToString(CultureInfo.InvariantCulture);
         var response = await Client.PostAsJsonAsync("/api/v1/catalog/products:batch", new
         {
@@ -239,6 +238,7 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
             {
                 new
                 {
+                    category_id = categoryId,
                     model_code = $"SKU-{Guid.NewGuid():N}",
                     name = "Dup Batch",
                     status = "draft",
@@ -254,5 +254,7 @@ public class CatalogApiValidationTests(CatalogPostgresFixture fixture) : Catalog
         });
 
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.Conflict, "conflict");
+
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 }

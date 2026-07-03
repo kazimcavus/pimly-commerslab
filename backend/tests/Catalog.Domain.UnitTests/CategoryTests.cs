@@ -39,8 +39,8 @@ public class CategoryTests
         var category = Category.Create("Apparel", null, null).Value;
         var attributeId = Guid.NewGuid();
 
-        category.AssignAttribute(attributeId, false, false, 0).IsSuccess.Should().BeTrue();
-        var duplicate = category.AssignAttribute(attributeId, true, false, 1);
+        category.AssignAttribute(attributeId, false, 0).IsSuccess.Should().BeTrue();
+        var duplicate = category.AssignAttribute(attributeId, true, 1);
 
         duplicate.IsFailure.Should().BeTrue();
         duplicate.Error.Code.Should().Be("conflict");

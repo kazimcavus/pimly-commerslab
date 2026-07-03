@@ -8,8 +8,10 @@ namespace Catalog.Domain.Variants;
 /// <example>RENK.</example>
 public sealed class VariantKey : ValueObject
 {
+    /// <summary>Gets anahtarın izin verilen maksimum uzunluğu.</summary>
     public const int MaxLength = CatalogKeyGenerator.MaxLength;
 
+    /// <summary>Gets normalize edilmiş varyant anahtarı metni.</summary>
     public string Value { get; }
 
     private VariantKey(string value)
@@ -17,13 +19,20 @@ public sealed class VariantKey : ValueObject
         Value = value;
     }
 
+    /// <summary>Kalıcı depodan okunan anahtar değerini yeniden oluşturur; doğrulama yapmaz.</summary>
+    /// <param name="value">Depodan okunan anahtar.</param>
     public static VariantKey FromPersistence(string value) => new(value);
 
+    /// <summary>Açık anahtar verilmişse doğrular; yoksa yedek adından türetir.</summary>
+    /// <param name="key">Açık anahtar; opsiyonel.</param>
+    /// <param name="fallbackName">Anahtar boşsa türetim için kullanılacak ad.</param>
     internal static Result<VariantKey> FromOptional(string? key, string fallbackName) =>
         string.IsNullOrWhiteSpace(key)
             ? FromName(fallbackName)
             : Create(key);
 
+    /// <summary>Ad metninden slug anahtar üretir.</summary>
+    /// <param name="name">Türetim kaynağı ad.</param>
     internal static Result<VariantKey> FromName(string name)
     {
         var generateResult = CatalogKeyGenerator.GenerateFromName(name);
@@ -32,6 +41,8 @@ public sealed class VariantKey : ValueObject
             : Result.Success(new VariantKey(generateResult.Value));
     }
 
+    /// <summary>Açık anahtar metnini doğrulayarak yeni değer nesnesi oluşturur.</summary>
+    /// <param name="value">Oluşturulacak anahtar.</param>
     internal static Result<VariantKey> Create(string value)
     {
         var validateResult = CatalogKeyGenerator.ValidateExplicit(value);

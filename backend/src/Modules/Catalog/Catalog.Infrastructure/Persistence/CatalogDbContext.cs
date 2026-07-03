@@ -4,7 +4,9 @@ using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using Catalog.Domain.SkuGenerator;
 using Catalog.Domain.Variants;
+using Catalog.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel.Tenancy;
 using CatalogVariant = Catalog.Domain.Variants.Variant;
 using DomainAttribute = Catalog.Domain.Attributes.Attribute;
 
@@ -13,10 +15,22 @@ namespace Catalog.Infrastructure.Persistence;
 /// <summary>Catalog modülü için Entity Framework veritabanı bağlamı.</summary>
 public sealed class CatalogDbContext : DbContext, IUnitOfWork
 {
+    private readonly ITenantContext? _tenantContext;
+
     public CatalogDbContext(DbContextOptions<CatalogDbContext> options)
-        : base(options)
+        : this(options, null)
     {
     }
+
+    public CatalogDbContext(DbContextOptions<CatalogDbContext> options, ITenantContext? tenantContext)
+        : base(options)
+    {
+        _tenantContext = tenantContext;
+    }
+
+    internal Guid CurrentTenantId =>
+        _tenantContext?.TenantId
+        ?? throw new InvalidOperationException("Tenant id is not available in the current HTTP context.");
 
     public DbSet<Category> Categories => Set<Category>();
 
@@ -35,9 +49,23 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
     public DbSet<SkuGeneratorConfig> SkuGeneratorConfigs => Set<SkuGeneratorConfig>();
 
     /// <inheritdoc/>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        if (_tenantContext is not null)
+        {
+            this.StampTenantId(CurrentTenantId);
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("catalog");
+
+        var tenantId = _tenantContext?.TenantId ?? Guid.Empty;
+        modelBuilder.ApplyCatalogTenancy(tenantId);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
     }

@@ -1,7 +1,9 @@
+using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 using ProductVariantType = Catalog.Domain.Products.Variant;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
@@ -16,6 +18,12 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasColumnName("id");
         builder.Property(p => p.GroupId).HasColumnName("group_id").IsRequired();
+        builder.Property(p => p.CategoryId).HasColumnName("category_id").IsRequired();
+        builder.HasOne<Category>()
+            .WithMany()
+            .HasForeignKey(p => p.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(p => p.CategoryId);
         builder.Property(p => p.Name).HasColumnName("title").IsRequired().HasMaxLength(500);
         builder.Ignore(p => p.DomainEvents);
 
@@ -25,7 +33,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasMaxLength(200)
             .IsRequired();
 
-        builder.HasIndex(p => p.ModelCode).IsUnique();
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(Product.ModelCode)).IsUnique();
 
         builder.Property(p => p.Status)
             .HasColumnName("status")
@@ -58,6 +66,15 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasField("_items");
 
         builder.HasMany(p => p.Items)
+            .WithOne()
+            .HasForeignKey("ProductId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(p => p.Images)
+            .UsePropertyAccessMode(PropertyAccessMode.Field)
+            .HasField("_images");
+
+        builder.HasMany(p => p.Images)
             .WithOne()
             .HasForeignKey("ProductId")
             .OnDelete(DeleteBehavior.Cascade);

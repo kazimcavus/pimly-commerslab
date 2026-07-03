@@ -12,6 +12,45 @@ namespace Identity.IntegrationTests;
 public class AuthApiTests(IdentityPostgresFixture fixture)
 {
     [SkippableFact]
+    public async Task Register_CreatesUserWithOwnTenant()
+    {
+        IdentityPostgresFixture.SkipIfUnavailable(fixture);
+        var client = fixture.Factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/identity/register", new
+        {
+            email = "new-shop@example.com",
+            password = "secret1234",
+            name = "Shop Owner",
+            tenant_name = "My Shop",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        body.Should().NotBeNull();
+        body!.Token.Should().NotBeNullOrWhiteSpace();
+        body.User.Email.Should().Be("new-shop@example.com");
+        body.Tenant.Name.Should().Be("My Shop");
+    }
+
+    [SkippableFact]
+    public async Task Register_WithExistingEmail_ReturnsConflict()
+    {
+        IdentityPostgresFixture.SkipIfUnavailable(fixture);
+        var client = fixture.Factory.CreateClient();
+        await IdentityTestUsers.SeedAsync(fixture.Factory.Services, "dup@example.com", "secret1234");
+
+        var response = await client.PostAsJsonAsync("/api/v1/identity/register", new
+        {
+            email = "dup@example.com",
+            password = "secret1234",
+            name = "Duplicate",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [SkippableFact]
     public async Task Login_WithValidCredentials_ReturnsToken()
     {
         IdentityPostgresFixture.SkipIfUnavailable(fixture);
@@ -67,8 +106,8 @@ public class AuthApiTests(IdentityPostgresFixture fixture)
         var response = await client.GetAsync("/api/v1/identity/me");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<UserResponse>();
-        body!.Email.Should().Be("me@example.com");
+        var body = await response.Content.ReadFromJsonAsync<MeResponse>();
+        body!.User.Email.Should().Be("me@example.com");
     }
 
     [SkippableFact]
@@ -96,11 +135,20 @@ public class AuthApiTests(IdentityPostgresFixture fixture)
     private sealed record LoginResponse(
         string Token,
         DateTimeOffset ExpiresAt,
-        UserResponse User);
+        UserResponse User,
+        TenantResponse Tenant);
+
+    private sealed record MeResponse(
+        UserResponse User,
+        TenantResponse Tenant);
 
     private sealed record UserResponse(
         Guid Id,
         string Email,
+        string Name);
+
+    private sealed record TenantResponse(
+        Guid Id,
         string Name);
 
     private sealed record ProblemDetailsResponse(

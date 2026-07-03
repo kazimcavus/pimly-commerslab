@@ -1,5 +1,6 @@
 using Identity.Application.Auth;
 using Identity.Domain;
+using Identity.Domain.Tenants;
 using Identity.Domain.Users;
 using Identity.Infrastructure.Auth;
 using Identity.Infrastructure.Persistence;
@@ -29,6 +30,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IdentityDbContext>());
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<ITenantMembershipRepository, TenantMembershipRepository>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddSingleton<IPasswordService, PasswordService>();
         services.AddSingleton<ITokenService, JwtTokenService>();

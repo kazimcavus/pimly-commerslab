@@ -41,9 +41,13 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("name");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Key")
+                    b.HasIndex("TenantId", "Key")
                         .IsUnique();
 
                     b.ToTable("attributes", "catalog");
@@ -65,9 +69,13 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("barcode");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Barcode")
+                    b.HasIndex("TenantId", "Barcode")
                         .IsUnique();
 
                     b.ToTable("barcode_allocations", "catalog");
@@ -75,6 +83,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Catalog.Domain.Barcodes.BarcodeSequence", b =>
                 {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<int>("Id")
                         .HasColumnType("integer")
                         .HasColumnName("id");
@@ -89,7 +101,7 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("next_value");
 
-                    b.HasKey("Id");
+                    b.HasKey("TenantId", "Id");
 
                     b.ToTable("barcode_sequence", "catalog");
                 });
@@ -115,6 +127,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("parent_id");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
@@ -133,6 +149,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("attribute_values");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
 
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid")
@@ -156,6 +176,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("_variants")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -163,10 +187,57 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ModelCode")
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("TenantId", "ModelCode")
                         .IsUnique();
 
                     b.ToTable("products", "catalog");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Products.ProductImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AltText")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("alt_text");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_primary");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("url");
+
+                    b.Property<Guid?>("VariantValueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("variant_value_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("product_images", "catalog");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Products.ProductItem", b =>
@@ -227,6 +298,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("stock");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("VariantValues")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -234,12 +309,12 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Barcode")
-                        .IsUnique();
-
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("Sku")
+                    b.HasIndex("TenantId", "Barcode")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Sku")
                         .IsUnique()
                         .HasFilter("sku IS NOT NULL");
 
@@ -248,6 +323,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Catalog.Domain.SkuGenerator.SkuGeneratorConfig", b =>
                 {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<int>("Id")
                         .HasColumnType("integer")
                         .HasColumnName("id");
@@ -265,7 +344,7 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("segments");
 
-                    b.HasKey("Id");
+                    b.HasKey("TenantId", "Id");
 
                     b.ToTable("sku_generator_config", "catalog");
                 });
@@ -304,15 +383,19 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("sort_order");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Key")
+                    b.HasIndex("TenantId", "Key")
                         .IsUnique();
 
-                    b.HasIndex("Name")
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
-                    b.HasIndex("Slicer")
+                    b.HasIndex("TenantId", "Slicer")
                         .IsUnique()
                         .HasFilter("slicer = true");
 
@@ -372,10 +455,6 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                                 .HasColumnType("uuid")
                                 .HasColumnName("category_id");
 
-                            b1.Property<bool>("MarketplaceRequired")
-                                .HasColumnType("boolean")
-                                .HasColumnName("marketplace_required");
-
                             b1.Property<bool>("Required")
                                 .HasColumnType("boolean")
                                 .HasColumnName("required");
@@ -398,6 +477,24 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Assignments");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
+                {
+                    b.HasOne("Catalog.Domain.Categories.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Products.ProductImage", b =>
+                {
+                    b.HasOne("Catalog.Domain.Products.Product", null)
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Catalog.Domain.Products.ProductItem", b =>
@@ -466,6 +563,8 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
                 {
+                    b.Navigation("Images");
+
                     b.Navigation("Items");
                 });
 #pragma warning restore 612, 618

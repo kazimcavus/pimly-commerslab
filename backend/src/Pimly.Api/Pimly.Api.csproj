@@ -18,12 +18,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Pimly.AspNetCore\Pimly.AspNetCore.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Api\Catalog.Api.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Application\Catalog.Application.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Api\Identity.Api.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Application\Identity.Application.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Media\Media.Api\Media.Api.csproj" />
+    <ProjectReference Include="..\Modules\Media\Media.Application\Media.Application.csproj" />
+    <ProjectReference Include="..\Modules\Media\Media.Infrastructure\Media.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Channels\Channels.Api\Channels.Api.csproj" />
+    <ProjectReference Include="..\Modules\Channels\Channels.Application\Channels.Application.csproj" />
+    <ProjectReference Include="..\Modules\Channels\Channels.Infrastructure\Channels.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

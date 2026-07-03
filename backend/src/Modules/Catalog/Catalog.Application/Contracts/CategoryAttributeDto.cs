@@ -7,5 +7,4 @@ public sealed record CategoryAttributeDto(
     string Key,
     string Name,
     bool Required,
-    bool MarketplaceRequired,
     int SortOrder);

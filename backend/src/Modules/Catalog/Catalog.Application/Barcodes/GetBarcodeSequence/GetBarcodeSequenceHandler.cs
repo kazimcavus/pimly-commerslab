@@ -1,21 +1,30 @@
 using Catalog.Application.Contracts;
 using Catalog.Domain;
+using Catalog.Domain.Barcodes;
 using SharedKernel;
 
 namespace Catalog.Application.Barcodes.GetBarcodeSequence;
 
 /// <summary>Barkod serisi ayarını getirme işlemini yürütür.</summary>
-public sealed class GetBarcodeSequenceHandler(IBarcodeSequenceRepository sequences)
-    : IGetBarcodeSequenceHandler
+public sealed class GetBarcodeSequenceHandler(
+    IBarcodeSequenceRepository sequences,
+    IUnitOfWork unitOfWork) : IGetBarcodeSequenceHandler
 {
     /// <inheritdoc/>
     public async Task<Result<BarcodeSequenceDto>> ExecuteAsync(
         GetBarcodeSequenceQuery query,
         CancellationToken cancellationToken = default)
     {
+        _ = query;
+
         var sequence = await sequences.GetAsync(cancellationToken);
-        return sequence is null
-            ? Result.Failure<BarcodeSequenceDto>(Error.NotFound("Barcode sequence is not configured."))
-            : Result.Success(sequence.ToDto());
+        if (sequence is null)
+        {
+            sequence = BarcodeSequence.CreateInitial();
+            await sequences.AddAsync(sequence, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return Result.Success(sequence.ToDto());
     }
 }

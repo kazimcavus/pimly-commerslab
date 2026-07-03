@@ -37,7 +37,6 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
             assignment.Property(a => a.Id).HasColumnName("id").ValueGeneratedNever();
             assignment.Property(a => a.AttributeId).HasColumnName("attribute_id").IsRequired();
             assignment.Property(a => a.Required).HasColumnName("required");
-            assignment.Property(a => a.MarketplaceRequired).HasColumnName("marketplace_required");
             assignment.Property(a => a.SortOrder).HasColumnName("sort_order");
             assignment.Ignore(a => a.DomainEvents);
             assignment.HasIndex(a => new { a.AttributeId }).IsUnique(false);

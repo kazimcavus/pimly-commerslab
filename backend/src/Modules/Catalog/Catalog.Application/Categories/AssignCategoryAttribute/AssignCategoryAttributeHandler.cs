@@ -30,7 +30,6 @@ public sealed class AssignCategoryAttributeHandler(
         var assignResult = category.AssignAttribute(
             command.AttributeId,
             command.Required,
-            command.MarketplaceRequired,
             command.SortOrder);
 
         if (assignResult.IsFailure)

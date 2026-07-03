@@ -1,6 +1,7 @@
 using Catalog.Domain.SkuGenerator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
 
@@ -11,7 +12,7 @@ internal sealed class SkuGeneratorConfigConfiguration : IEntityTypeConfiguration
     {
         builder.ToTable("sku_generator_config");
 
-        builder.HasKey(c => c.Id);
+        builder.HasKey(TenantEntityShadowProperty.Name, nameof(SkuGeneratorConfig.Id));
         builder.Property(c => c.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(c => c.Enabled).HasColumnName("enabled").IsRequired();
         builder.Property(c => c.CounterNextValue).HasColumnName("counter_next_value").IsRequired();

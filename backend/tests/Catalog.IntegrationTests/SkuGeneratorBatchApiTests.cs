@@ -15,6 +15,7 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
     {
         await EnableSkuGeneratorAsync();
 
+        var categoryId = await CreateCategoryAsync();
         var colorVariant = await CreateVariantType("Color", "color", slicer: false);
         var sizeVariant = await CreateVariantType("Size", "list", slicer: false);
         var red = await CreateVariantValue(colorVariant.Id, "Red", "#ff0000", "R08");
@@ -27,6 +28,7 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
             {
                 new
                 {
+                    category_id = categoryId,
                     model_code = string.Empty,
                     code_inputs = Array.Empty<string>(),
                     name = "Generated Shirt",
@@ -68,6 +70,7 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{medium.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{colorVariant.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{sizeVariant.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
 
         await DisableSkuGeneratorAsync();
     }
@@ -135,14 +138,17 @@ public class SkuGeneratorBatchApiTests(CatalogPostgresFixture fixture) : Catalog
         (9300000000L + Random.Shared.Next(1, 1000000)).ToString(CultureInfo.InvariantCulture);
 }
 
+/// <summary>SKU üretici ile toplu ürün oluşturma API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record SkuBatchCreateResponse(IReadOnlyList<SkuBatchProductResponse> Products);
 
+/// <summary>SKU batch ile oluşturulan ürün API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record SkuBatchProductResponse(
     Guid Id,
     [property: JsonPropertyName("model_code")] string ModelCode,
     string Name,
     IReadOnlyList<SkuBatchItemResponse> Items);
 
+/// <summary>SKU batch ile oluşturulan ürün kalemi API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record SkuBatchItemResponse(
     Guid Id,
     string Barcode,

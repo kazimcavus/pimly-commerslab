@@ -29,7 +29,6 @@ public sealed class UpdateCategoryAttributeHandler(
         var updateResult = owner.UpdateAssignment(
             command.Id,
             command.Required,
-            command.MarketplaceRequired,
             command.SortOrder);
 
         if (updateResult.IsFailure)

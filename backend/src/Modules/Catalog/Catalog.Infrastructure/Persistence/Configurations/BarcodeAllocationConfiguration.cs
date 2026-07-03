@@ -1,6 +1,7 @@
 using Catalog.Domain.Barcodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
 
@@ -17,6 +18,6 @@ internal sealed class BarcodeAllocationConfiguration : IEntityTypeConfiguration<
         builder.Property(a => a.AllocatedAt).HasColumnName("allocated_at").IsRequired();
         builder.Ignore(a => a.DomainEvents);
 
-        builder.HasIndex(a => a.Barcode).IsUnique();
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(BarcodeAllocation.Barcode)).IsUnique();
     }
 }

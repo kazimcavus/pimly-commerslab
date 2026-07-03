@@ -1,0 +1,95 @@
+# PLGT observability stack (Prometheus, Loki, Grafana, Tempo).
+# API host'ta dotnet run ile çalışır; bu compose yalnızca izleme altyapısını başlatır.
+#
+# Kullanım:
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml --profile monitoring up -d
+#   cd backend && dotnet watch run --project src/Pimly.Api
+services:
+  postgres:
+    networks:
+      - pimly
+
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.2.1
+    container_name: pimly-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - pimly_prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - pimly
+
+  loki:
+    profiles: [monitoring]
+    image: grafana/loki:3.4.2
+    container_name: pimly-loki
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - pimly_loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - pimly
+
+  tempo:
+    profiles: [monitoring]
+    image: grafana/tempo:2.7.2
+    container_name: pimly-tempo
+    command: ["-config.file=/etc/tempo/tempo-config.yml"]
+    volumes:
+      - ./monitoring/tempo/tempo-config.yml:/etc/tempo/tempo-config.yml:ro
+      - pimly_tempo_data:/var/tempo
+    ports:
+      - "4317:4317"
+      - "3200:3200"
+    networks:
+      - pimly
+
+  promtail:
+    profiles: [monitoring]
+    image: grafana/promtail:3.4.2
+    container_name: pimly-promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - pimly
+    depends_on:
+      - loki
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:11.5.2
+    container_name: pimly-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - pimly_grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+      - promtail
+    networks:
+      - pimly
+
+networks:
+  pimly:
+    name: pimly
+
+volumes:
+  pimly_prometheus_data:
+  pimly_loki_data:
+  pimly_tempo_data:
+  pimly_grafana_data:

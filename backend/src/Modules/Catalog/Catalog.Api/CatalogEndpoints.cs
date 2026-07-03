@@ -21,6 +21,7 @@ public static class CatalogEndpoints
         group.MapVariantTypeEndpoints();
         group.MapVariantValueEndpoints();
         group.MapProductEndpoints();
+        group.MapProductImageEndpoints();
         group.MapProductItemEndpoints();
         group.MapBarcodeEndpoints();
         group.MapSkuGeneratorEndpoints();

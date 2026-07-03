@@ -4,5 +4,4 @@ namespace Catalog.Api.Requests;
 internal sealed record AssignCategoryAttributeRequest(
     Guid AttributeId,
     bool Required,
-    bool MarketplaceRequired,
     int SortOrder);

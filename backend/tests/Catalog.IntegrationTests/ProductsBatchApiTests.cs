@@ -12,6 +12,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
     [SkippableFact]
     public async Task ProductsBatch_WithSlicer_SplitsIntoMultipleProducts()
     {
+        var categoryId = await CreateCategoryAsync();
         var colorVariant = await CreateVariant($"Color-{Guid.NewGuid():N}", slicer: true);
         var sizeVariant = await CreateVariant($"Size-{Guid.NewGuid():N}", slicer: false);
         var red = await CreateVariantValue(colorVariant.Id, "Red", "#ff0000");
@@ -28,6 +29,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
             {
                 new
                 {
+                    category_id = categoryId,
                     model_code = baseSku,
                     name = "Batch Shirt",
                     status = "draft",
@@ -68,11 +70,13 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{medium.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{colorVariant.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{sizeVariant.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task ProductsBatch_WithoutSlicer_CreatesSingleProduct()
     {
+        var categoryId = await CreateCategoryAsync();
         var sizeVariant = await CreateVariant($"Size-{Guid.NewGuid():N}", slicer: false);
         var small = await CreateVariantValue(sizeVariant.Id, "S", null);
         var modelCode = $"BATCH-SINGLE-{Guid.NewGuid():N}";
@@ -84,6 +88,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
             {
                 new
                 {
+                    category_id = categoryId,
                     model_code = modelCode,
                     name = "Single Batch Shirt",
                     status = "draft",
@@ -111,11 +116,13 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         await Client.DeleteAsync($"/api/v1/catalog/products/{batchResult.Products[0].Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{small.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{sizeVariant.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     [SkippableFact]
     public async Task ProductsBatch_WithSlicerOnly_SplitsByColor()
     {
+        var categoryId = await CreateCategoryAsync();
         var colorVariant = await CreateVariant($"Color-{Guid.NewGuid():N}", slicer: true);
         var red = await CreateVariantValue(colorVariant.Id, "Red", "#ff0000");
         var blue = await CreateVariantValue(colorVariant.Id, "Blue", "#0000ff");
@@ -128,6 +135,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
             {
                 new
                 {
+                    category_id = categoryId,
                     model_code = baseSku,
                     name = "Color Only Shirt",
                     status = "draft",
@@ -167,6 +175,7 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{red.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variant-values/{blue.Id}");
         await Client.DeleteAsync($"/api/v1/catalog/variants/{colorVariant.Id}");
+        await Client.DeleteAsync($"/api/v1/catalog/categories/{categoryId}");
     }
 
     private async Task<VariantResponse> CreateVariant(string name, bool slicer)
@@ -225,12 +234,15 @@ public class ProductsBatchApiTests(CatalogPostgresFixture fixture) : CatalogInte
         (9200000000L + Random.Shared.Next(1, 1000000)).ToString(CultureInfo.InvariantCulture);
 }
 
+/// <summary>Toplu ürün oluşturma API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record BatchCreateResponse(IReadOnlyList<BatchProductResponse> Products);
 
+/// <summary>Toplu oluşturulan ürün API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record BatchProductResponse(
     Guid Id,
     [property: System.Text.Json.Serialization.JsonPropertyName("modelCode")] string ModelCode,
     string Name,
     IReadOnlyList<BatchItemResponse> Items);
 
+/// <summary>Toplu oluşturulan ürün kalemi API yanıtını deserialize etmek için kullanılan DTO.</summary>
 internal sealed record BatchItemResponse(Guid Id, string Barcode);

@@ -6,12 +6,23 @@ namespace Catalog.Application.Contracts;
 public sealed record ProductDto(
     Guid Id,
     Guid GroupId,
+    Guid CategoryId,
     string ModelCode,
     string Name,
     string Status,
     IReadOnlyList<ProductAttributeValueDto> AttributeValues,
     IReadOnlyList<ProductVariantDto> Variants,
-    IReadOnlyList<ProductItemDto> Items);
+    IReadOnlyList<ProductItemDto> Items,
+    IReadOnlyList<ProductImageDto> Images);
+
+/// <summary>Ürün galerisi görseli API yanıt modeli.</summary>
+public sealed record ProductImageDto(
+    Guid Id,
+    string Url,
+    int SortOrder,
+    string? AltText,
+    bool IsPrimary,
+    Guid? VariantValueId);
 
 /// <summary>Ürün kalemi API yanıt modeli.</summary>
 public sealed record ProductItemDto(

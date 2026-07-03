@@ -17,4 +17,9 @@ internal static class IdentityValidationRules
         rule.NotEmpty()
             .WithErrorCode(ValidationErrorCodes.Required)
             .WithMessage("Password is required.");
+
+    public static IRuleBuilderOptions<T, string> RegisterPassword<T>(this IRuleBuilder<T, string> rule) =>
+        rule.Password()
+            .MinimumLength(8)
+            .WithMessage("Password must be at least 8 characters.");
 }

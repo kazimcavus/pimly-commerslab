@@ -13,12 +13,14 @@ internal static class ProductMappings
         new(
             product.Id,
             product.GroupId,
+            product.CategoryId,
             product.ModelCode.Value,
             product.Name,
             product.Status.ToString().ToLowerInvariant(),
             product.AttributeValues.Select(value => value.ToDto()).ToList(),
             product.Variants.Select(variant => variant.ToDto()).ToList(),
-            product.Items.Select(item => item.ToDto(product.Id)).ToList());
+            product.Items.Select(item => item.ToDto(product.Id)).ToList(),
+            product.Images.Select(image => image.ToDto()).ToList());
 
     public static ProductItemDto ToDto(this ProductItem item, Guid productId) =>
         new(
@@ -54,4 +56,7 @@ internal static class ProductMappings
 
     private static ProductVariantValueDto ToDto(this ProductVariantValue value) =>
         new(value.Variant.ToDto(), value.Id, value.Name);
+
+    internal static ProductImageDto ToDto(this ProductImage image) =>
+        new(image.Id, image.Url, image.SortOrder, image.AltText, image.IsPrimary, image.VariantValueId);
 }

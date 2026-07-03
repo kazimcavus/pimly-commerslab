@@ -1,6 +1,7 @@
 using Catalog.Domain.Barcodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel.Tenancy;
 
 namespace Catalog.Infrastructure.Persistence.Configurations;
 
@@ -11,7 +12,7 @@ internal sealed class BarcodeSequenceConfiguration : IEntityTypeConfiguration<Ba
     {
         builder.ToTable("barcode_sequence");
 
-        builder.HasKey(s => s.Id);
+        builder.HasKey(TenantEntityShadowProperty.Name, nameof(BarcodeSequence.Id));
         builder.Property(s => s.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(s => s.NextValue).HasColumnName("next_value").IsRequired();
         builder.Property(s => s.ClientAllocationRequired)

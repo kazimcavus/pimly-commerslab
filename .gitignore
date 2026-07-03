@@ -15,6 +15,10 @@ node_modules/
 dist/
 .vite/
 
+# Media blob files (not Media.Application/Storage source code)
+/storage/
+backend/storage/
+
 # OS / editor
 .DS_Store
 Thumbs.db

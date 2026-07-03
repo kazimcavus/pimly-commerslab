@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Pimly.Api/Pimly.Api.csproj" />
+    <Project Path="src/Pimly.Channels.Worker/Pimly.Channels.Worker.csproj" />
     <Project Path="src/Pimly.AspNetCore/Pimly.AspNetCore.csproj" />
     <Project Path="src/SharedKernel/SharedKernel.csproj" />
   </Folder>
@@ -17,11 +18,23 @@
     <Project Path="src/Modules/Identity/Identity.Api/Identity.Api.csproj" />
     <Project Path="src/Modules/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Media/">
+    <Project Path="src/Modules/Media/Media.Application/Media.Application.csproj" />
+    <Project Path="src/Modules/Media/Media.Api/Media.Api.csproj" />
+    <Project Path="src/Modules/Media/Media.Infrastructure/Media.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Channels/">
+    <Project Path="src/Modules/Channels/Channels.Domain/Channels.Domain.csproj" />
+    <Project Path="src/Modules/Channels/Channels.Application/Channels.Application.csproj" />
+    <Project Path="src/Modules/Channels/Channels.Api/Channels.Api.csproj" />
+    <Project Path="src/Modules/Channels/Channels.Infrastructure/Channels.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Catalog.Domain.UnitTests/Catalog.Domain.UnitTests.csproj" />
     <Project Path="tests/Catalog.Application.UnitTests/Catalog.Application.UnitTests.csproj" />
     <Project Path="tests/Catalog.IntegrationTests/Catalog.IntegrationTests.csproj" />
     <Project Path="tests/Identity.Application.UnitTests/Identity.Application.UnitTests.csproj" />
     <Project Path="tests/Identity.IntegrationTests/Identity.IntegrationTests.csproj" />
+    <Project Path="tests/Media.Application.UnitTests/Media.Application.UnitTests.csproj" />
   </Folder>
 </Solution>

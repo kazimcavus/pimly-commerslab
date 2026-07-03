@@ -1,0 +1,756 @@
+{
+  "info": {
+    "_postman_id": "pimly-api-v1",
+    "name": "Pimly API",
+    "description": "Pimly v1 REST API collection.\n\n**Base URL:** `http://localhost:7000` (Development)\n\n**Auth:** Önce **Identity → Login** isteğini çalıştırın. Yanıttaki JWT otomatik olarak `token` değişkenine kaydedilir.\n\n**Dev kullanıcı:** `owner@acme.test` / `demo1234`\n\n**JSON format:** Tüm istek ve yanıtlar `snake_case` kullanır.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:7000" },
+    { "key": "token", "value": "" },
+    { "key": "categoryId", "value": "00000000-0000-0000-0000-000000000001" },
+    { "key": "attributeId", "value": "00000000-0000-0000-0000-000000000002" },
+    { "key": "attributeValueId", "value": "00000000-0000-0000-0000-000000000003" },
+    { "key": "categoryAttributeId", "value": "00000000-0000-0000-0000-000000000004" },
+    { "key": "variantTypeId", "value": "00000000-0000-0000-0000-000000000005" },
+    { "key": "variantValueId", "value": "00000000-0000-0000-0000-000000000006" },
+    { "key": "productId", "value": "00000000-0000-0000-0000-000000000007" },
+    { "key": "productItemId", "value": "00000000-0000-0000-0000-000000000008" },
+    { "key": "productImageId", "value": "00000000-0000-0000-0000-000000000009" },
+    { "key": "groupId", "value": "00000000-0000-0000-0000-000000000010" }
+  ],
+  "item": [
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.test('Token saved', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@acme.test\",\n  \"password\": \"demo1234\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/identity/login",
+            "description": "JWT alır. Yanıt: `{ token, expires_at, user: { id, email, name } }`"
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/identity/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Liveness",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/healthz"
+          }
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/ready"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "Categories",
+          "item": [
+            {
+              "name": "List Categories",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/categories?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "categories"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Category",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Electronics\",\n  \"code\": \"electronics\",\n  \"parent_id\": null\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/categories"
+              }
+            },
+            {
+              "name": "Get Category",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}"
+              }
+            },
+            {
+              "name": "Update Category",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Electronics Updated\",\n  \"code\": \"electronics\",\n  \"parent_id\": null\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}"
+              }
+            },
+            {
+              "name": "Delete Category",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Category Attributes",
+          "item": [
+            {
+              "name": "List Category Attributes",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/attributes?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "categories", "{{categoryId}}", "attributes"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Assign Attribute to Category",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"attribute_id\": \"{{attributeId}}\",\n  \"required\": true,\n  \"sort_order\": 0\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/categories/{{categoryId}}/attributes"
+              }
+            },
+            {
+              "name": "Update Category Attribute",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"required\": true,\n  \"sort_order\": 1\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/category-attributes/{{categoryAttributeId}}"
+              }
+            },
+            {
+              "name": "Remove Category Attribute",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/category-attributes/{{categoryAttributeId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attributes",
+          "item": [
+            {
+              "name": "List Attributes",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/attributes?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "attributes"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Attribute",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Material\"\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/attributes"
+              }
+            },
+            {
+              "name": "Get Attribute",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/attributes/{{attributeId}}"
+              }
+            },
+            {
+              "name": "Update Attribute",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Material Updated\"\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/attributes/{{attributeId}}"
+              }
+            },
+            {
+              "name": "Delete Attribute",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/attributes/{{attributeId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attribute Values",
+          "item": [
+            {
+              "name": "List Attribute Values",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/attributes/{{attributeId}}/values?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "attributes", "{{attributeId}}", "values"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add Attribute Value",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Cotton\"\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/attributes/{{attributeId}}/values"
+              }
+            },
+            {
+              "name": "Update Attribute Value",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Organic Cotton\"\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/attribute-values/{{attributeValueId}}"
+              }
+            },
+            {
+              "name": "Delete Attribute Value",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/attribute-values/{{attributeValueId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Variant Types",
+          "item": [
+            {
+              "name": "List Variant Types",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/variants?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "variants"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Variant Type",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Color\",\n  \"selection_style\": \"list\",\n  \"sort_order\": 0,\n  \"slicer\": false,\n  \"key\": \"color\"\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/variants"
+              }
+            },
+            {
+              "name": "Get Variant Type",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/variants/{{variantTypeId}}"
+              }
+            },
+            {
+              "name": "Update Variant Type",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Color\",\n  \"selection_style\": \"list\",\n  \"sort_order\": 0,\n  \"slicer\": false\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/variants/{{variantTypeId}}"
+              }
+            },
+            {
+              "name": "Delete Variant Type",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/variants/{{variantTypeId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Variant Values",
+          "item": [
+            {
+              "name": "List Variant Values",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/variants/{{variantTypeId}}/values?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "variants", "{{variantTypeId}}", "values"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add Variant Value",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Red\",\n  \"color\": \"#ff0000\",\n  \"image_url\": null,\n  \"key\": \"red\",\n  \"sort_order\": 0\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/variants/{{variantTypeId}}/values"
+              }
+            },
+            {
+              "name": "Update Variant Value",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Crimson\",\n  \"color\": \"#dc143c\",\n  \"image_url\": null,\n  \"key\": \"crimson\",\n  \"sort_order\": 0\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/variant-values/{{variantValueId}}"
+              }
+            },
+            {
+              "name": "Delete Variant Value",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/variant-values/{{variantValueId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Products",
+          "item": [
+            {
+              "name": "List Products",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/products?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "products"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Product",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"group_id\": \"{{groupId}}\",\n  \"category_id\": \"{{categoryId}}\",\n  \"model_code\": \"MDL-001\",\n  \"name\": \"Sample Product\",\n  \"status\": \"draft\",\n  \"code_inputs\": null,\n  \"attribute_values\": [],\n  \"variants\": [],\n  \"items\": [\n    {\n      \"sku\": null,\n      \"barcode\": \"8690000000001\",\n      \"gtin\": null,\n      \"mpn\": null,\n      \"axis_value_entry_id\": null,\n      \"axis_value\": null,\n      \"price\": 19.99,\n      \"compare_at_price\": null,\n      \"stock\": 10,\n      \"attribute_values\": [],\n      \"variant_values\": []\n    }\n  ]\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/products"
+              }
+            },
+            {
+              "name": "Create Products (Batch)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"group_id\": \"{{groupId}}\",\n  \"products\": [\n    {\n      \"category_id\": \"{{categoryId}}\",\n      \"model_code\": \"MDL-A\",\n      \"name\": \"Product A\",\n      \"status\": \"draft\",\n      \"code_inputs\": null,\n      \"attribute_values\": [],\n      \"variants\": [],\n      \"items\": [\n        {\n          \"barcode\": \"8690000000002\",\n          \"price\": 29.99,\n          \"stock\": 5,\n          \"attribute_values\": [],\n          \"variant_values\": []\n        }\n      ]\n    },\n    {\n      \"category_id\": \"{{categoryId}}\",\n      \"model_code\": \"MDL-B\",\n      \"name\": \"Product B\",\n      \"status\": \"draft\",\n      \"code_inputs\": null,\n      \"attribute_values\": [],\n      \"variants\": [],\n      \"items\": [\n        {\n          \"barcode\": \"8690000000003\",\n          \"price\": 39.99,\n          \"stock\": 3,\n          \"attribute_values\": [],\n          \"variant_values\": []\n        }\n      ]\n    }\n  ]\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/products:batch"
+              }
+            },
+            {
+              "name": "Get Product",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/products/{{productId}}"
+              }
+            },
+            {
+              "name": "Update Product",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": \"{{categoryId}}\",\n  \"name\": \"Updated Product\",\n  \"status\": \"active\",\n  \"attribute_values\": []\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/products/{{productId}}"
+              }
+            },
+            {
+              "name": "Delete Product",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/products/{{productId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product Images",
+          "item": [
+            {
+              "name": "Add Product Image",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"/media/products/example.jpg\",\n  \"sort_order\": 0,\n  \"alt_text\": \"Front view\",\n  \"is_primary\": true,\n  \"variant_value_id\": null\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/products/{{productId}}/images"
+              }
+            },
+            {
+              "name": "Update Product Image",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"/media/products/example-updated.jpg\",\n  \"sort_order\": 1,\n  \"alt_text\": \"Side view\",\n  \"is_primary\": false,\n  \"variant_value_id\": null\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/product-images/{{productImageId}}"
+              }
+            },
+            {
+              "name": "Delete Product Image",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/product-images/{{productImageId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product Items",
+          "item": [
+            {
+              "name": "Get Product Item",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/items/{{productItemId}}"
+              }
+            },
+            {
+              "name": "Update Product Item",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"gtin\": null,\n  \"mpn\": null,\n  \"axis_value_entry_id\": null,\n  \"axis_value\": null,\n  \"price\": 24.99,\n  \"compare_at_price\": 29.99,\n  \"stock\": 8,\n  \"attribute_values\": []\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/items/{{productItemId}}"
+              }
+            },
+            {
+              "name": "Delete Product Item",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/api/v1/catalog/items/{{productItemId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Barcodes",
+          "item": [
+            {
+              "name": "Get Barcode Sequence",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/barcode-sequence"
+              }
+            },
+            {
+              "name": "Update Barcode Sequence",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"next_value\": 8690000000000,\n  \"client_allocation_required\": false\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/barcode-sequence"
+              }
+            },
+            {
+              "name": "Allocate Barcodes",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 5\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/barcodes:allocate"
+              }
+            },
+            {
+              "name": "List Barcode Allocations",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/catalog/barcode-allocations?page=0&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "catalog", "barcode-allocations"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "SKU Generator",
+          "item": [
+            {
+              "name": "Get SKU Config",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/catalog/sku-config"
+              }
+            },
+            {
+              "name": "Update SKU Config",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": true,\n  \"counter_next_value\": 1000,\n  \"segments\": [\n    { \"type\": \"fixed\", \"label\": \"Firma\", \"value\": \"26\" },\n    { \"type\": \"year\", \"label\": \"Yıl\", \"digits\": 2 },\n    { \"type\": \"counter\", \"label\": \"No\", \"start\": 1000, \"width\": 4 }\n  ]\n}"
+                },
+                "url": "{{baseUrl}}/api/v1/catalog/sku-config"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Media",
+      "item": [
+        {
+          "name": "Upload Image (product)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/uploads?purpose=product",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "media", "uploads"],
+              "query": [
+                { "key": "purpose", "value": "product", "description": "product | swatch" }
+              ]
+            },
+            "description": "Multipart form upload. Field adı `file` olmalıdır.\n\nYanıt: `{ url, content_type, size_bytes }`"
+          }
+        },
+        {
+          "name": "Upload Image (swatch)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/media/uploads?purpose=swatch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "media", "uploads"],
+              "query": [
+                { "key": "purpose", "value": "swatch" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Channels",
+      "item": [
+        {
+          "name": "List Marketplaces",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/channels/marketplaces",
+            "description": "Desteklenen pazaryerlerini listeler. Yanıt: `[{ id, key, name, is_active, is_configured }]`"
+          }
+        },
+        {
+          "name": "Get Marketplace Connection",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/channels/marketplaces/trendyol/connection",
+            "description": "Pazaryeri API bağlantı bilgilerini getirir (gizli alanlar maskelenir). Yanıt: `{ id, marketplace_key, seller_id, has_api_key, has_api_secret, api_key_hint, is_enabled }`"
+          }
+        },
+        {
+          "name": "Upsert Marketplace Connection",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seller_id\": \"123456\",\n  \"api_key\": \"your-api-key\",\n  \"api_secret\": \"your-api-secret\",\n  \"is_enabled\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/channels/marketplaces/trendyol/connection",
+            "description": "Pazaryeri bağlantısını oluşturur veya günceller."
+          }
+        },
+        {
+          "name": "Get Taxonomy Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/channels/marketplaces/trendyol/taxonomy/status",
+            "description": "Son sync durumu ve cache'lenmiş kategori sayısı."
+          }
+        },
+        {
+          "name": "Search External Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/channels/marketplaces/trendyol/categories?q=telefon&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "channels", "marketplaces", "trendyol", "categories"],
+              "query": [
+                { "key": "q", "value": "telefon" },
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "description": "Cache'lenmiş Trendyol kategorilerinde arama."
+          }
+        }
+      ]
+    }
+  ]
+}

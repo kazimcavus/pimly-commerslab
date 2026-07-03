@@ -36,6 +36,14 @@ public class CreateProductCommandValidatorTests
     private readonly CreateProductCommandValidator _validator = new();
 
     [Fact]
+    public void Validate_EmptyCategoryId_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { CategoryId = Guid.Empty });
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "CategoryId");
+    }
+
+    [Fact]
     public void Validate_EmptyGroupId_Fails()
     {
         var result = _validator.Validate(ValidCommand() with { GroupId = Guid.Empty });
@@ -87,6 +95,7 @@ public class CreateProductCommandValidatorTests
     private static CreateProductCommand ValidCommand() =>
         new(
             Guid.NewGuid(),
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "SKU-001",
             "Title",
             "draft",
@@ -116,6 +125,7 @@ public class CreateProductsBatchCommandValidatorTests
     public void Validate_ValidCommand_Succeeds()
     {
         var item = new CreateProductsBatchItem(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "SKU-001",
             "Title",
             "draft",
@@ -132,6 +142,7 @@ public class CreateProductsBatchCommandValidatorTests
     public void Validate_NegativeNestedItemPrice_Fails()
     {
         var item = new CreateProductsBatchItem(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "SKU-001",
             "Title",
             "draft",

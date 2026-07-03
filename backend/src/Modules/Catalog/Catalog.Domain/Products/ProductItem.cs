@@ -87,6 +87,8 @@ public sealed class ProductItem : Entity<Guid>
     /// <example>Renk: Kırmızı, Beden: S anlık görüntüleri.</example>
     public IReadOnlyList<VariantValue> VariantValues { get; private set; } = [];
 
+    /// <summary>Taslak girdiden yeni satılabilir kalem oluşturur.</summary>
+    /// <param name="draft">Kalem oluşturma girdisi.</param>
     internal static Result<ProductItem> Create(ProductItemDraft draft)
     {
         if (string.IsNullOrWhiteSpace(draft.Barcode))
@@ -119,6 +121,8 @@ public sealed class ProductItem : Entity<Guid>
             draft.VariantValues ?? []));
     }
 
+    /// <summary>Kalemin fiyat, stok, tanımlayıcı ve özellik bilgilerini günceller.</summary>
+    /// <param name="update">Güncelleme girdisi.</param>
     internal Result Update(ProductItemUpdate update)
     {
         if (update.Price < 0)

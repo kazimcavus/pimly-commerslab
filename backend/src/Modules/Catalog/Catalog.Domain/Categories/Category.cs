@@ -34,6 +34,10 @@ public sealed class Category : AggregateRoot<Guid>
     /// <summary>Gets kategoriye atanan öznitelik eşlemeleri.</summary>
     public IReadOnlyCollection<CategoryAttributeAssignment> Assignments => _assignments.AsReadOnly();
 
+    /// <summary>Yeni kategori oluşturur ve <see cref="CategoryCreated"/> alan olayını yayımlar.</summary>
+    /// <param name="name">Kategori adı.</param>
+    /// <param name="code">Opsiyonel kategori kodu.</param>
+    /// <param name="parentId">Üst kategori tanımlayıcısı; kök kategori için null.</param>
     public static Result<Category> Create(string name, string? code, Guid? parentId)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -51,6 +55,9 @@ public sealed class Category : AggregateRoot<Guid>
         return Result.Success(category);
     }
 
+    /// <summary>Kategori adını ve opsiyonel kodunu günceller.</summary>
+    /// <param name="name">Yeni kategori adı.</param>
+    /// <param name="code">Yeni kategori kodu; boş bırakılırsa null olur.</param>
     public Result Rename(string name, string? code)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -63,6 +70,9 @@ public sealed class Category : AggregateRoot<Guid>
         return Result.Success();
     }
 
+    /// <summary>Kategoriyi hiyerarşide başka bir üst kategoriye taşır.</summary>
+    /// <param name="parentId">Yeni üst kategori; kök seviyeye almak için null.</param>
+    /// <param name="descendantIds">Döngü oluşturmayı önlemek için bu kategorinin alt soy tanımlayıcıları.</param>
     public Result MoveToParent(Guid? parentId, IReadOnlySet<Guid> descendantIds)
     {
         if (parentId == Id)
@@ -79,10 +89,13 @@ public sealed class Category : AggregateRoot<Guid>
         return Result.Success();
     }
 
+    /// <summary>Kategoriye yeni bir öznitelik ataması ekler.</summary>
+    /// <param name="attributeId">Atanacak öznitelik tanımlayıcısı.</param>
+    /// <param name="required">Öznitelik bu kategoride zorunlu mu.</param>
+    /// <param name="sortOrder">Kategori içindeki görüntüleme sırası.</param>
     public Result<CategoryAttributeAssignment> AssignAttribute(
         Guid attributeId,
         bool required,
-        bool marketplaceRequired,
         int sortOrder)
     {
         if (_assignments.Any(a => a.AttributeId == attributeId))
@@ -95,17 +108,19 @@ public sealed class Category : AggregateRoot<Guid>
             Guid.NewGuid(),
             attributeId,
             required,
-            marketplaceRequired,
             sortOrder);
 
         _assignments.Add(assignment);
         return Result.Success(assignment);
     }
 
+    /// <summary>Mevcut bir öznitelik atamasının kurallarını günceller.</summary>
+    /// <param name="assignmentId">Güncellenecek atama tanımlayıcısı.</param>
+    /// <param name="required">Öznitelik bu kategoride zorunlu mu.</param>
+    /// <param name="sortOrder">Kategori içindeki görüntüleme sırası.</param>
     public Result UpdateAssignment(
         Guid assignmentId,
         bool required,
-        bool marketplaceRequired,
         int sortOrder)
     {
         var assignment = _assignments.FirstOrDefault(a => a.Id == assignmentId);
@@ -114,10 +129,12 @@ public sealed class Category : AggregateRoot<Guid>
             return Result.Failure(Error.NotFound("Category attribute assignment not found."));
         }
 
-        assignment.Update(required, marketplaceRequired, sortOrder);
+        assignment.Update(required, sortOrder);
         return Result.Success();
     }
 
+    /// <summary>Kategoriden bir öznitelik atamasını kaldırır.</summary>
+    /// <param name="assignmentId">Kaldırılacak atama tanımlayıcısı.</param>
     public Result RemoveAssignment(Guid assignmentId)
     {
         var assignment = _assignments.FirstOrDefault(a => a.Id == assignmentId);
@@ -130,6 +147,8 @@ public sealed class Category : AggregateRoot<Guid>
         return Result.Success();
     }
 
+    /// <summary>Kalınan öznitelik atamalarını yükler; kalıcılık katmanı tarafından kullanılır.</summary>
+    /// <param name="assignments">Kategoriye ait atama koleksiyonu.</param>
     internal void LoadAssignments(IEnumerable<CategoryAttributeAssignment> assignments)
     {
         _assignments.Clear();

@@ -1,4 +1,5 @@
 using Catalog.Application.Barcodes;
+using Catalog.Application.Options;
 using Catalog.Application.SkuGenerator;
 using Catalog.Domain;
 using Catalog.Domain.SkuGenerator;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddDbContext<CatalogDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsHistoryTable("__ef_migrations_history", "catalog")));
+
+        services.Configure<MediaUrlOptions>(configuration.GetSection(MediaUrlOptions.SectionName));
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CatalogDbContext>());
         services.AddScoped<ICategoryRepository, CategoryRepository>();

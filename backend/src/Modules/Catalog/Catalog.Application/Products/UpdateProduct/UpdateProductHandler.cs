@@ -10,6 +10,7 @@ namespace Catalog.Application.Products.UpdateProduct;
 public sealed class UpdateProductHandler(
     IValidator<UpdateProductCommand> validator,
     IProductRepository products,
+    ICategoryRepository categories,
     IAttributeRepository attributes,
     IUnitOfWork unitOfWork) : IUpdateProductHandler
 {
@@ -30,6 +31,12 @@ public sealed class UpdateProductHandler(
             return Result.Failure<ProductDto>(Error.NotFound("Product not found."));
         }
 
+        var category = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
+        if (category is null)
+        {
+            return Result.Failure<ProductDto>(Error.NotFound("Category not found."));
+        }
+
         var attributeValuesResult = await ProductCreationSupport.ResolveAttributeValuesAsync(
             attributes,
             command.AttributeValueInputs,
@@ -42,6 +49,7 @@ public sealed class UpdateProductHandler(
 
         var status = ProductMappings.ParseStatus(command.Status);
         var updateResult = product.UpdateDetails(
+            command.CategoryId,
             command.Name,
             status,
             command.AttributeValueInputs is null ? null : attributeValuesResult.Value);

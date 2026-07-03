@@ -15,13 +15,11 @@ public sealed class CategoryAttributeAssignment : Entity<Guid>
         Guid id,
         Guid attributeId,
         bool required,
-        bool marketplaceRequired,
         int sortOrder)
     {
         Id = id;
         AttributeId = attributeId;
         Required = required;
-        MarketplaceRequired = marketplaceRequired;
         SortOrder = sortOrder;
     }
 
@@ -31,16 +29,15 @@ public sealed class CategoryAttributeAssignment : Entity<Guid>
     /// <summary>Gets a value indicating whether özniteliğin bu kategoride zorunlu olup olmadığı.</summary>
     public bool Required { get; private set; }
 
-    /// <summary>Gets a value indicating whether özniteliğin pazaryerinde zorunlu olup olmadığı.</summary>
-    public bool MarketplaceRequired { get; private set; }
-
     /// <summary>Gets kategori içindeki görüntüleme sırası.</summary>
     public int SortOrder { get; private set; }
 
-    internal void Update(bool required, bool marketplaceRequired, int sortOrder)
+    /// <summary>Atamanın zorunluluk ve sıralama kurallarını günceller.</summary>
+    /// <param name="required">Öznitelik bu kategoride zorunlu mu.</param>
+    /// <param name="sortOrder">Kategori içindeki görüntüleme sırası.</param>
+    internal void Update(bool required, int sortOrder)
     {
         Required = required;
-        MarketplaceRequired = marketplaceRequired;
         SortOrder = sortOrder;
     }
 }

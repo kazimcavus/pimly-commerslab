@@ -13,21 +13,27 @@ sonra pazaryerlerine (önce Trendyol) eşlenip gönderilir.
 backend/   .NET API (Pimly.Api) — Identity + Catalog modülleri  → :7000
 web/       React + Vite yönetim arayüzü                          → :5173
 docs/      Tasarım/mantık belgeleri (ör. ürün kodu üretici)
-docker-compose.yml   Yerel PostgreSQL (geliştirme veritabanı)
+docker-compose.yml              Yerel PostgreSQL
+docker-compose.monitoring.yml   PLGT observability (profile: monitoring)
+monitoring/                     Prometheus, Loki, Tempo, Grafana config
 ```
 
 ## Hızlı başlangıç
 
 ```bash
-# 1) Veritabanı (PostgreSQL)
+# 1) PostgreSQL
 docker compose up -d
 
-# 2) Backend (.NET) — :7000, Development'ta varsayılan kullanıcı tohumlanır
-cd backend
-DOTNET_ROLL_FORWARD=Major dotnet run --project src/Pimly.Api
-# Sağlık kontrolü: http://localhost:7000/healthz · Swagger: /swagger
+# 2) Observability stack (opsiyonel — trace/metrik için)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml --profile monitoring up -d
+# Grafana: http://localhost:3001 · Prometheus: http://localhost:9090
 
-# 3) Frontend (React + Vite) — :5173
+# 3) Backend — host'ta, hot reload ile
+cd backend
+DOTNET_ROLL_FORWARD=Major dotnet watch run --project src/Pimly.Api
+# Sağlık: http://localhost:7000/healthz · Readiness: /ready · Swagger: /swagger
+
+# 4) Frontend (React + Vite) — :5173
 cd ../web
 npm install
 npm run dev
