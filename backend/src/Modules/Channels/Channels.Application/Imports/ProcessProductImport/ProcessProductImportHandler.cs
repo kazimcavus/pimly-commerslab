@@ -1,8 +1,8 @@
 using Channels.Application.Connections;
 using Channels.Application.ExternalCatalog;
+using Channels.Application.Imports.Catalog;
 using Channels.Application.Imports.Planning;
 using Channels.Application.Options;
-using Channels.Application.Ports;
 using Channels.Domain;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;

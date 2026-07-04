@@ -1,6 +1,6 @@
 using Channels.Application.AttributeChannelMappings.AttributeChannelMappingSupport;
+using Channels.Application.AttributeChannelMappings.Catalog;
 using Channels.Application.Contracts;
-using Channels.Application.Ports;
 using Channels.Application.Validation;
 using Channels.Domain;
 using Channels.Domain.AttributeChannelMappings;

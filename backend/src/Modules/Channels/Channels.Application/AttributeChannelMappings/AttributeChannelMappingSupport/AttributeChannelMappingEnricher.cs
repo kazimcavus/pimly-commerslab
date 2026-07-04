@@ -1,5 +1,5 @@
+using Channels.Application.AttributeChannelMappings.Catalog;
 using Channels.Application.Contracts;
-using Channels.Application.Ports;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.ExternalCatalog;

@@ -1,6 +1,6 @@
+using Channels.Application.CategoryChannelMappings.Catalog;
 using Channels.Application.CategoryChannelMappings.CategoryChannelMappingSupport;
 using Channels.Application.Contracts;
-using Channels.Application.Ports;
 using Channels.Application.Validation;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;

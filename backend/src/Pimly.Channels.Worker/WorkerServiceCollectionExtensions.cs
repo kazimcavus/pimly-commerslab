@@ -1,8 +1,8 @@
 using Catalog.Application;
 using Catalog.Infrastructure;
 using Channels.Application;
+using Channels.Application.Imports.Catalog;
 using Channels.Application.Imports.ProcessProductImport;
-using Channels.Application.Ports;
 using Channels.Infrastructure;
 using Media.Application;
 using Media.Infrastructure;

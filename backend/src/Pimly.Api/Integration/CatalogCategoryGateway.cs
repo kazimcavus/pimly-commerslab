@@ -1,5 +1,5 @@
 using Catalog.Application.Categories.GetCategory;
-using Channels.Application.Ports;
+using Channels.Application.CategoryChannelMappings.Catalog;
 
 namespace Pimly.Api.Integration;
 

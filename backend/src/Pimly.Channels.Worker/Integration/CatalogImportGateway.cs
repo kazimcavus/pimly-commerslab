@@ -11,7 +11,7 @@ using Catalog.Application.Variants.AddVariantValue;
 using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Domain;
 using Catalog.Domain.Variants;
-using Channels.Application.Ports;
+using Channels.Application.Imports.Catalog;
 using Media.Application.UploadImage;
 using SharedKernel;
 using CatalogProductVariant = Catalog.Domain.Products.Variant;

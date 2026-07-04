@@ -1,6 +1,6 @@
 using Catalog.Application.Variants.GetVariantType;
 using Catalog.Domain;
-using Channels.Application.Ports;
+using Channels.Application.AttributeChannelMappings.Catalog;
 
 namespace Pimly.Api.Integration;
 

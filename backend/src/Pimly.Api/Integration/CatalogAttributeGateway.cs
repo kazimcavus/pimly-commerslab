@@ -1,7 +1,7 @@
 using Catalog.Application.Attributes.GetAttribute;
 using Catalog.Application.Categories.ListCategoryAttributes;
 using Catalog.Domain;
-using Channels.Application.Ports;
+using Channels.Application.AttributeChannelMappings.Catalog;
 
 namespace Pimly.Api.Integration;
 
