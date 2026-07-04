@@ -260,4 +260,137 @@ public class ProductTests
         product.Items.Should().HaveCount(1);
         product.Items.Should().NotContain(i => i.Id == itemToRemove);
     }
+
+    private static readonly ProductVariantType SizeType =
+        new(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Size", SelectionStyle.List);
+
+    private static ProductItemDraft SizedItem(string barcode, Guid valueId, string label, string? sku = null) =>
+        new(
+            sku,
+            barcode,
+            null,
+            null,
+            null,
+            null,
+            10m,
+            null,
+            5,
+            null,
+            [new Catalog.Domain.Products.VariantValue(SizeType, valueId, label)]);
+
+    private static Product SizedProduct() =>
+        Product.Create(
+            Guid.NewGuid(),
+            TestCategoryId,
+            "SKU-100",
+            "Variant",
+            ProductStatus.Draft,
+            null,
+            [SizeType],
+            [SizedItem("BC-001", Guid.Parse("00000000-0000-0000-0000-000000000011"), "S")]).Value;
+
+    [Fact]
+    public void AddItem_WithNewSelection_Succeeds()
+    {
+        var product = SizedProduct();
+
+        var result = product.AddItem(SizedItem("BC-002", Guid.Parse("00000000-0000-0000-0000-000000000012"), "M"));
+
+        result.IsSuccess.Should().BeTrue();
+        product.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void AddItem_WithDuplicateSelection_Fails()
+    {
+        var product = SizedProduct();
+
+        var result = product.AddItem(SizedItem("BC-002", Guid.Parse("00000000-0000-0000-0000-000000000011"), "S"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("same variant selections");
+    }
+
+    [Fact]
+    public void AddItem_WithDuplicateBarcode_Fails()
+    {
+        var product = SizedProduct();
+
+        var result = product.AddItem(SizedItem("BC-001", Guid.Parse("00000000-0000-0000-0000-000000000012"), "M"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("Barcode");
+    }
+
+    [Fact]
+    public void AddItem_MissingAxisSelection_Fails()
+    {
+        var product = SizedProduct();
+
+        var result = product.AddItem(BasicVariant("BC-002"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Message.Should().Contain("each variant type");
+    }
+
+    [Fact]
+    public void AddItem_ToBasicProduct_Fails()
+    {
+        var product = Product.Create(
+            Guid.NewGuid(),
+            TestCategoryId,
+            "SKU-101",
+            "Basic",
+            ProductStatus.Draft,
+            null,
+            null,
+            [BasicVariant("BC-001")]).Value;
+
+        var result = product.AddItem(BasicVariant("BC-002"));
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void UpdateItem_ChangesSkuAndBarcode()
+    {
+        var product = SizedProduct();
+        var item = product.Items.Single();
+
+        var result = product.UpdateItem(item.Id, new ProductItemUpdate(
+            null, null, null, null, 10m, null, 5, null, Sku: "NEW-SKU", Barcode: "BC-NEW"));
+
+        result.IsSuccess.Should().BeTrue();
+        item.Sku.Should().Be("NEW-SKU");
+        item.Barcode.Should().Be("BC-NEW");
+    }
+
+    [Fact]
+    public void UpdateItem_NullSkuAndBarcode_KeepsExisting()
+    {
+        var product = SizedProduct();
+        var item = product.Items.Single();
+        var originalBarcode = item.Barcode;
+
+        var result = product.UpdateItem(item.Id, new ProductItemUpdate(
+            null, null, null, null, 12m, null, 3, null));
+
+        result.IsSuccess.Should().BeTrue();
+        item.Barcode.Should().Be(originalBarcode);
+        item.Price.Should().Be(12m);
+    }
+
+    [Fact]
+    public void UpdateItem_DuplicateBarcodeWithinProduct_Fails()
+    {
+        var product = SizedProduct();
+        product.AddItem(SizedItem("BC-002", Guid.Parse("00000000-0000-0000-0000-000000000012"), "M"));
+        var second = product.Items.Last();
+
+        var result = product.UpdateItem(second.Id, new ProductItemUpdate(
+            null, null, null, null, 10m, null, 5, null, Barcode: "BC-001"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("conflict");
+    }
 }

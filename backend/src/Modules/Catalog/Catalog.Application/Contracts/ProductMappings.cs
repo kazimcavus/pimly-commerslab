@@ -20,7 +20,9 @@ internal static class ProductMappings
             product.AttributeValues.Select(value => value.ToDto()).ToList(),
             product.Variants.Select(variant => variant.ToDto()).ToList(),
             product.Items.Select(item => item.ToDto(product.Id)).ToList(),
-            product.Images.Select(image => image.ToDto()).ToList());
+            product.Images.Select(image => image.ToDto()).ToList(),
+            product.GroupCode,
+            product.SlicerValue);
 
     public static ProductItemDto ToDto(this ProductItem item, Guid productId) =>
         new(

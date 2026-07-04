@@ -18,6 +18,7 @@ public sealed record CreateProductItemRequest(
     [property: JsonPropertyName("variant_values")] JsonElement? VariantValues);
 
 /// <summary>Ürün kalemi güncelleme isteği.</summary>
+/// <remarks>Sku/Barcode gönderilmezse mevcut değer korunur; boş sku metni SKU'yu temizler.</remarks>
 public sealed record UpdateProductItemRequest(
     string? Gtin,
     string? Mpn,
@@ -26,4 +27,6 @@ public sealed record UpdateProductItemRequest(
     decimal Price,
     [property: JsonPropertyName("compare_at_price")] decimal? CompareAtPrice,
     int Stock,
-    [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues);
+    [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues,
+    string? Sku = null,
+    string? Barcode = null);

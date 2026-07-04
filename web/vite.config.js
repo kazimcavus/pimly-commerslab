@@ -13,6 +13,11 @@ export default defineConfig({
         target: process.env.PIMLY_API_TARGET || 'http://localhost:7000',
         changeOrigin: true,
       },
+      // Ürün görselleri: API /media altında statik sunar (Media modülü deposu).
+      '/media': {
+        target: process.env.PIMLY_API_TARGET || 'http://localhost:7000',
+        changeOrigin: true,
+      },
     },
   },
 })

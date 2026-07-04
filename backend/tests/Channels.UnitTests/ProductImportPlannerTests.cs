@@ -27,13 +27,15 @@ public class ProductImportPlannerTests
         decimal listPrice = 599.90m,
         decimal salePrice = 449.90m,
         int quantity = 10,
-        string categoryId = "221") =>
+        string categoryId = "221",
+        string? stockCode = null,
+        string title = "Klasik Gömlek") =>
         new(
             barcode,
-            "Klasik Gömlek",
+            title,
             mainId,
             "Pimly",
-            $"STK-{barcode}",
+            stockCode ?? $"STK-{barcode}",
             quantity,
             listPrice,
             salePrice,
@@ -254,6 +256,65 @@ public class ProductImportPlannerTests
         var plan = ProductImportPlanner.BuildPlan([Row("1", quantity: -3)], Defs());
 
         plan.Groups.Single().Items.Single().Stock.Should().Be(0);
+    }
+
+    [Fact]
+    public void BuildPlan_ColorLevelStockCode_BecomesSplitCodeAndClearsItemSkus()
+    {
+        // Trendyol'da stok kodu çoğu zaman renk düzeyindedir: aynı rengin tüm bedenleri
+        // aynı kodu taşır. Kod split'e (renk ürününün model kodu) taşınır, kalem SKU'ları boşalır.
+        var plan = ProductImportPlanner.BuildPlan(
+            [
+                Row("1", renk: "Vizon", renkId: "val-vizon", beden: "S", stockCode: "25CSM02817NR03", title: "Vizon Klasik Halı"),
+                Row("2", renk: "Vizon", renkId: "val-vizon", beden: "M", bedenId: "val-m", stockCode: "25CSM02817NR03", title: "Vizon Klasik Halı"),
+                Row("3", renk: "Bej", renkId: "val-bej", beden: "S", stockCode: "25CSM02817CR03", title: "Bej Cashmira Halı"),
+            ],
+            Defs());
+
+        var group = plan.Groups.Single();
+        group.SplitOverrides.Should().HaveCount(2);
+
+        var vizon = group.SplitOverrides.Single(s => s.ValueName == "Vizon");
+        vizon.StockCode.Should().Be("25CSM02817NR03");
+        vizon.Title.Should().Be("Vizon Klasik Halı");
+
+        var bej = group.SplitOverrides.Single(s => s.ValueName == "Bej");
+        bej.StockCode.Should().Be("25CSM02817CR03");
+        bej.Title.Should().Be("Bej Cashmira Halı");
+
+        group.Items.Should().OnlyContain(item => item.Sku == null);
+    }
+
+    [Fact]
+    public void BuildPlan_ItemLevelStockCodes_KeepItemSkus_AndSplitCodeStaysEmpty()
+    {
+        // Renk içinde kalem başına farklı stok kodları → kod kalem düzeyindedir;
+        // split koduna taşınmaz, SKU'lar eski kuralla kalemlere yazılır.
+        var plan = ProductImportPlanner.BuildPlan(
+            [
+                Row("1", renk: "Vizon", renkId: "val-vizon", beden: "S"),
+                Row("2", renk: "Vizon", renkId: "val-vizon", beden: "M", bedenId: "val-m"),
+            ],
+            Defs());
+
+        var group = plan.Groups.Single();
+        group.SplitOverrides.Single(s => s.ValueName == "Vizon").StockCode.Should().BeNull();
+        group.Items.Select(i => i.Sku).Should().BeEquivalentTo(["STK-1", "STK-2"]);
+    }
+
+    [Fact]
+    public void BuildPlan_SameStockCodeAcrossColors_NotUsedAsSplitCode()
+    {
+        // Aynı kod iki renkte görülüyorsa güvenilmezdir; hiçbir renge verilmez.
+        var plan = ProductImportPlanner.BuildPlan(
+            [
+                Row("1", renk: "Vizon", renkId: "val-vizon", stockCode: "SHARED"),
+                Row("2", renk: "Bej", renkId: "val-bej", stockCode: "SHARED"),
+            ],
+            Defs());
+
+        var group = plan.Groups.Single();
+        group.SplitOverrides.Should().OnlyContain(s => s.StockCode == null);
     }
 
     private static MarketplaceProductNode MakeRow(

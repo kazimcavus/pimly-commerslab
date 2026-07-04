@@ -10,6 +10,7 @@ using Catalog.Application.Products.UpsertItemChannelPrice;
 using Catalog.Application.Variants.AddVariantValue;
 using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Domain;
+using Catalog.Domain.Products;
 using Catalog.Domain.Variants;
 using Channels.Application.Imports.Catalog;
 using Media.Application.UploadImage;
@@ -280,6 +281,10 @@ internal sealed class CatalogImportGateway(
         CatalogProductBatchInput input,
         CancellationToken cancellationToken = default)
     {
+        var splitOverrides = input.Splits?
+            .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name))
+            .ToList();
+
         var batchItem = new CreateProductsBatchItem(
             input.CategoryId,
             input.ModelCode,
@@ -313,7 +318,8 @@ internal sealed class CatalogImportGateway(
                     item.VariantValues
                         .Select(selection => new VariantValueInput(selection.Id, selection.ValueId))
                         .ToList()))
-                .ToList());
+                .ToList(),
+            splitOverrides);
 
         var createResult = await createProductsBatch.ExecuteAsync(
             new CreateProductsBatchCommand(input.GroupId, [batchItem]),

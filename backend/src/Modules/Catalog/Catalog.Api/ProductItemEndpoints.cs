@@ -1,4 +1,6 @@
 using Catalog.Api.Requests;
+using Catalog.Application.Products.AddProductItem;
+using Catalog.Application.Products.CreateProduct;
 using Catalog.Application.Products.DeleteProductItem;
 using Catalog.Application.Products.GetProductItem;
 using Catalog.Application.Products.UpdateProductItem;
@@ -18,6 +20,28 @@ internal static class ProductItemEndpoints
             return result.ToHttpResult();
         });
 
+        group.MapPost("/products/{productId:guid}/items", async (
+            Guid productId,
+            CreateProductItemRequest request,
+            IAddProductItemHandler handler) =>
+        {
+            var result = await handler.ExecuteAsync(new AddProductItemCommand(
+                productId,
+                new CreateProductItemInput(
+                    request.Sku,
+                    request.Barcode,
+                    request.Gtin,
+                    request.Mpn,
+                    request.AxisValueEntryId,
+                    request.AxisValue,
+                    request.Price,
+                    request.CompareAtPrice,
+                    request.Stock,
+                    ProductInputMapper.MapAttributeValues(request.AttributeValues),
+                    ProductInputMapper.MapVariantValues(request.VariantValues))));
+            return result.ToHttpResult();
+        });
+
         group.MapPatch("/items/{id:guid}", async (Guid id, UpdateProductItemRequest request, IUpdateProductItemHandler handler) =>
         {
             var result = await handler.ExecuteAsync(new UpdateProductItemCommand(
@@ -29,7 +53,9 @@ internal static class ProductItemEndpoints
                 request.Price,
                 request.CompareAtPrice,
                 request.Stock,
-                ProductInputMapper.MapAttributeValues(request.AttributeValues)));
+                ProductInputMapper.MapAttributeValues(request.AttributeValues),
+                request.Sku,
+                request.Barcode));
             return result.ToHttpResult();
         });
 

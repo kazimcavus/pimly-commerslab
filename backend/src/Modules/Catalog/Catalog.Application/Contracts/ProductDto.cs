@@ -3,6 +3,7 @@ using Catalog.Domain.Products;
 namespace Catalog.Application.Contracts;
 
 /// <summary>Ürün API yanıt modeli.</summary>
+/// <remarks>GroupCode grubun paylaşılan kodu (pazaryeri "model kodu"), SlicerValue bölünen eksen değeridir (ör. renk).</remarks>
 public sealed record ProductDto(
     Guid Id,
     Guid GroupId,
@@ -13,7 +14,9 @@ public sealed record ProductDto(
     IReadOnlyList<ProductAttributeValueDto> AttributeValues,
     IReadOnlyList<ProductVariantDto> Variants,
     IReadOnlyList<ProductItemDto> Items,
-    IReadOnlyList<ProductImageDto> Images);
+    IReadOnlyList<ProductImageDto> Images,
+    string? GroupCode = null,
+    string? SlicerValue = null);
 
 /// <summary>Ürün galerisi görseli API yanıt modeli.</summary>
 public sealed record ProductImageDto(

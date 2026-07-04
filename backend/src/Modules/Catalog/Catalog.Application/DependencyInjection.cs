@@ -21,6 +21,7 @@ using Catalog.Application.Categories.RemoveCategoryAttribute;
 using Catalog.Application.Categories.UpdateCategory;
 using Catalog.Application.Categories.UpdateCategoryAttribute;
 using Catalog.Application.Products.AddProductImage;
+using Catalog.Application.Products.AddProductItem;
 using Catalog.Application.Products.CreateProduct;
 using Catalog.Application.Products.CreateProductsBatch;
 using Catalog.Application.Products.DeleteItemChannelPrice;
@@ -97,6 +98,7 @@ public static class DependencyInjection
         services.AddScoped<IUpdateProductImageHandler, UpdateProductImageHandler>();
         services.AddScoped<IRemoveProductImageHandler, RemoveProductImageHandler>();
         services.AddScoped<IGetProductItemHandler, GetProductItemHandler>();
+        services.AddScoped<IAddProductItemHandler, AddProductItemHandler>();
         services.AddScoped<IUpdateProductItemHandler, UpdateProductItemHandler>();
         services.AddScoped<IDeleteProductItemHandler, DeleteProductItemHandler>();
         services.AddScoped<IUpsertItemChannelPriceHandler, UpsertItemChannelPriceHandler>();

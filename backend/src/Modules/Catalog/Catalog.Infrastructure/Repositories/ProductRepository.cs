@@ -83,6 +83,9 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
     public async Task AddImageAsync(ProductImage image, CancellationToken cancellationToken = default) =>
         await db.Set<ProductImage>().AddAsync(image, cancellationToken);
 
+    public async Task AddItemAsync(ProductItem item, CancellationToken cancellationToken = default) =>
+        await db.ProductItems.AddAsync(item, cancellationToken);
+
     public void Update(Product product) => db.Products.Update(product);
 
     public void Remove(Product product) => db.Products.Remove(product);

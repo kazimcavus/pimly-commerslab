@@ -31,6 +31,25 @@ public sealed class UpdateProductItemHandler(
             return Result.Failure<ProductItemDto>(Error.NotFound("Product variant not found."));
         }
 
+        var current = product.Items.First(item => item.Id == command.Id);
+
+        // Barkod/SKU değişiyorsa tenant genelinde benzersiz kalmalı (ürün içi kontrol domain'de).
+        var newBarcode = command.Barcode?.Trim();
+        if (!string.IsNullOrWhiteSpace(newBarcode)
+            && !string.Equals(newBarcode, current.Barcode, StringComparison.OrdinalIgnoreCase)
+            && await products.BarcodeExistsAsync(newBarcode, cancellationToken))
+        {
+            return Result.Failure<ProductItemDto>(Error.Conflict("Barcode is already in use."));
+        }
+
+        var newSku = command.Sku?.Trim();
+        if (!string.IsNullOrWhiteSpace(newSku)
+            && !string.Equals(newSku, current.Sku, StringComparison.OrdinalIgnoreCase)
+            && await products.VariantSkuExistsAsync(newSku, cancellationToken))
+        {
+            return Result.Failure<ProductItemDto>(Error.Conflict("Variant SKU is already in use."));
+        }
+
         var attributeValuesResult = await ProductCreationSupport.ResolveAttributeValuesAsync(
             attributes,
             command.AttributeValueInputs,
@@ -49,7 +68,9 @@ public sealed class UpdateProductItemHandler(
             command.Price,
             command.CompareAtPrice,
             command.Stock,
-            command.AttributeValueInputs is null ? null : attributeValuesResult.Value);
+            command.AttributeValueInputs is null ? null : attributeValuesResult.Value,
+            command.Sku,
+            command.Barcode);
 
         var updateResult = product.UpdateItem(command.Id, update);
         if (updateResult.IsFailure)

@@ -15,6 +15,7 @@ public interface ISkuGeneratorService
         string name,
         IReadOnlyList<Variant> variants,
         IReadOnlyList<ProductItemDraft> drafts,
+        IReadOnlyList<ProductSplitOverride>? splitOverrides = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -34,6 +35,7 @@ public sealed class SkuGeneratorService(
         string name,
         IReadOnlyList<Variant> variants,
         IReadOnlyList<ProductItemDraft> drafts,
+        IReadOnlyList<ProductSplitOverride>? splitOverrides = null,
         CancellationToken cancellationToken = default)
     {
         var config = await configs.GetAsync(cancellationToken);
@@ -63,7 +65,7 @@ public sealed class SkuGeneratorService(
         }
 
         var baseForSplit = useGenerator ? SkuGeneratorConstants.BasePlaceholder : modelCode.Trim();
-        var splitResult = ProductCreateSplitter.Split(baseForSplit, name, variants, drafts);
+        var splitResult = ProductCreateSplitter.Split(baseForSplit, name, variants, drafts, splitOverrides);
         if (splitResult.IsFailure)
         {
             return Result.Failure<IReadOnlyList<ProductCreatePlan>>(splitResult.Error);
@@ -119,7 +121,10 @@ public sealed class SkuGeneratorService(
                 .Select(draft => ApplyVariantSku(config, useGenerator, finalModelCode, draft))
                 .ToList();
 
-            finalPlans.Add(new ProductCreatePlan(finalModelCode, plan.Name, plan.Variants, items));
+            // Generator yolunda her plan sayaçtan kendi kodunu alır; paylaşılan grup kodu anlamsızdır.
+            var groupCode = useGenerator ? null : plan.GroupCode;
+
+            finalPlans.Add(plan with { ModelCode = finalModelCode, Items = items, GroupCode = groupCode });
         }
 
         return Result.Success<IReadOnlyList<ProductCreatePlan>>(finalPlans);

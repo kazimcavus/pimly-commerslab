@@ -26,7 +26,9 @@ export function ProductList({ onNavigate, onToast }) {
     const needle = q.trim().toLocaleLowerCase('tr')
     shown = shown.filter((p) =>
       (p.name || '').toLocaleLowerCase('tr').includes(needle) ||
-      (p.model_code || '').toLocaleLowerCase('tr').includes(needle))
+      (p.model_code || '').toLocaleLowerCase('tr').includes(needle) ||
+      (p.group_code || '').toLocaleLowerCase('tr').includes(needle) ||
+      (p.slicer_value || '').toLocaleLowerCase('tr').includes(needle))
   }
 
   // Group split color-products under their shared model (group_id).
@@ -34,29 +36,16 @@ export function ProductList({ onNavigate, onToast }) {
   for (const p of shown) { if (!byModel.has(p.group_id)) byModel.set(p.group_id, []); byModel.get(p.group_id).push(p) }
   const models = [...byModel.values()]
 
-  // Slicer ile bölünmüş ürünü yapısal olarak tanı: backend model kodunu her zaman
-  // "temelkod-renkslug" üretir (ProductCreateSplitter). Adın SON " - " parçası
-  // slug'lanıp model kodu son ekiyle eşleşiyorsa ürün bölünmüştür; eşleşmiyorsa
-  // addaki " - " başlığın parçasıdır (Trendyol başlıkları " - " içerebilir).
-  const slugify = (v) => [...(v || '').trim().toLowerCase()].filter((ch) => /[\p{L}\p{N}]/u.test(ch)).join('')
-  const splitInfo = (p) => {
-    const name = p.name || ''
-    const idx = name.lastIndexOf(' - ')
-    if (idx < 0) return null
-    const color = name.slice(idx + 3).trim()
-    const slug = slugify(color)
-    if (!slug) return null
-    const mc = (p.model_code || '').toLowerCase()
-    if (!mc.endsWith(`-${slug}`)) return null
-    return {
-      title: name.slice(0, idx).trim(),
-      color,
-      baseCode: p.model_code.slice(0, p.model_code.length - slug.length - 1),
-    }
+  // Renk ve grup kodu artık yapısal: slicer ile bölünen ürün slicer_value (renk adı)
+  // ve group_code (pazaryerindeki "model kodu", ör. 26BHR0007) taşır; model_code ise
+  // renk ürününe özgü koddur (pazaryerindeki "stok kodu", ör. 26BHR0007R15).
+  const colorLabel = (p) => p.slicer_value || null
+  const modelBaseCode = (ps) => ps.find((p) => p.group_code)?.group_code || null
+  const thumbUrl = (p) => {
+    const imgs = p.images || []
+    const primary = imgs.find((im) => im.is_primary) || imgs[0]
+    return primary?.url || null
   }
-  const colorLabel = (p) => splitInfo(p)?.color || null
-  const modelTitle = (ps) => splitInfo(ps[0])?.title || ps[0].name || ''
-  const modelBaseCode = (ps) => splitInfo(ps[0])?.baseCode || null
 
   return (
     <div className="page">
@@ -99,31 +88,43 @@ export function ProductList({ onNavigate, onToast }) {
                     <tr>
                       <td colSpan={5} style={{ background: 'var(--surface-subtle)' }}>
                         <span className="hstack" style={{ gap: 8, fontWeight: 700, color: 'var(--text-strong)' }}>
-                          {I('package', { size: 15 })}{modelTitle(ps)}
-                          {modelBaseCode(ps) && <span className="mono list-meta" style={{ fontWeight: 500 }}>{modelBaseCode(ps)}</span>}
+                          {I('package', { size: 15 })}
+                          <span className="mono">{modelBaseCode(ps) || ps[0].model_code}</span>
                           <span className="list-meta" style={{ fontWeight: 400 }}>· {ps.length} renk · {itemsTotal} varyant</span>
                         </span>
                       </td>
                     </tr>
                   )}
-                  {ps.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <div className="cellrow" style={{ paddingLeft: split ? 14 : 0 }}>
-                          <span className="thumb">{I(split ? 'palette' : 'package')}</span>
-                          <span className="pim-td-strong">{split ? (colorLabel(p) || p.name) : p.name}</span>
-                        </div>
-                      </td>
-                      <td className="pim-td-mono">{p.model_code}</td>
-                      <td><StatusBadge status={p.status} /></td>
-                      <td className="muted">{p.items?.length || 0}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="rowact">
-                          <button className="tb__icon" title="Sil" style={{ width: 28, height: 28 }} onClick={(e) => remove(e, p.id, p.name)}>{I('trash-2')}</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {ps.map((p) => {
+                    const img = thumbUrl(p)
+                    return (
+                      <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => onNavigate('product', p.id)}>
+                        <td>
+                          <div className="cellrow" style={{ paddingLeft: split ? 14 : 0 }}>
+                            <span className="thumb" style={img ? { padding: 0, overflow: 'hidden' } : undefined}>
+                              {img
+                                ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+                                : I(split ? 'palette' : 'package')}
+                            </span>
+                            <span>
+                              <span className="pim-td-strong">{split ? (colorLabel(p) || p.name) : p.name}</span>
+                              {split && colorLabel(p) && (
+                                <span className="list-meta" style={{ display: 'block', maxWidth: 420, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                              )}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="pim-td-mono">{p.model_code}</td>
+                        <td><StatusBadge status={p.status} /></td>
+                        <td className="muted">{p.items?.length || 0}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <div className="rowact">
+                            <button className="tb__icon" title="Sil" style={{ width: 28, height: 28 }} onClick={(e) => remove(e, p.id, p.name)}>{I('trash-2')}</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </React.Fragment>
               )
             })}

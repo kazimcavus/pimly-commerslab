@@ -30,7 +30,9 @@ public sealed class Product : AggregateRoot<Guid>
         string name,
         ProductStatus status,
         IReadOnlyList<AttributeValue> attributeValues,
-        IReadOnlyList<Variant> variants)
+        IReadOnlyList<Variant> variants,
+        string? groupCode,
+        string? slicerValue)
         : base(id)
     {
         GroupId = groupId;
@@ -39,6 +41,8 @@ public sealed class Product : AggregateRoot<Guid>
         Name = name;
         Status = status;
         AttributeValues = attributeValues;
+        GroupCode = groupCode;
+        SlicerValue = slicerValue;
         _variants.AddRange(variants);
     }
 
@@ -53,6 +57,18 @@ public sealed class Product : AggregateRoot<Guid>
     /// <summary>Gets ürün model kodu.</summary>
     /// <example>GOMlek-001.</example>
     public ModelCode ModelCode { get; private set; } = null!;
+
+    /// <summary>
+    /// Gets grubun insan-okur paylaşılan kodu (pazaryerindeki "model kodu"na karşılık gelir).
+    /// Slicer ile bölünen renk ürünlerinin tümü aynı grup kodunu taşır; ModelCode ise renk
+    /// ürününe özgüdür (pazaryerindeki "stok kodu").
+    /// </summary>
+    /// <example>Grup kodu "25CSM02817", renk ürününün model kodu "25CSM02817GR52".</example>
+    public string? GroupCode { get; private set; }
+
+    /// <summary>Gets slicer ile bölünmüş ürünün eksen değeri (ör. renk adı); bölünmemişse null.</summary>
+    /// <example>Antrasit.</example>
+    public string? SlicerValue { get; private set; }
 
     /// <summary>Gets ürün adı.</summary>
     /// <example>Pamuklu Gömlek.</example>
@@ -86,6 +102,8 @@ public sealed class Product : AggregateRoot<Guid>
     /// <param name="attributeValues">Ürün düzeyinde özellik değerleri; opsiyonel.</param>
     /// <param name="variants">Sabitlenen eksen tanım anlık görüntüleri; opsiyonel.</param>
     /// <param name="items">Oluşturulacak satılabilir kalemler.</param>
+    /// <param name="groupCode">Grubun paylaşılan insan-okur kodu; opsiyonel.</param>
+    /// <param name="slicerValue">Slicer bölmesinden gelen eksen değeri (ör. renk); opsiyonel.</param>
     public static Result<Product> Create(
         Guid groupId,
         Guid categoryId,
@@ -94,7 +112,9 @@ public sealed class Product : AggregateRoot<Guid>
         ProductStatus status,
         IReadOnlyList<AttributeValue>? attributeValues,
         IReadOnlyList<Variant>? variants,
-        IReadOnlyList<ProductItemDraft> items)
+        IReadOnlyList<ProductItemDraft> items,
+        string? groupCode = null,
+        string? slicerValue = null)
     {
         if (groupId == Guid.Empty)
         {
@@ -132,7 +152,9 @@ public sealed class Product : AggregateRoot<Guid>
             name.Trim(),
             status,
             attributeValues ?? [],
-            snapshots);
+            snapshots,
+            string.IsNullOrWhiteSpace(groupCode) ? null : groupCode.Trim(),
+            string.IsNullOrWhiteSpace(slicerValue) ? null : slicerValue.Trim());
 
         foreach (var draft in items)
         {
@@ -192,8 +214,78 @@ public sealed class Product : AggregateRoot<Guid>
             return Result.Failure(Error.NotFound("Product variant not found."));
         }
 
+        // Barkod/SKU değişiyorsa ürün içindeki diğer kalemlerle çakışmamalı.
+        if (!string.IsNullOrWhiteSpace(update.Barcode)
+            && _items.Any(other => other.Id != itemId
+                && string.Equals(other.Barcode, update.Barcode.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
+            return Result.Failure(Error.Conflict("Barcode already exists on this product."));
+        }
+
+        if (!string.IsNullOrWhiteSpace(update.Sku)
+            && _items.Any(other => other.Id != itemId
+                && string.Equals(other.Sku, update.Sku.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
+            return Result.Failure(Error.Conflict("Variant SKU already exists on this product."));
+        }
+
         return item.Update(update);
     }
+
+    /// <summary>
+    /// Ürüne yeni bir satılabilir kalem ekler. Kalem, üründeki her eksen için tam bir seçim
+    /// içermeli; eksen kombinasyonu, barkod ve SKU ürün içinde benzersiz olmalıdır.
+    /// </summary>
+    /// <param name="draft">Kalem oluşturma girdisi.</param>
+    public Result<ProductItem> AddItem(ProductItemDraft draft)
+    {
+        if (_variants.Count == 0)
+        {
+            return Result.Failure<ProductItem>(
+                Error.Validation("Basic product must have exactly one variant."));
+        }
+
+        var selections = draft.VariantValues ?? [];
+        var expectedTypeIds = _variants.Select(type => type.Id).ToHashSet();
+        var selectionTypeIds = selections.Select(selection => selection.Variant.Id).ToHashSet();
+        if (selections.Count != _variants.Count || !expectedTypeIds.SetEquals(selectionTypeIds))
+        {
+            return Result.Failure<ProductItem>(
+                Error.Validation("Item must include exactly one selection for each variant type."));
+        }
+
+        var newKey = SelectionKey(selections);
+        if (_items.Any(existing => SelectionKey(existing.VariantValues).SequenceEqual(newKey)))
+        {
+            return Result.Failure<ProductItem>(
+                Error.Conflict("An item with the same variant selections already exists."));
+        }
+
+        var barcode = draft.Barcode?.Trim();
+        if (!string.IsNullOrWhiteSpace(barcode)
+            && _items.Any(existing => string.Equals(existing.Barcode, barcode, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Result.Failure<ProductItem>(Error.Conflict("Barcode already exists on this product."));
+        }
+
+        if (!string.IsNullOrWhiteSpace(draft.Sku)
+            && _items.Any(existing => string.Equals(existing.Sku, draft.Sku.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
+            return Result.Failure<ProductItem>(Error.Conflict("Variant SKU already exists on this product."));
+        }
+
+        var itemResult = ProductItem.Create(draft);
+        if (itemResult.IsFailure)
+        {
+            return itemResult;
+        }
+
+        _items.Add(itemResult.Value);
+        return Result.Success(itemResult.Value);
+    }
+
+    private static List<Guid> SelectionKey(IReadOnlyList<VariantValue>? selections) =>
+        (selections ?? []).OrderBy(selection => selection.Variant.Id).Select(selection => selection.Id).ToList();
 
     /// <summary>Üründen bir satılabilir kalemi kaldırır; en az bir kalem kalmalıdır.</summary>
     /// <param name="itemId">Kaldırılacak kalem tanımlayıcısı.</param>

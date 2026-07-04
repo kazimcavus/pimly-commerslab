@@ -4,11 +4,25 @@ namespace Catalog.Domain.Products;
 
 /// <summary>Slicer eksenine göre bölünmüş tek ürün oluşturma planı.</summary>
 /// <example>ModelCode "GOMlek-001-KIRMIZI", Name "Pamuklu Gömlek - Kırmızı", sadece Beden ekseni ve ilgili kalemler.</example>
+/// <remarks>GroupCode her planda paylaşılan temel koddur; SlicerValue bölünen eksen değeridir (bölünmemişse null).</remarks>
 public sealed record ProductCreatePlan(
     string ModelCode,
     string Name,
     IReadOnlyList<Variant> Variants,
-    IReadOnlyList<ProductItemDraft> Items);
+    IReadOnlyList<ProductItemDraft> Items,
+    string? GroupCode = null,
+    string? SlicerValue = null);
+
+/// <summary>
+/// Slicer değerine özel plan geçersiz kılmaları. Pazaryeri import'unda renk ürününün
+/// gerçek stok kodu ve orijinal listeleme başlığı buradan taşınır; verilmeyen alanlar
+/// için türetilmiş varsayılanlar (temel kod + slug, "ad - değer") kullanılır.
+/// </summary>
+/// <example>ValueName "Antrasit", ModelCode "25CSM02817GR52", Name "Antrasit Klasik Göbekli Halı".</example>
+public sealed record ProductSplitOverride(
+    string ValueName,
+    string? ModelCode,
+    string? Name);
 
 /// <summary>Slicer varyant türüne göre ürün oluşturma planlarını üretir.</summary>
 /// <example>
@@ -22,11 +36,13 @@ public static class ProductCreateSplitter
     /// <param name="baseName">Temel ürün adı.</param>
     /// <param name="variants">Ürün eksen tanım anlık görüntüleri.</param>
     /// <param name="items">Bölünecek satılabilir kalemler.</param>
+    /// <param name="overrides">Slicer değeri başına kod/ad geçersiz kılmaları; opsiyonel.</param>
     public static Result<IReadOnlyList<ProductCreatePlan>> Split(
         string baseModelCode,
         string baseName,
         IReadOnlyList<Variant> variants,
-        IReadOnlyList<ProductItemDraft> items)
+        IReadOnlyList<ProductItemDraft> items,
+        IReadOnlyList<ProductSplitOverride>? overrides = null)
     {
         var slicerTypes = variants.Where(type => type.Slicer).ToList();
         if (slicerTypes.Count == 0)
@@ -78,21 +94,34 @@ public static class ProductCreateSplitter
             ? remainingTypes
             : new List<Variant> { slicerType };
 
+        var overridesByValue = (overrides ?? [])
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate.ValueName))
+            .GroupBy(candidate => candidate.ValueName.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
         var usedModelCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var plans = new List<ProductCreatePlan>();
         foreach (var group in groups.Values.OrderBy(g => g.Selection.Name, StringComparer.OrdinalIgnoreCase))
         {
-            var modelCodeResult = BuildSplitModelCode(baseModelCode, group.Selection, usedModelCodes);
+            overridesByValue.TryGetValue(group.Selection.Name.Trim(), out var groupOverride);
+
+            var modelCodeResult = BuildSplitModelCode(baseModelCode, group.Selection, usedModelCodes, groupOverride?.ModelCode);
             if (modelCodeResult.IsFailure)
             {
                 return Result.Failure<IReadOnlyList<ProductCreatePlan>>(modelCodeResult.Error);
             }
 
+            var planName = string.IsNullOrWhiteSpace(groupOverride?.Name)
+                ? $"{baseName.Trim()} - {group.Selection.Name}"
+                : groupOverride!.Name!.Trim();
+
             plans.Add(new ProductCreatePlan(
                 modelCodeResult.Value,
-                $"{baseName.Trim()} - {group.Selection.Name}",
+                planName,
                 productVariants,
-                group.Items));
+                group.Items,
+                GroupCode: baseModelCode,
+                SlicerValue: group.Selection.Name));
         }
 
         return Result.Success<IReadOnlyList<ProductCreatePlan>>(plans);
@@ -101,10 +130,13 @@ public static class ProductCreateSplitter
     private static Result<string> BuildSplitModelCode(
         string baseModelCode,
         VariantValue slicerSelection,
-        HashSet<string> usedModelCodes)
+        HashSet<string> usedModelCodes,
+        string? overrideCode)
     {
+        // Öncelik: pazaryerinden gelen gerçek kod → temel kod + değer slug'ı → temel kod + kısa id.
         var candidates = new[]
         {
+            string.IsNullOrWhiteSpace(overrideCode) ? string.Empty : overrideCode.Trim(),
             AppendModelCodeSuffix(baseModelCode, Slugify(slicerSelection.Name)),
             AppendModelCodeSuffix(baseModelCode, slicerSelection.Id.ToString("N")[..8]),
         };

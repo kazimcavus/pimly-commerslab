@@ -152,6 +152,7 @@ export const api = {
   deleteProduct: (id) => req('DELETE', `${CATALOG}/products/${id}`),
   // .NET "item" — ürün altı SKU satırı.
   getItem: (id) => req('GET', `${CATALOG}/items/${id}`),
+  createItem: (productId, b) => req('POST', `${CATALOG}/products/${productId}/items`, { body: b }),
   updateItem: (id, b) => req('PATCH', `${CATALOG}/items/${id}`, { body: b }),
   deleteItem: (id) => req('DELETE', `${CATALOG}/items/${id}`),
 

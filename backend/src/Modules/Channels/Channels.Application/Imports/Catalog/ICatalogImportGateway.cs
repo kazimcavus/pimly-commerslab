@@ -86,6 +86,7 @@ public interface ICatalogImportGateway
 public sealed record EnsuredVariantSnapshot(Guid Id, string Name, bool IsColor, bool Slicer, bool SlicerDemoted);
 
 /// <summary>Ürün grubu oluşturma girdisi (modül-bağımsız).</summary>
+/// <remarks>Splits, slicer değeri başına gerçek stok kodu ve orijinal listeleme başlığını taşır.</remarks>
 public sealed record CatalogProductBatchInput(
     Guid GroupId,
     Guid CategoryId,
@@ -94,7 +95,15 @@ public sealed record CatalogProductBatchInput(
     string Status,
     IReadOnlyList<CatalogSelectionInput> AttributeValues,
     IReadOnlyList<CatalogVariantAxisInput> Variants,
-    IReadOnlyList<CatalogProductItemInput> Items);
+    IReadOnlyList<CatalogProductItemInput> Items,
+    IReadOnlyList<CatalogSplitInput>? Splits = null);
+
+/// <summary>Slicer değerine özel ürün geçersiz kılmaları (kod/ad).</summary>
+/// <example>ValueName "Antrasit", ModelCode "25CSM02817GR52", Name "Antrasit Klasik Göbekli Halı".</example>
+public sealed record CatalogSplitInput(
+    string ValueName,
+    string? ModelCode,
+    string? Name);
 
 /// <summary>Ürünün kullandığı varyant ekseni.</summary>
 public sealed record CatalogVariantAxisInput(Guid VariantId, bool IsColor, bool Slicer);

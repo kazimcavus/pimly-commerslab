@@ -9,6 +9,7 @@ public sealed record CreateProductsBatchCommand(
     IReadOnlyList<CreateProductsBatchItem> Products);
 
 /// <summary>Toplu oluşturma girdisindeki tek ürün tanımı.</summary>
+/// <remarks>SplitOverrides slicer değeri başına gerçek kod/ad taşır (pazaryeri import'u).</remarks>
 public sealed record CreateProductsBatchItem(
     Guid CategoryId,
     string ModelCode,
@@ -17,4 +18,5 @@ public sealed record CreateProductsBatchItem(
     IReadOnlyList<string>? CodeInputs,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     IReadOnlyList<Variant>? Variants,
-    IReadOnlyList<CreateProduct.CreateProductItemInput> Items);
+    IReadOnlyList<CreateProduct.CreateProductItemInput> Items,
+    IReadOnlyList<ProductSplitOverride>? SplitOverrides = null);

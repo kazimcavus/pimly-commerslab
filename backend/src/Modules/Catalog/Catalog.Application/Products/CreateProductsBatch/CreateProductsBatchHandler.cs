@@ -85,6 +85,7 @@ public sealed class CreateProductsBatchHandler(
                 item.Name,
                 resolvedTypesResult.Value,
                 itemDraftsResult.Value,
+                item.SplitOverrides,
                 cancellationToken);
 
             if (plansResult.IsFailure)
@@ -134,7 +135,9 @@ public sealed class CreateProductsBatchHandler(
                 entry.Status,
                 entry.AttributeValues,
                 entry.Plan.Variants,
-                entry.Plan.Items.ToList());
+                entry.Plan.Items.ToList(),
+                entry.Plan.GroupCode,
+                entry.Plan.SlicerValue);
 
             if (createResult.IsFailure)
             {

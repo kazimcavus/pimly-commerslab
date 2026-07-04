@@ -6,6 +6,7 @@ import { Login } from './screens/Login.jsx'
 import { Register } from './screens/Register.jsx'
 import { Dashboard } from './screens/Dashboard.jsx'
 import { ProductList } from './screens/ProductList.jsx'
+import { ProductDetail } from './screens/ProductDetail.jsx'
 import { ProductBuilder } from './screens/ProductBuilder.jsx'
 import { Categories } from './screens/Categories.jsx'
 import { Attributes } from './screens/Attributes.jsx'
@@ -19,6 +20,8 @@ export function App() {
   const [session, setSession] = useState(null) // { user: { id, email, name }, tenant: { id, name } }
   // Aktif ekranı localStorage'da tut ki sayfa yenilenince aynı yerde kalınsın.
   const [route, setRoute] = useState(() => localStorage.getItem('pimly_route') || 'dashboard')
+  // Ekran parametresi (ör. ürün detayının id'si); yenilemede o da korunur.
+  const [routeParam, setRouteParam] = useState(() => localStorage.getItem('pimly_route_param') || null)
   const [authView, setAuthView] = useState('login') // 'login' | 'register'
   const [toast, setToast] = useState(null)
   const [authError, setAuthError] = useState('')
@@ -38,9 +41,12 @@ export function App() {
     }
   }, [])
 
-  const navigate = (r) => {
+  const navigate = (r, param = null) => {
     setRoute(r)
+    setRouteParam(param)
     localStorage.setItem('pimly_route', r)
+    if (param) localStorage.setItem('pimly_route_param', param)
+    else localStorage.removeItem('pimly_route_param')
     document.querySelector('.app__content')?.scrollTo(0, 0)
   }
 
@@ -100,6 +106,7 @@ export function App() {
   const screens = {
     dashboard: <Dashboard onNavigate={navigate} user={user} />,
     products: <ProductList onNavigate={navigate} onToast={showToast} />,
+    product: <ProductDetail productId={routeParam} onNavigate={navigate} onToast={showToast} />,
     builder: <ProductBuilder onNavigate={navigate} onSaved={(msg) => { navigate('products'); showToast({ tone: 'success', title: 'Ürün kaydedildi', body: msg }) }} />,
     categories: <Categories onToast={showToast} />,
     attributes: <Attributes onToast={showToast} />,
@@ -108,7 +115,7 @@ export function App() {
     channels: <Channels onNavigate={navigate} onToast={showToast} />,
     onboarding: <TrendyolOnboarding onNavigate={navigate} onToast={showToast} />,
   }
-  const navRoute = route === 'builder' ? 'products' : route === 'onboarding' ? 'channels' : route
+  const navRoute = route === 'builder' || route === 'product' ? 'products' : route === 'onboarding' ? 'channels' : route
 
   return (
     <HelpProvider>

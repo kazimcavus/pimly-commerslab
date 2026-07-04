@@ -85,6 +85,91 @@ public class ProductCreateSplitterTests
     }
 
     [Fact]
+    public void Split_WithSlicer_SetsGroupCodeAndSlicerValue()
+    {
+        var types = new[]
+        {
+            new ProductVariantType(ColorTypeId, "Color", SelectionStyle.Color, Slicer: true),
+            new ProductVariantType(SizeTypeId, "Size", SelectionStyle.List),
+        };
+
+        var variants = new[]
+        {
+            Variant("BC-RED-S", RedValueId, "Red", SmallValueId, "S"),
+            Variant("BC-BLUE-S", BlueValueId, "Blue", SmallValueId, "S"),
+        };
+
+        var result = ProductCreateSplitter.Split("SKU-001", "Shirt", types, variants);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().OnlyContain(plan => plan.GroupCode == "SKU-001");
+        result.Value.Select(plan => plan.SlicerValue).Should().BeEquivalentTo("Red", "Blue");
+    }
+
+    [Fact]
+    public void Split_WithOverrides_UsesMarketplaceCodeAndTitle()
+    {
+        var types = new[]
+        {
+            new ProductVariantType(ColorTypeId, "Color", SelectionStyle.Color, Slicer: true),
+            new ProductVariantType(SizeTypeId, "Size", SelectionStyle.List),
+        };
+
+        var variants = new[]
+        {
+            Variant("BC-RED-S", RedValueId, "Red", SmallValueId, "S"),
+            Variant("BC-BLUE-S", BlueValueId, "Blue", SmallValueId, "S"),
+        };
+
+        ProductSplitOverride[] overrides =
+        [
+            new("Red", "25CSM02817GR52", "Antrasit Klasik Halı"),
+            new("Blue", null, null),
+        ];
+
+        var result = ProductCreateSplitter.Split("SKU-001", "Shirt", types, variants, overrides);
+
+        result.IsSuccess.Should().BeTrue();
+        var red = result.Value.Single(plan => plan.SlicerValue == "Red");
+        red.ModelCode.Should().Be("25CSM02817GR52");
+        red.Name.Should().Be("Antrasit Klasik Halı");
+        red.GroupCode.Should().Be("SKU-001");
+
+        var blue = result.Value.Single(plan => plan.SlicerValue == "Blue");
+        blue.ModelCode.Should().Be("SKU-001-blue");
+        blue.Name.Should().Be("Shirt - Blue");
+    }
+
+    [Fact]
+    public void Split_WithDuplicateOverrideCode_FallsBackToSlugSuffix()
+    {
+        var types = new[]
+        {
+            new ProductVariantType(ColorTypeId, "Color", SelectionStyle.Color, Slicer: true),
+            new ProductVariantType(SizeTypeId, "Size", SelectionStyle.List),
+        };
+
+        var variants = new[]
+        {
+            Variant("BC-RED-S", RedValueId, "Red", SmallValueId, "S"),
+            Variant("BC-BLUE-S", BlueValueId, "Blue", SmallValueId, "S"),
+        };
+
+        ProductSplitOverride[] overrides =
+        [
+            new("Red", "SAME-CODE", null),
+            new("Blue", "SAME-CODE", null),
+        ];
+
+        var result = ProductCreateSplitter.Split("SKU-001", "Shirt", types, variants, overrides);
+
+        result.IsSuccess.Should().BeTrue();
+        var codes = result.Value.Select(plan => plan.ModelCode).ToList();
+        codes.Should().Contain("SAME-CODE");
+        codes.Should().Contain(code => code.StartsWith("SKU-001-"));
+    }
+
+    [Fact]
     public void Split_WithMultipleSlicers_Fails()
     {
         var types = new[]

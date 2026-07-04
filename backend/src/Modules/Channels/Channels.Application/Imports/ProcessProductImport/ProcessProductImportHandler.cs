@@ -494,7 +494,10 @@ public sealed class ProcessProductImportHandler(
             Status: "active",
             attributeSelections,
             axisInputs,
-            itemInputs));
+            itemInputs,
+            group.SplitOverrides
+                .Select(split => new CatalogSplitInput(split.ValueName, split.StockCode, split.Title))
+                .ToList()));
     }
 
     private async Task<Result<EnsuredAxis>> EnsureAxisAsync(

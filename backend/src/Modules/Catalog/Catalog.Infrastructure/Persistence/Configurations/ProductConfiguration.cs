@@ -35,6 +35,16 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.HasIndex(TenantEntityShadowProperty.Name, nameof(Product.ModelCode)).IsUnique();
 
+        builder.Property(p => p.GroupCode)
+            .HasColumnName("group_code")
+            .HasMaxLength(200);
+
+        builder.HasIndex(TenantEntityShadowProperty.Name, nameof(Product.GroupCode));
+
+        builder.Property(p => p.SlicerValue)
+            .HasColumnName("slicer_value")
+            .HasMaxLength(200);
+
         builder.Property(p => p.Status)
             .HasColumnName("status")
             .HasConversion(

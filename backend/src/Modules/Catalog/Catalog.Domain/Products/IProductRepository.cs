@@ -65,6 +65,14 @@ public interface IProductRepository
     /// <param name="cancellationToken">İptal belirteci.</param>
     Task AddImageAsync(ProductImage image, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Var olan ürüne eklenen yeni satılabilir kalemi izlemeye alır. Anahtarı domain'de atanan
+    /// yeni child, change tracking keşfinde Modified sayılacağı için açıkça Added işaretlenmelidir.
+    /// </summary>
+    /// <param name="item">Aggregate'e yeni eklenen kalem.</param>
+    /// <param name="cancellationToken">İptal belirteci.</param>
+    Task AddItemAsync(ProductItem item, CancellationToken cancellationToken = default);
+
     /// <summary>Ürün aggregate'indeki değişiklikleri izlemeye alır.</summary>
     /// <param name="product">Güncellenmiş ürün.</param>
     void Update(Product product);

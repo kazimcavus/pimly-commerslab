@@ -78,6 +78,7 @@ public sealed class CreateProductHandler(
             command.Name,
             resolvedTypesResult.Value,
             itemDraftsResult.Value,
+            splitOverrides: null,
             cancellationToken);
 
         if (plansResult.IsFailure)
@@ -106,7 +107,9 @@ public sealed class CreateProductHandler(
             status,
             attributeValuesResult.Value,
             plan.Variants,
-            plan.Items.ToList());
+            plan.Items.ToList(),
+            plan.GroupCode,
+            plan.SlicerValue);
 
         if (createResult.IsFailure)
         {

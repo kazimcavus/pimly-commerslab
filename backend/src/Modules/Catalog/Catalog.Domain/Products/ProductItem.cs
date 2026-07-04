@@ -123,6 +123,7 @@ public sealed class ProductItem : Entity<Guid>
 
     /// <summary>Kalemin fiyat, stok, tanımlayıcı ve özellik bilgilerini günceller.</summary>
     /// <param name="update">Güncelleme girdisi.</param>
+    /// <remarks>Barcode null ise mevcut barkod korunur; Sku null ise mevcut SKU korunur (boş metin SKU'yu temizler).</remarks>
     internal Result Update(ProductItemUpdate update)
     {
         if (update.Price < 0)
@@ -133,6 +134,21 @@ public sealed class ProductItem : Entity<Guid>
         if (update.Stock < 0)
         {
             return Result.Failure(Error.Validation("Variant stock cannot be negative."));
+        }
+
+        if (update.Barcode is not null)
+        {
+            if (string.IsNullOrWhiteSpace(update.Barcode))
+            {
+                return Result.Failure(Error.Validation("Variant barcode is required."));
+            }
+
+            Barcode = update.Barcode.Trim();
+        }
+
+        if (update.Sku is not null)
+        {
+            Sku = NullIfWhiteSpace(update.Sku);
         }
 
         Gtin = NullIfWhiteSpace(update.Gtin);
@@ -171,6 +187,7 @@ public sealed record ProductItemDraft(
 
 /// <summary>Mevcut satılabilir kalem güncelleme girdisi.</summary>
 /// <example>Price 279.99, Stock 8 ve güncellenmiş özellik değerleri.</example>
+/// <remarks>Barcode/Sku null bırakılırsa mevcut değer korunur; boş Sku metni SKU'yu temizler.</remarks>
 public sealed record ProductItemUpdate(
     string? Gtin,
     string? Mpn,
@@ -179,4 +196,6 @@ public sealed record ProductItemUpdate(
     decimal Price,
     decimal? CompareAtPrice,
     int Stock,
-    IReadOnlyList<AttributeValue>? AttributeValues);
+    IReadOnlyList<AttributeValue>? AttributeValues,
+    string? Sku = null,
+    string? Barcode = null);
