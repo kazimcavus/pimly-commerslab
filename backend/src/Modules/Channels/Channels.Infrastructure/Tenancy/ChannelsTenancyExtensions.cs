@@ -1,7 +1,7 @@
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
-using Channels.Domain.Imports;
+using Channels.Domain.ProductImports;
 using Microsoft.EntityFrameworkCore;
 
 namespace Channels.Infrastructure.Tenancy;

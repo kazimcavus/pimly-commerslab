@@ -1,4 +1,4 @@
-using Channels.Domain.Imports;
+using Channels.Domain.ProductImports;
 
 namespace Channels.Application.Contracts;
 

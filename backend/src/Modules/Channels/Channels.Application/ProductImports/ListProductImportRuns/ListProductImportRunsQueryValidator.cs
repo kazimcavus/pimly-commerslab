@@ -1,7 +1,7 @@
 using Channels.Application.Validation;
 using FluentValidation;
 
-namespace Channels.Application.Imports.ListProductImportRuns;
+namespace Channels.Application.ProductImports.ListProductImportRuns;
 
 /// <summary>ListProductImportRunsQuery için doğrulama kuralları.</summary>
 public sealed class ListProductImportRunsQueryValidator : AbstractValidator<ListProductImportRunsQuery>

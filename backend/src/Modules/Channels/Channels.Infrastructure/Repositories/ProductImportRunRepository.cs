@@ -1,5 +1,5 @@
-using Channels.Domain.Imports;
 using Channels.Domain.Marketplaces;
+using Channels.Domain.ProductImports;
 using Channels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,21 +41,41 @@ internal sealed class ProductImportRunRepository(ChannelsDbContext db, TimeProvi
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-    public async Task<ProductImportRun?> TryClaimNextPendingAsync(CancellationToken cancellationToken = default)
+    public async Task<ProductImportRun?> TryClaimNextPendingAsync(
+        IReadOnlyCollection<Guid>? tenantIds = null,
+        CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
-        var pendingId = await db.ProductImportRuns
-            .FromSqlInterpolated($"""
-                SELECT id, tenant_id, marketplace_code, status, created_at, started_at, completed_at,
-                       total_products, processed_products, imported_products, skipped_products,
-                       failed_products, error_message
-                FROM channels.product_import_runs
-                WHERE status = {"pending"}
-                ORDER BY created_at
-                LIMIT 1
-                FOR UPDATE SKIP LOCKED
-                """)
+        // Tenant-izole worker instance'ları yalnızca kendi tenant'larının run'larını claim eder;
+        // filtre yoksa kuyruk tenant'lar arası ortak davranır. Npgsql, Guid[] parametresini uuid[]e map eder.
+        var tenantFilter = tenantIds is { Count: > 0 } ? tenantIds.ToArray() : null;
+
+        var pendingQuery = tenantFilter is null
+            ? db.ProductImportRuns
+                .FromSqlInterpolated($"""
+                    SELECT id, tenant_id, marketplace_code, status, created_at, started_at, completed_at,
+                           total_products, processed_products, imported_products, skipped_products,
+                           failed_products, error_message
+                    FROM channels.product_import_runs
+                    WHERE status = {"pending"}
+                    ORDER BY created_at
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                    """)
+            : db.ProductImportRuns
+                .FromSqlInterpolated($"""
+                    SELECT id, tenant_id, marketplace_code, status, created_at, started_at, completed_at,
+                           total_products, processed_products, imported_products, skipped_products,
+                           failed_products, error_message
+                    FROM channels.product_import_runs
+                    WHERE status = {"pending"} AND tenant_id = ANY({tenantFilter})
+                    ORDER BY created_at
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                    """);
+
+        var pendingId = await pendingQuery
             .Select(run => run.Id)
             .FirstOrDefaultAsync(cancellationToken);
 

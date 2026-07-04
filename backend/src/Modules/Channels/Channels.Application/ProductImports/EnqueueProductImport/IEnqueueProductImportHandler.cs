@@ -1,7 +1,7 @@
 using Channels.Application.Contracts;
 using SharedKernel;
 
-namespace Channels.Application.Imports.EnqueueProductImport;
+namespace Channels.Application.ProductImports.EnqueueProductImport;
 
 /// <summary>Ürün import job'ı kuyruğa alma işlemini yürüten handler arabirimi.</summary>
 public interface IEnqueueProductImportHandler

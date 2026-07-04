@@ -2,7 +2,7 @@ using Channels.Application.Connections;
 using Channels.Domain.Marketplaces;
 using SharedKernel;
 
-namespace Channels.Application.Imports;
+namespace Channels.Application.ProductImports;
 
 /// <summary>Pazaryerindeki satıcı ürünlerini sayfalı olarak çeken istemci.</summary>
 public interface IMarketplaceProductsClient

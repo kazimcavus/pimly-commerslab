@@ -1,24 +1,34 @@
-using Channels.Application.Imports.ProcessProductImport;
-using Channels.Domain.Imports;
-using Channels.Infrastructure.Options;
+using Channels.Application.ProductImports.ProcessProductImport;
+using Channels.Domain.ProductImports;
 using Microsoft.Extensions.Options;
+using Pimly.ProductImports.Worker.Options;
 using SharedKernel.Tenancy;
 
-namespace Pimly.Channels.Worker.Imports;
+namespace Pimly.ProductImports.Worker.ProductImports;
 
 /// <summary>
 /// Ürün import kuyruğunu işleyen arka plan servisi. İki scope'lu pompa deseni kullanır:
 /// tenant'sız scope kuyruğu claim eder (FOR UPDATE SKIP LOCKED); ikinci scope'ta ambient tenant,
 /// run'ın tenant'ına set edilip işleme yapılır — Catalog yazmaları tenant'ı buradan alır.
+/// Yalnızca konfigüre edilen tenant'ların (<see cref="ProductImportsWorkerOptions.TenantIds"/>)
+/// run'ları claim edilir; böylece worker instance'ları tenant bazında izole çalıştırılabilir.
 /// </summary>
 internal sealed class ProductImportBackgroundService(
     IServiceScopeFactory scopeFactory,
-    IOptions<ChannelsOptions> options,
+    IOptions<ProductImportsWorkerOptions> options,
     ILogger<ProductImportBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var pollInterval = TimeSpan.FromSeconds(Math.Max(1, options.Value.WorkerPollIntervalSeconds));
+        var pollInterval = TimeSpan.FromSeconds(Math.Max(1, options.Value.PollIntervalSeconds));
+        var tenantFilter = options.Value.TenantIds.ToArray();
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Product import worker started for tenants: {TenantIds}.",
+                string.Join(", ", tenantFilter));
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -26,7 +36,7 @@ internal sealed class ProductImportBackgroundService(
 
             try
             {
-                processed = await TryProcessNextAsync(stoppingToken);
+                processed = await TryProcessNextAsync(tenantFilter, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -51,7 +61,7 @@ internal sealed class ProductImportBackgroundService(
         }
     }
 
-    private async Task<bool> TryProcessNextAsync(CancellationToken stoppingToken)
+    private async Task<bool> TryProcessNextAsync(IReadOnlyCollection<Guid> tenantFilter, CancellationToken stoppingToken)
     {
         // Scope A: tenant bağlamı yokken kuyruk claim edilir (query filter'lar devre dışı).
         Guid runId;
@@ -60,7 +70,7 @@ internal sealed class ProductImportBackgroundService(
         await using (var claimScope = scopeFactory.CreateAsyncScope())
         {
             var importRuns = claimScope.ServiceProvider.GetRequiredService<IProductImportRunRepository>();
-            var run = await importRuns.TryClaimNextPendingAsync(stoppingToken);
+            var run = await importRuns.TryClaimNextPendingAsync(tenantFilter, stoppingToken);
             if (run is null)
             {
                 return false;

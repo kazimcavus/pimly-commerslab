@@ -1,4 +1,4 @@
-using Channels.Domain.Imports;
+using Channels.Domain.ProductImports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

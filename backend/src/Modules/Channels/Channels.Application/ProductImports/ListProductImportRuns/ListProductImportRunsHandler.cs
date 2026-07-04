@@ -1,12 +1,12 @@
 using Channels.Application.Contracts;
 using Channels.Application.Validation;
-using Channels.Domain.Imports;
 using Channels.Domain.Marketplaces;
+using Channels.Domain.ProductImports;
 using FluentValidation;
 using SharedKernel;
 using SharedKernel.Tenancy;
 
-namespace Channels.Application.Imports.ListProductImportRuns;
+namespace Channels.Application.ProductImports.ListProductImportRuns;
 
 /// <summary>
 /// Tenant'ın belirtilen pazaryerindeki son ürün import run'larını listeler.

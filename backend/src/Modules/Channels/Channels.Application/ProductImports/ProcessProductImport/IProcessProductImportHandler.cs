@@ -1,6 +1,6 @@
 using SharedKernel;
 
-namespace Channels.Application.Imports.ProcessProductImport;
+namespace Channels.Application.ProductImports.ProcessProductImport;
 
 /// <summary>Claim edilmiş ürün import run'ını işleyen handler arabirimi.</summary>
 public interface IProcessProductImportHandler

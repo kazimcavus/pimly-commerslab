@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>pimly-channels-worker</UserSecretsId>
+    <UserSecretsId>pimly-product-imports-worker</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +14,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Modules\Channels\Channels.Application\Channels.Application.csproj" />
     <ProjectReference Include="..\Modules\Channels\Channels.Infrastructure\Channels.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Catalog\Catalog.Application\Catalog.Application.csproj" />
+    <ProjectReference Include="..\Modules\Catalog\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Media\Media.Application\Media.Application.csproj" />
+    <ProjectReference Include="..\Modules\Media\Media.Infrastructure\Media.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

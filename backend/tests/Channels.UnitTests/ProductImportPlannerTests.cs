@@ -1,5 +1,5 @@
-using Channels.Application.Imports;
-using Channels.Application.Imports.Planning;
+using Channels.Application.ProductImports;
+using Channels.Application.ProductImports.Planning;
 using FluentAssertions;
 
 namespace Channels.UnitTests;

@@ -1,7 +1,7 @@
 using Channels.Domain.Marketplaces;
 using SharedKernel;
 
-namespace Channels.Domain.Imports;
+namespace Channels.Domain.ProductImports;
 
 /// <summary>
 /// Pazaryerinden ürün import job kaydı. TaxonomySyncRun deseninin tenant'lı karşılığıdır:

@@ -1,6 +1,6 @@
 using SharedKernel;
 
-namespace Channels.Domain.Imports;
+namespace Channels.Domain.ProductImports;
 
 /// <summary>Ürün import'u sırasında tek bir ürün grubu için oluşan hata kaydı.</summary>
 public sealed class ProductImportError : Entity<Guid>

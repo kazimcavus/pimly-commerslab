@@ -1,4 +1,4 @@
-namespace Channels.Domain.Imports;
+namespace Channels.Domain.ProductImports;
 
 /// <summary>Pazaryeri ürün import job durumu.</summary>
 public enum ProductImportStatus

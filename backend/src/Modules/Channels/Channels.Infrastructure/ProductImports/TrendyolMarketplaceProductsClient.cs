@@ -1,5 +1,5 @@
 using Channels.Application.Connections;
-using Channels.Application.Imports;
+using Channels.Application.ProductImports;
 using Channels.Domain.Marketplaces;
 using Channels.Infrastructure.Options;
 using Channels.Infrastructure.Taxonomy;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharedKernel;
 
-namespace Channels.Infrastructure.Imports;
+namespace Channels.Infrastructure.ProductImports;
 
 /// <summary>
 /// Trendyol satıcı ürünleri istemcisi (filterProducts). Sayfalı ürün listesini çeker;

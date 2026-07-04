@@ -1,6 +1,6 @@
 using SharedKernel;
 
-namespace Channels.Application.Imports.Catalog;
+namespace Channels.Application.ProductImports.Catalog;
 
 /// <summary>
 /// Ürün import hattının Catalog modülüne yazma kapısı. Mevcut okuma gateway'leri gibi

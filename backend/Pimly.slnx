@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Pimly.Api/Pimly.Api.csproj" />
     <Project Path="src/Pimly.Channels.Worker/Pimly.Channels.Worker.csproj" />
+    <Project Path="src/Pimly.ProductImports.Worker/Pimly.ProductImports.Worker.csproj" />
     <Project Path="src/Pimly.AspNetCore/Pimly.AspNetCore.csproj" />
     <Project Path="src/SharedKernel/SharedKernel.csproj" />
   </Folder>

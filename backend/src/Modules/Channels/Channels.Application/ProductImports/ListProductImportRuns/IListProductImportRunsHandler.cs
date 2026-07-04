@@ -1,7 +1,7 @@
 using Channels.Application.Contracts;
 using SharedKernel;
 
-namespace Channels.Application.Imports.ListProductImportRuns;
+namespace Channels.Application.ProductImports.ListProductImportRuns;
 
 /// <summary>Ürün import run'larını listeleme işlemini yürüten handler arabirimi.</summary>
 public interface IListProductImportRunsHandler

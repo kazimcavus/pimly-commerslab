@@ -1,5 +1,5 @@
-using Channels.Domain.Imports;
 using Channels.Domain.Marketplaces;
+using Channels.Domain.ProductImports;
 using FluentAssertions;
 
 namespace Channels.UnitTests;

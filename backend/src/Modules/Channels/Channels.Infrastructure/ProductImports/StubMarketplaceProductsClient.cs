@@ -1,9 +1,9 @@
 using Channels.Application.Connections;
-using Channels.Application.Imports;
+using Channels.Application.ProductImports;
 using Channels.Domain.Marketplaces;
 using SharedKernel;
 
-namespace Channels.Infrastructure.Imports;
+namespace Channels.Infrastructure.ProductImports;
 
 /// <summary>
 /// Geliştirme/test için deterministik sahte satıcı kataloğu. Stub taksonomi id'lerine bağlıdır:

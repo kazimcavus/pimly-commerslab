@@ -12,12 +12,12 @@ using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Domain;
 using Catalog.Domain.Products;
 using Catalog.Domain.Variants;
-using Channels.Application.Imports.Catalog;
+using Channels.Application.ProductImports.Catalog;
 using Media.Application.UploadImage;
 using SharedKernel;
 using CatalogProductVariant = Catalog.Domain.Products.Variant;
 
-namespace Pimly.Channels.Worker.Integration;
+namespace Pimly.ProductImports.Worker.Integration;
 
 /// <summary>
 /// Ürün import hattının Catalog yazma kapısı; Catalog handler ve repolarına delege eder.

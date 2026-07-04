@@ -1,7 +1,7 @@
 using Channels.Application.Validation;
 using FluentValidation;
 
-namespace Channels.Application.Imports.EnqueueProductImport;
+namespace Channels.Application.ProductImports.EnqueueProductImport;
 
 /// <summary>EnqueueProductImportCommand için doğrulama kuralları.</summary>
 public sealed class EnqueueProductImportCommandValidator : AbstractValidator<EnqueueProductImportCommand>

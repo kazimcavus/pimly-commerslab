@@ -2,13 +2,13 @@ using Channels.Application.Contracts;
 using Channels.Application.Validation;
 using Channels.Domain;
 using Channels.Domain.Connections;
-using Channels.Domain.Imports;
 using Channels.Domain.Marketplaces;
+using Channels.Domain.ProductImports;
 using FluentValidation;
 using SharedKernel;
 using SharedKernel.Tenancy;
 
-namespace Channels.Application.Imports.EnqueueProductImport;
+namespace Channels.Application.ProductImports.EnqueueProductImport;
 
 /// <summary>
 /// Tenant'ın pazaryerindeki ürünlerini içe aktarmak için yeni bir import job'ı kuyruğa alır.

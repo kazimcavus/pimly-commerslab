@@ -1,6 +1,6 @@
 using Channels.Domain.Marketplaces;
 
-namespace Channels.Domain.Imports;
+namespace Channels.Domain.ProductImports;
 
 /// <summary>
 /// Pazaryerinden ürün içe aktarma job'larının (<see cref="ProductImportRun"/>) kalıcılık arabirimi.
@@ -39,8 +39,12 @@ public interface IProductImportRunRepository
     /// Kuyruktaki en eski pending run'ı PostgreSQL <c>FOR UPDATE SKIP LOCKED</c> ile kilitleyerek
     /// claim eder ve running durumuna alır. Eşzamanlı worker'lar aynı işi alamaz.
     /// Tenant bağlamı olmadan çağrılır; run yoksa <see langword="null"/> döner.
+    /// <paramref name="tenantIds"/> doluysa yalnızca o tenant'ların run'ları claim edilir
+    /// (tenant-izole worker instance'ları için); <see langword="null"/>/boş ise filtre uygulanmaz.
     /// </summary>
-    Task<ProductImportRun?> TryClaimNextPendingAsync(CancellationToken cancellationToken = default);
+    Task<ProductImportRun?> TryClaimNextPendingAsync(
+        IReadOnlyCollection<Guid>? tenantIds = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Yeni pending import run kaydını ekler (kuyruğa alma).</summary>
     Task AddAsync(ProductImportRun run, CancellationToken cancellationToken = default);

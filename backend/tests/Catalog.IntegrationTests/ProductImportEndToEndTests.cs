@@ -1,15 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
-using Channels.Application.Imports.ProcessProductImport;
+using Channels.Application.ProductImports.ProcessProductImport;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.ProcessTaxonomySync;
-using Channels.Domain.Imports;
 using Channels.Domain.Marketplaces;
+using Channels.Domain.ProductImports;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Pimly.Channels.Worker;
+using Pimly.ProductImports.Worker;
 using SharedKernel.Tenancy;
 
 namespace Catalog.IntegrationTests;
@@ -170,7 +170,7 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
             {
                 ["ConnectionStrings:Database"] = _fixture.ConnectionString,
                 ["Channels:UseStubTaxonomyClient"] = "true",
-                ["Channels:WorkerPollIntervalSeconds"] = "1",
+                ["ProductImports:PollIntervalSeconds"] = "1",
                 ["Media:StoragePath"] = mediaPath,
                 ["Media:AllowedUrlPrefix"] = "/media/",
             })
@@ -179,7 +179,7 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
-        services.AddPimlyWorker(configuration);
+        services.AddPimlyProductImportsWorker(configuration);
 
         await using var provider = services.BuildServiceProvider();
 
@@ -191,6 +191,9 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
             await using (var claimScope = provider.CreateAsyncScope())
             {
                 var importRuns = claimScope.ServiceProvider.GetRequiredService<IProductImportRunRepository>();
+
+                // Test tenant'ı runtime'da register ile oluştuğundan sabit TenantIds verilemez;
+                // host başlatılmadığı için ValidateOnStart devrede değil, filtresiz claim kullanılır.
                 var claimed = await importRuns.TryClaimNextPendingAsync();
                 if (claimed is null)
                 {

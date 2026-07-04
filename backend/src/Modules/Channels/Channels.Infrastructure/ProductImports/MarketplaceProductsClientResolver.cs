@@ -1,9 +1,9 @@
-using Channels.Application.Imports;
+using Channels.Application.ProductImports;
 using Channels.Domain.Marketplaces;
 using Microsoft.Extensions.DependencyInjection;
 using SharedKernel;
 
-namespace Channels.Infrastructure.Imports;
+namespace Channels.Infrastructure.ProductImports;
 
 /// <summary>Keyed DI ile pazaryeri ürün client çözümlemesi.</summary>
 internal sealed class MarketplaceProductsClientResolver(IServiceProvider serviceProvider)

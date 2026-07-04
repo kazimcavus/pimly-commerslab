@@ -1,4 +1,4 @@
-namespace Channels.Application.Imports.Planning;
+namespace Channels.Application.ProductImports.Planning;
 
 /// <summary>
 /// Pazaryerinden çekilen ürün satırlarını Pimly ürün gruplarına dönüştüren saf planlayıcı.

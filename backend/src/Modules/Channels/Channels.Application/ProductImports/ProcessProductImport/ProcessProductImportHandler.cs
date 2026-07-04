@@ -1,21 +1,21 @@
 using Channels.Application.Connections;
 using Channels.Application.ExternalCatalog;
-using Channels.Application.Imports.Catalog;
-using Channels.Application.Imports.Planning;
 using Channels.Application.Options;
+using Channels.Application.ProductImports.Catalog;
+using Channels.Application.ProductImports.Planning;
 using Channels.Domain;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
-using Channels.Domain.Imports;
 using Channels.Domain.Marketplaces;
+using Channels.Domain.ProductImports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharedKernel;
 using SharedKernel.Tenancy;
 
-namespace Channels.Application.Imports.ProcessProductImport;
+namespace Channels.Application.ProductImports.ProcessProductImport;
 
 /// <summary>
 /// Claim edilmiş ürün import run'ını işler: pazaryerinden ürünleri çeker, kategori/özellik/varyantları

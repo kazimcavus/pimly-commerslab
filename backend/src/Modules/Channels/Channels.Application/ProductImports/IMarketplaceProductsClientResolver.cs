@@ -1,7 +1,7 @@
 using Channels.Domain.Marketplaces;
 using SharedKernel;
 
-namespace Channels.Application.Imports;
+namespace Channels.Application.ProductImports;
 
 /// <summary>Pazaryerine göre ürün import client'ı çözümler.</summary>
 public interface IMarketplaceProductsClientResolver

@@ -3,7 +3,7 @@ using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
-using Channels.Domain.Imports;
+using Channels.Domain.ProductImports;
 using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;

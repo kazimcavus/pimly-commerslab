@@ -358,7 +358,7 @@ namespace Channels.Infrastructure.Persistence.Migrations
                     b.ToTable("external_category_attributes", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Imports.ProductImportRun", b =>
+            modelBuilder.Entity("Channels.Domain.ProductImports.ProductImportRun", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -481,9 +481,9 @@ namespace Channels.Infrastructure.Persistence.Migrations
                     b.ToTable("taxonomy_sync_runs", "channels");
                 });
 
-            modelBuilder.Entity("Channels.Domain.Imports.ProductImportRun", b =>
+            modelBuilder.Entity("Channels.Domain.ProductImports.ProductImportRun", b =>
                 {
-                    b.OwnsMany("Channels.Domain.Imports.ProductImportError", "Errors", b1 =>
+                    b.OwnsMany("Channels.Domain.ProductImports.ProductImportError", "Errors", b1 =>
                         {
                             b1.Property<Guid>("Id")
                                 .ValueGeneratedOnAdd()

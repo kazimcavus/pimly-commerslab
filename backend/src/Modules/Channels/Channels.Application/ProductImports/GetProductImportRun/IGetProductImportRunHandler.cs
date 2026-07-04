@@ -1,7 +1,7 @@
 using Channels.Application.Contracts;
 using SharedKernel;
 
-namespace Channels.Application.Imports.GetProductImportRun;
+namespace Channels.Application.ProductImports.GetProductImportRun;
 
 /// <summary>Ürün import run ayrıntısını getirme işlemini yürüten handler arabirimi.</summary>
 public interface IGetProductImportRunHandler
