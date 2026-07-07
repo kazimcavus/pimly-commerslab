@@ -11,6 +11,8 @@ import { ProductBuilder } from './screens/ProductBuilder.jsx'
 import { Categories } from './screens/Categories.jsx'
 import { Attributes } from './screens/Attributes.jsx'
 import { Variants } from './screens/Variants.jsx'
+import { Brands } from './screens/Brands.jsx'
+import { PriceDefinitions } from './screens/PriceDefinitions.jsx'
 import { Settings } from './screens/Settings.jsx'
 import { Channels } from './screens/Channels.jsx'
 import { TrendyolOnboarding } from './screens/TrendyolOnboarding.jsx'
@@ -107,10 +109,12 @@ export function App() {
     dashboard: <Dashboard onNavigate={navigate} user={user} />,
     products: <ProductList onNavigate={navigate} onToast={showToast} />,
     product: <ProductDetail productId={routeParam} onNavigate={navigate} onToast={showToast} />,
-    builder: <ProductBuilder onNavigate={navigate} onSaved={(msg) => { navigate('products'); showToast({ tone: 'success', title: 'Ürün kaydedildi', body: msg }) }} />,
+    builder: <ProductBuilder onNavigate={navigate} onToast={showToast} onSaved={(msg) => { navigate('products'); showToast({ tone: 'success', title: 'Ürün kaydedildi', body: msg }) }} />,
     categories: <Categories onToast={showToast} />,
     attributes: <Attributes onToast={showToast} />,
     variants: <Variants onToast={showToast} />,
+    brands: <Brands onToast={showToast} />,
+    prices: <PriceDefinitions onToast={showToast} />,
     settings: <Settings onToast={showToast} />,
     channels: <Channels onNavigate={navigate} onToast={showToast} />,
     onboarding: <TrendyolOnboarding onNavigate={navigate} onToast={showToast} />,

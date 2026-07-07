@@ -1,12 +1,14 @@
 using Catalog.Application.Attributes.AddAttributeValue;
 using Catalog.Application.Attributes.CreateAttribute;
+using Catalog.Application.Brands.CreateBrand;
 using Catalog.Application.Categories.AssignCategoryAttribute;
 using Catalog.Application.Categories.CreateCategory;
+using Catalog.Application.PriceDefinitions.CreatePriceDefinition;
 using Catalog.Application.Products;
 using Catalog.Application.Products.AddProductImage;
 using Catalog.Application.Products.CreateProduct;
 using Catalog.Application.Products.CreateProductsBatch;
-using Catalog.Application.Products.UpsertItemChannelPrice;
+using Catalog.Application.Products.UpsertItemPrice;
 using Catalog.Application.Variants.AddVariantValue;
 using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Domain;
@@ -26,10 +28,14 @@ namespace Pimly.ProductImports.Worker.Integration;
 /// </summary>
 internal sealed class CatalogImportGateway(
     ICategoryRepository categories,
+    IBrandRepository brands,
+    IPriceDefinitionRepository priceDefinitions,
     IAttributeRepository attributes,
     IVariantRepository variants,
     IProductRepository products,
     ICreateCategoryHandler createCategory,
+    ICreateBrandHandler createBrand,
+    ICreatePriceDefinitionHandler createPriceDefinition,
     ICreateAttributeHandler createAttribute,
     IAddAttributeValueHandler addAttributeValue,
     ICreateVariantTypeHandler createVariantType,
@@ -38,7 +44,7 @@ internal sealed class CatalogImportGateway(
     ICreateProductsBatchHandler createProductsBatch,
     IAddProductImageHandler addProductImage,
     IUploadImageHandler uploadImage,
-    IUpsertItemChannelPriceHandler upsertChannelPrice,
+    IUpsertItemPriceHandler upsertItemPrice,
     IHttpClientFactory httpClientFactory) : ICatalogImportGateway
 {
     private const long MaxImageBytes = 10 * 1024 * 1024;
@@ -101,6 +107,32 @@ internal sealed class CatalogImportGateway(
         }
 
         var createResult = await createAttribute.ExecuteAsync(new CreateAttributeCommand(name.Trim()), cancellationToken);
+        return createResult.IsFailure
+            ? Result.Failure<Guid>(createResult.Error)
+            : Result.Success(createResult.Value.Id);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<Guid>> EnsureBrandAsync(
+        string name,
+        string? externalId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Result.Failure<Guid>(Error.Validation("Brand name is required."));
+        }
+
+        var existing = await brands.GetByNameAsync(name.Trim(), cancellationToken);
+        if (existing is not null)
+        {
+            return Result.Success(existing.Id);
+        }
+
+        var createResult = await createBrand.ExecuteAsync(
+            new CreateBrandCommand(name.Trim(), externalId),
+            cancellationToken);
+
         return createResult.IsFailure
             ? Result.Failure<Guid>(createResult.Error)
             : Result.Success(createResult.Value.Id);
@@ -319,7 +351,8 @@ internal sealed class CatalogImportGateway(
                         .Select(selection => new VariantValueInput(selection.Id, selection.ValueId))
                         .ToList()))
                 .ToList(),
-            splitOverrides);
+            splitOverrides,
+            input.BrandId);
 
         var createResult = await createProductsBatch.ExecuteAsync(
             new CreateProductsBatchCommand(input.GroupId, [batchItem]),
@@ -403,16 +436,41 @@ internal sealed class CatalogImportGateway(
     }
 
     /// <inheritdoc/>
-    public async Task<Result> UpsertItemChannelPriceAsync(
+    public async Task<Result<Guid>> EnsurePriceDefinitionAsync(
+        string name,
+        string? code,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Result.Failure<Guid>(Error.Validation("Price definition name is required."));
+        }
+
+        var existing = await priceDefinitions.GetByNameAsync(name.Trim(), cancellationToken);
+        if (existing is not null)
+        {
+            return Result.Success(existing.Id);
+        }
+
+        var createResult = await createPriceDefinition.ExecuteAsync(
+            new CreatePriceDefinitionCommand(name.Trim(), code),
+            cancellationToken);
+
+        return createResult.IsFailure
+            ? Result.Failure<Guid>(createResult.Error)
+            : Result.Success(createResult.Value.Id);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result> UpsertItemPriceAsync(
         Guid productItemId,
-        string marketplaceKey,
-        decimal price,
-        decimal? compareAtPrice,
+        Guid priceDefinitionId,
+        decimal amount,
         string? currency,
         CancellationToken cancellationToken = default)
     {
-        var upsertResult = await upsertChannelPrice.ExecuteAsync(
-            new UpsertItemChannelPriceCommand(productItemId, marketplaceKey, price, compareAtPrice, currency),
+        var upsertResult = await upsertItemPrice.ExecuteAsync(
+            new UpsertItemPriceCommand(productItemId, priceDefinitionId, amount, currency),
             cancellationToken);
 
         return upsertResult.IsFailure ? Result.Failure(upsertResult.Error) : Result.Success();

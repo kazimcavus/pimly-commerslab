@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Field, Input, Select, Banner } from '../ds'
+import { Button, Field, Input, Select, Banner, Textarea } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
@@ -10,12 +10,16 @@ const STATUS_OPTIONS = [
   { value: 'archived', label: 'Arşiv' },
 ]
 
+const parseMoney = (v) => Number(String(v).trim().replace(',', '.'))
+const fmtMoney = (n) => (n == null ? '' : String(n).replace('.', ','))
+
 // Ürün detayı: kodlar (model/stok), renk, görseller, özellikler ve kalem tablosu.
 // Ad/durum ile kalem fiyat/stok düzenlenebilir; kalem ve ürün silinebilir.
 export function ProductDetail({ productId, onNavigate, onToast }) {
   const [product, setProduct] = useState(null)
   const [error, setError] = useState('')
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [status, setStatus] = useState('active')
   const [savingProduct, setSavingProduct] = useState(false)
   const [itemEdits, setItemEdits] = useState({})   // itemId -> { sku, barcode, price, stock }
@@ -27,10 +31,18 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   const [newItem, setNewItem] = useState({ selections: {}, sku: '', barcode: '', price: '', stock: '0' })
   const [savingNew, setSavingNew] = useState(false)
 
+  // Tanımlı fiyatlar: itemId -> ItemPriceDto[]; panel tek kalem için açılır.
+  const [priceDefs, setPriceDefs] = useState([])      // fiyat tanımları (Tanımlar → Fiyatlar)
+  const [itemPrices, setItemPrices] = useState({})
+  const [pricesOpenFor, setPricesOpenFor] = useState(null)
+  const [dpEdits, setDpEdits] = useState({})          // `${itemId}:${defId}` -> tutar metni
+  const [priceBusy, setPriceBusy] = useState(false)
+  const [baseEdit, setBaseEdit] = useState(null)      // { compareAt } — panel içi karşılaştırma fiyatı düzenleme
+
   const load = () => {
     if (!productId) return
     api.getProduct(productId)
-      .then((p) => { setProduct(p); setName(p.name || ''); setStatus(p.status || 'active'); setItemEdits({}) })
+      .then((p) => { setProduct(p); setName(p.name || ''); setDescription(p.description || ''); setStatus(p.status || 'active'); setItemEdits({}) })
       .catch((e) => setError(e.message || 'Ürün yüklenemedi'))
   }
   useEffect(() => { load() }, [productId])
@@ -40,6 +52,110 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
     const label = (it) => (it.variant_values || []).map((v) => v.name).join(' / ')
     return list.sort((a, b) => label(a).localeCompare(label(b), 'tr', { numeric: true }))
   }, [product])
+
+  // Fiyat tanımlarını bir kez yükle (panel satırları + builder ile aynı kaynak).
+  useEffect(() => { api.listPriceDefinitions().then(setPriceDefs).catch(() => {}) }, [])
+
+  // Tüm kalemlerin tanımlı fiyatlarını yükle (satırlardaki fiyat rozetleri için).
+  useEffect(() => {
+    const its = product?.items || []
+    if (its.length === 0) { setItemPrices({}); return }
+    let alive = true
+    Promise.all(its.map((it) =>
+      api.listItemPrices(it.id)
+        .then((rows) => [it.id, Array.isArray(rows) ? rows : rows?.items || []])
+        .catch(() => [it.id, []])))
+      .then((pairs) => { if (alive) setItemPrices(Object.fromEntries(pairs)) })
+    return () => { alive = false }
+  }, [product])
+
+  const reloadItemPrices = async (itemId) => {
+    const rows = await api.listItemPrices(itemId).catch(() => [])
+    setItemPrices((cur) => ({ ...cur, [itemId]: Array.isArray(rows) ? rows : rows?.items || [] }))
+  }
+
+  const togglePrices = (it) => {
+    setDpEdits({})
+    setBaseEdit(null)
+    setPricesOpenFor((cur) => (cur === it.id ? null : it.id))
+  }
+
+  // Tanım satırı: kayıtlı değer varsa onun metni, yoksa boş; düzenleme metni öncelikli.
+  const dpValOf = (itemId, def, stored) => {
+    const e = dpEdits[`${itemId}:${def.id}`]
+    return e !== undefined ? e : fmtMoney(stored?.amount ?? null)
+  }
+  const setDpEdit = (itemId, def, text) =>
+    setDpEdits((cur) => ({ ...cur, [`${itemId}:${def.id}`]: text }))
+  const dpDirty = (itemId, def, stored) => {
+    const e = dpEdits[`${itemId}:${def.id}`]
+    if (e === undefined) return false
+    if (!e.trim()) return false // boş bırakılan alan kaydedilmez; silme çöp kutusundan
+    return !stored || parseMoney(e) !== Number(stored.amount)
+  }
+
+  const saveItemPrice = async (itemId, def, amountText) => {
+    const amount = parseMoney(amountText)
+    if (!Number.isFinite(amount) || amount < 0) { onToast?.({ tone: 'danger', title: 'Geçersiz fiyat' }); return }
+    setPriceBusy(true)
+    try {
+      await api.putItemPrice(itemId, def.id, { amount, currency: 'TRY' })
+      onToast?.({ tone: 'success', title: `${def.name} fiyatı kaydedildi` })
+      await reloadItemPrices(itemId)
+      setDpEdits((cur) => { const next = { ...cur }; delete next[`${itemId}:${def.id}`]; return next })
+    } catch (e) {
+      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message })
+    } finally {
+      setPriceBusy(false)
+    }
+  }
+
+  const removeItemPrice = async (itemId, def) => {
+    if (!confirm(`"${def.name}" için girilen fiyat silinecek. Emin misin?`)) return
+    try {
+      await api.deleteItemPrice(itemId, def.id)
+      onToast?.({ tone: 'success', title: `${def.name} fiyatı silindi` })
+      await reloadItemPrices(itemId)
+      setDpEdits((cur) => { const next = { ...cur }; delete next[`${itemId}:${def.id}`]; return next })
+    } catch (e) {
+      onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message })
+    }
+  }
+
+  // Panelden genel fiyatı kaydet: satırdaki fiyat/stok düzenlemesi ile panel
+  // karşılaştırma fiyatını TEK updateItem çağrısında birleştirir (yarış olmasın).
+  const saveBasePrice = async (it) => {
+    const e = editOf(it)
+    const price = parseMoney(e.price)
+    const stock = Math.max(0, Math.trunc(Number(e.stock)))
+    const compareAt = baseEdit != null
+      ? (String(baseEdit.compareAt || '').trim() ? parseMoney(baseEdit.compareAt) : null)
+      : (it.compare_at_price ?? null)
+    if (!Number.isFinite(price) || price < 0) { onToast?.({ tone: 'danger', title: 'Geçersiz fiyat' }); return }
+    if (compareAt != null && (!Number.isFinite(compareAt) || compareAt < 0)) { onToast?.({ tone: 'danger', title: 'Geçersiz karşılaştırma fiyatı' }); return }
+    setPriceBusy(true)
+    try {
+      await api.updateItem(it.id, {
+        gtin: it.gtin,
+        mpn: it.mpn,
+        axis_value_entry_id: it.axis_value_entry_id,
+        axis_value: it.axis_value,
+        price,
+        compare_at_price: compareAt,
+        stock: Number.isFinite(stock) ? stock : it.stock,
+        // null → koru (sku/barkod bu panelden değişmez).
+        sku: null,
+        barcode: null,
+      })
+      onToast?.({ tone: 'success', title: 'Genel fiyat güncellendi' })
+      setBaseEdit(null)
+      load()
+    } catch (e2) {
+      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e2.message })
+    } finally {
+      setPriceBusy(false)
+    }
+  }
 
   if (error) {
     return (
@@ -52,14 +168,16 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   if (!product) return <div className="page"><div className="list-meta">Yükleniyor…</div></div>
 
   const images = product.images || []
-  const dirtyProduct = name !== product.name || status !== product.status
+  const dirtyProduct = name !== product.name || status !== product.status || description !== (product.description || '')
 
   const saveProduct = async () => {
     setSavingProduct(true)
     try {
       const updated = await api.updateProduct(product.id, {
         category_id: product.category_id,
+        brand_id: product.brand_id,
         name: name.trim(),
+        description: description.trim() || null,
         status,
       })
       setProduct(updated)
@@ -208,7 +326,7 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
         <div className="bnode__head">
           <span className="ic">{I('package')}</span>
           <div><div className="bnode__title">Ürün bilgileri</div>
-            <div className="list-meta">Ad ve durum düzenlenebilir; kodlar import ile eşlendiği için sabittir.</div></div>
+            <div className="list-meta">Ad, açıklama ve durum düzenlenebilir; kodlar import ile eşlendiği için sabittir.</div></div>
           <div className="hstack" style={{ marginLeft: 'auto' }}>
             <Button variant="primary" size="sm" loading={savingProduct} disabled={!dirtyProduct} onClick={saveProduct}>Kaydet</Button>
           </div>
@@ -220,6 +338,15 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
             </Field>
             <Field label="Durum">
               <Select value={status} onChange={(e) => setStatus(e.target.value)} options={STATUS_OPTIONS} />
+            </Field>
+            <Field label="Marka">
+              <Input value={product.brand_name || '—'} readOnly />
+            </Field>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <Field label="Ürün açıklaması" optional>
+              <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ürün açıklaması…" />
             </Field>
           </div>
 
@@ -243,7 +370,7 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
         <div className="bnode__head">
           <span className="ic">{I('layers')}</span>
           <div><div className="bnode__title">Varyantlar</div>
-            <div className="list-meta">{items.length} kalem · SKU, barkod, fiyat ve stok satır üzerinde düzenlenir.</div></div>
+            <div className="list-meta">{items.length} kalem · SKU, barkod, genel fiyat ve stok satırda düzenlenir · {I('coins', { size: 12 })} ile tanımlı fiyat alanları (TY Satış, Toptan…) yönetilir.</div></div>
           <div className="hstack" style={{ marginLeft: 'auto' }}>
             <Button variant="secondary" size="sm" iconLeft={I('plus')} onClick={openAdd} disabled={adding}>Varyant Ekle</Button>
           </div>
@@ -282,13 +409,18 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
           <div className="pim-table-wrap" style={{ border: 0, borderRadius: 0 }}>
             <table className="pim-table">
               <thead><tr>
-                <th>Varyant</th><th>SKU</th><th>Barkod</th><th style={{ width: 120 }}>Fiyat</th><th style={{ width: 90 }}>Stok</th><th style={{ width: 90 }}></th>
+                <th>Varyant</th><th>SKU</th><th>Barkod</th>
+                <th style={{ width: 130 }} title="Kendi siteniz için geçerli varsayılan satış fiyatı">Genel fiyat</th>
+                <th style={{ width: 90 }}>Stok</th><th style={{ width: 120 }}></th>
               </tr></thead>
               <tbody>
                 {items.map((it) => {
                   const e = editOf(it)
+                  const ips = itemPrices[it.id] || []
+                  const open = pricesOpenFor === it.id
                   return (
-                    <tr key={it.id}>
+                    <React.Fragment key={it.id}>
+                    <tr>
                       <td className="pim-td-strong">{(it.variant_values || []).map((v) => v.name).join(' / ') || '—'}</td>
                       <td>
                         <input className="pim-input pim-input--sm mono" style={{ width: 150 }} placeholder="—"
@@ -301,6 +433,12 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
                       <td>
                         <input className="pim-input pim-input--sm mono" style={{ width: 100 }}
                           value={e.price} onChange={(ev) => setEdit(it, { price: ev.target.value })} />
+                        {ips.length > 0 && (
+                          <div className="list-meta" style={{ marginTop: 3, cursor: 'pointer' }} onClick={() => togglePrices(it)}
+                            title="Fiyat alanlarını görüntüle">
+                            {ips.map((p) => p.definition_name).join(' · ')}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <input className="pim-input pim-input--sm mono" style={{ width: 70 }}
@@ -312,11 +450,79 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
                             <button className="tb__icon" title="Kaydet" style={{ width: 28, height: 28, color: 'var(--accent, #4f7d5a)' }}
                               disabled={savingItem === it.id} onClick={() => saveItem(it)}>{I('check')}</button>
                           )}
+                          <button className="tb__icon" title="Fiyat alanları (TY Satış, Toptan…)"
+                            style={{ width: 28, height: 28, color: open ? 'var(--accent, #4f7d5a)' : undefined }}
+                            onClick={() => togglePrices(it)}>{I('coins')}</button>
                           <button className="tb__icon" title="Varyantı sil" style={{ width: 28, height: 28 }}
                             onClick={() => removeItem(it)}>{I('trash-2')}</button>
                         </div>
                       </td>
                     </tr>
+                    {open && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: 0, background: 'var(--surface-subtle)' }}>
+                          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                            <div className="list-meta" style={{ fontWeight: 600, marginBottom: 4 }}>
+                              Fiyatlar — {(it.variant_values || []).map((v) => v.name).join(' / ') || it.barcode}
+                            </div>
+                            <div className="list-meta" style={{ marginBottom: 12 }}>
+                              Genel fiyat kendi siteniz için geçerlidir. Diğer fiyat alanlarını Tanımlar → Fiyatlar&apos;dan yönetebilirsiniz;
+                              Trendyol&apos;dan import edilen ürünlerde TY Satış ve TY Karşılaştırma otomatik dolar.
+                            </div>
+
+                            {/* Genel (kendi siteniz) fiyatı */}
+                            <div className="hstack" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+                              <span className="pim-badge" style={{ minWidth: 110, justifyContent: 'center' }}>Genel (site)</span>
+                              <Field label="Satış fiyatı">
+                                <Input size="sm" mono suffix="₺" value={e.price} style={{ width: 110 }}
+                                  onChange={(ev) => setEdit(it, { price: ev.target.value })} />
+                              </Field>
+                              <Field label="Karşılaştırma (üstü çizili)">
+                                <Input size="sm" mono suffix="₺" style={{ width: 110 }} placeholder="—"
+                                  value={baseEdit ? baseEdit.compareAt : fmtMoney(it.compare_at_price)}
+                                  onChange={(ev) => setBaseEdit({ compareAt: ev.target.value })} />
+                              </Field>
+                              {(baseEdit != null || itemDirty(it)) && (
+                                <Button variant="primary" size="sm" loading={priceBusy || savingItem === it.id}
+                                  onClick={() => saveBasePrice(it)}>
+                                  Kaydet
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Tanımlı fiyat alanları — tanım başına bir satır */}
+                            {priceDefs.map((def) => {
+                              const stored = ips.find((p) => p.price_definition_id === def.id)
+                              return (
+                                <div key={def.id} className="hstack" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 8 }}>
+                                  <span className="pim-badge pim-badge--count" style={{ minWidth: 110, justifyContent: 'center' }}>
+                                    {def.name}
+                                  </span>
+                                  <Field label="Fiyat">
+                                    <Input size="sm" mono suffix="₺" value={dpValOf(it.id, def, stored)} style={{ width: 110 }} placeholder="—"
+                                      onChange={(ev) => setDpEdit(it.id, def, ev.target.value)} />
+                                  </Field>
+                                  {dpDirty(it.id, def, stored) && (
+                                    <Button variant="primary" size="sm" loading={priceBusy}
+                                      onClick={() => saveItemPrice(it.id, def, dpValOf(it.id, def, stored))}>Kaydet</Button>
+                                  )}
+                                  {stored && (
+                                    <button className="tb__icon" title={`${def.name} — değeri sil`}
+                                      style={{ width: 28, height: 28 }} onClick={() => removeItemPrice(it.id, def)}>{I('trash-2')}</button>
+                                  )}
+                                </div>
+                              )
+                            })}
+                            {priceDefs.length === 0 && (
+                              <div className="list-meta" style={{ marginTop: 4 }}>
+                                Henüz fiyat tanımı yok — Tanımlar → Fiyatlar&apos;dan ekleyin.
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   )
                 })}
                 {items.length === 0 && (

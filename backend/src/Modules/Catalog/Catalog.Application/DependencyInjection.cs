@@ -11,6 +11,13 @@ using Catalog.Application.Barcodes.AllocateBarcodes;
 using Catalog.Application.Barcodes.GetBarcodeSequence;
 using Catalog.Application.Barcodes.ListBarcodeAllocations;
 using Catalog.Application.Barcodes.UpdateBarcodeSequence;
+using Catalog.Application.Brands.CreateBrand;
+using Catalog.Application.Brands.DeleteBrand;
+using Catalog.Application.Brands.GetBrand;
+using Catalog.Application.Brands.ListBrands;
+using Catalog.Application.Brands.UpdateBrand;
+using Catalog.Application.CatalogSettings.GetCatalogSettings;
+using Catalog.Application.CatalogSettings.UpdateCatalogSettings;
 using Catalog.Application.Categories.AssignCategoryAttribute;
 using Catalog.Application.Categories.CreateCategory;
 using Catalog.Application.Categories.DeleteCategory;
@@ -20,22 +27,27 @@ using Catalog.Application.Categories.ListCategoryAttributes;
 using Catalog.Application.Categories.RemoveCategoryAttribute;
 using Catalog.Application.Categories.UpdateCategory;
 using Catalog.Application.Categories.UpdateCategoryAttribute;
+using Catalog.Application.PriceDefinitions.CreatePriceDefinition;
+using Catalog.Application.PriceDefinitions.DeletePriceDefinition;
+using Catalog.Application.PriceDefinitions.GetPriceDefinition;
+using Catalog.Application.PriceDefinitions.ListPriceDefinitions;
+using Catalog.Application.PriceDefinitions.UpdatePriceDefinition;
 using Catalog.Application.Products.AddProductImage;
 using Catalog.Application.Products.AddProductItem;
 using Catalog.Application.Products.CreateProduct;
 using Catalog.Application.Products.CreateProductsBatch;
-using Catalog.Application.Products.DeleteItemChannelPrice;
+using Catalog.Application.Products.DeleteItemPrice;
 using Catalog.Application.Products.DeleteProduct;
 using Catalog.Application.Products.DeleteProductItem;
 using Catalog.Application.Products.GetProduct;
 using Catalog.Application.Products.GetProductItem;
-using Catalog.Application.Products.ListItemChannelPrices;
+using Catalog.Application.Products.ListItemPrices;
 using Catalog.Application.Products.ListProducts;
 using Catalog.Application.Products.RemoveProductImage;
 using Catalog.Application.Products.UpdateProduct;
 using Catalog.Application.Products.UpdateProductImage;
 using Catalog.Application.Products.UpdateProductItem;
-using Catalog.Application.Products.UpsertItemChannelPrice;
+using Catalog.Application.Products.UpsertItemPrice;
 using Catalog.Application.SkuGenerator;
 using Catalog.Application.SkuGenerator.GetSkuGeneratorConfig;
 using Catalog.Application.SkuGenerator.UpdateSkuGeneratorConfig;
@@ -67,6 +79,18 @@ public static class DependencyInjection
         services.AddScoped<IListCategoryAttributesHandler, ListCategoryAttributesHandler>();
         services.AddScoped<IUpdateCategoryAttributeHandler, UpdateCategoryAttributeHandler>();
         services.AddScoped<IRemoveCategoryAttributeHandler, RemoveCategoryAttributeHandler>();
+
+        services.AddScoped<ICreateBrandHandler, CreateBrandHandler>();
+        services.AddScoped<IUpdateBrandHandler, UpdateBrandHandler>();
+        services.AddScoped<IDeleteBrandHandler, DeleteBrandHandler>();
+        services.AddScoped<IGetBrandHandler, GetBrandHandler>();
+        services.AddScoped<IListBrandsHandler, ListBrandsHandler>();
+
+        services.AddScoped<ICreatePriceDefinitionHandler, CreatePriceDefinitionHandler>();
+        services.AddScoped<IUpdatePriceDefinitionHandler, UpdatePriceDefinitionHandler>();
+        services.AddScoped<IDeletePriceDefinitionHandler, DeletePriceDefinitionHandler>();
+        services.AddScoped<IGetPriceDefinitionHandler, GetPriceDefinitionHandler>();
+        services.AddScoped<IListPriceDefinitionsHandler, ListPriceDefinitionsHandler>();
 
         services.AddScoped<ICreateAttributeHandler, CreateAttributeHandler>();
         services.AddScoped<IUpdateAttributeHandler, UpdateAttributeHandler>();
@@ -101,9 +125,9 @@ public static class DependencyInjection
         services.AddScoped<IAddProductItemHandler, AddProductItemHandler>();
         services.AddScoped<IUpdateProductItemHandler, UpdateProductItemHandler>();
         services.AddScoped<IDeleteProductItemHandler, DeleteProductItemHandler>();
-        services.AddScoped<IUpsertItemChannelPriceHandler, UpsertItemChannelPriceHandler>();
-        services.AddScoped<IListItemChannelPricesHandler, ListItemChannelPricesHandler>();
-        services.AddScoped<IDeleteItemChannelPriceHandler, DeleteItemChannelPriceHandler>();
+        services.AddScoped<IUpsertItemPriceHandler, UpsertItemPriceHandler>();
+        services.AddScoped<IListItemPricesHandler, ListItemPricesHandler>();
+        services.AddScoped<IDeleteItemPriceHandler, DeleteItemPriceHandler>();
 
         services.AddScoped<IGetBarcodeSequenceHandler, GetBarcodeSequenceHandler>();
         services.AddScoped<IUpdateBarcodeSequenceHandler, UpdateBarcodeSequenceHandler>();
@@ -113,6 +137,8 @@ public static class DependencyInjection
         services.AddScoped<ISkuGeneratorService, SkuGeneratorService>();
         services.AddScoped<IGetSkuGeneratorConfigHandler, GetSkuGeneratorConfigHandler>();
         services.AddScoped<IUpdateSkuGeneratorConfigHandler, UpdateSkuGeneratorConfigHandler>();
+        services.AddScoped<IGetCatalogSettingsHandler, GetCatalogSettingsHandler>();
+        services.AddScoped<IUpdateCatalogSettingsHandler, UpdateCatalogSettingsHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

@@ -41,7 +41,8 @@ public sealed record MarketplaceProductNode(
     string? Description,
     bool Approved,
     IReadOnlyList<string> ImageUrls,
-    IReadOnlyList<MarketplaceProductAttributeNode> Attributes);
+    IReadOnlyList<MarketplaceProductAttributeNode> Attributes,
+    string? BrandExternalId = null);
 
 /// <summary>Ürün satırındaki attribute değeri.</summary>
 /// <remarks>

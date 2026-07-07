@@ -47,6 +47,19 @@ export function Settings({ onToast }) {
   const [savingBc, setSavingBc] = useState(false)
   const [dragIdx, setDragIdx] = useState(null)
   const [insertAt, setInsertAt] = useState(null)
+  // Ayraçlı (renk vb.) ürünlerde ad türetme konumu — backend'de tutulur (catalog/settings).
+  const [slicerNamePos, setSlicerNamePos] = useState('suffix')
+  const changeSlicerNamePos = async (pos) => {
+    const prev = slicerNamePos
+    setSlicerNamePos(pos)
+    try {
+      await api.putCatalogSettings({ slicer_name_position: pos })
+      onToast?.({ tone: 'success', title: 'Adlandırma tercihi kaydedildi' })
+    } catch (e) {
+      setSlicerNamePos(prev)
+      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message })
+    }
+  }
 
   useEffect(() => {
     loadSkuConfig()
@@ -64,6 +77,9 @@ export function Settings({ onToast }) {
       }))
       .catch(() => {})
       .finally(() => setLoaded(true))
+    api.getCatalogSettings()
+      .then((s) => setSlicerNamePos(s.slicer_name_position || 'suffix'))
+      .catch(() => {})
   }, [])
 
   // --- SKU segment editing ---
@@ -214,6 +230,27 @@ export function Settings({ onToast }) {
         </div>
         <div className="pim-card__footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)' }}>
           <Button variant="primary" loading={savingBc} onClick={saveBarcode}>Kaydet</Button>
+        </div>
+      </div>
+
+      {/* ÜRÜN ADLANDIRMA — ayraçlı (renk vb.) ürünlerde değer adının konumu */}
+      <div className="pim-card" style={{ marginTop: 18 }}>
+        <div className="pim-card__header">
+          <div className="hstack">{I('type')}<span className="pim-card__title">Ürün Adlandırma</span></div>
+        </div>
+        <div className="pim-card__body">
+          <div className="list-meta" style={{ marginBottom: 10 }}>
+            Renk gibi ayraç eksenli ürünlerde her değer ayrı ürün olur; değer adının ürün adındaki konumu buradan seçilir.
+            Ürün açarken alan boş bırakılırsa bu kurala göre otomatik adlandırılır.
+          </div>
+          <div className="style-seg" style={{ maxWidth: 520 }}>
+            <div className="style-card" data-active={slicerNamePos === 'suffix'} onClick={() => changeSlicerNamePos('suffix')}>
+              Sonda — <span className="pim-td-strong">Abiye Elbise - Beyaz</span>
+            </div>
+            <div className="style-card" data-active={slicerNamePos === 'prefix'} onClick={() => changeSlicerNamePos('prefix')}>
+              Başta — <span className="pim-td-strong">Beyaz Abiye Elbise</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

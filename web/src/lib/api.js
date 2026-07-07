@@ -107,11 +107,16 @@ export const api = {
   getImportRun: (code, runId) => req('GET', `${CHANNELS}/marketplaces/${code}/imports/${runId}`),
   listImportRuns: (code, limit = 20) => req('GET', `${CHANNELS}/marketplaces/${code}/imports?limit=${limit}`),
 
-  // --- kanal fiyatları (Catalog modülü) ---
-  // Etkin satış fiyatı = kanal fiyatı ?? kalemin temel fiyatı.
-  listItemChannelPrices: (itemId) => req('GET', `${CATALOG}/items/${itemId}/channel-prices`),
-  putItemChannelPrice: (itemId, code, b) => req('PUT', `${CATALOG}/items/${itemId}/channel-prices/${code}`, { body: b }),
-  deleteItemChannelPrice: (itemId, code) => req('DELETE', `${CATALOG}/items/${itemId}/channel-prices/${code}`),
+  // --- fiyat tanımları & kalem fiyatları (Catalog modülü) ---
+  // Kullanıcı tanımlı fiyat alanları (örn. "TY Satış"); her kaleme tanım başına bir tutar girilir.
+  listPriceDefinitions: () => reqList(`${CATALOG}/price-definitions`),
+  createPriceDefinition: (b) => req('POST', `${CATALOG}/price-definitions`, { body: b }),
+  updatePriceDefinition: (id, b) => req('PATCH', `${CATALOG}/price-definitions/${id}`, { body: b }),
+  deletePriceDefinition: (id) => req('DELETE', `${CATALOG}/price-definitions/${id}`),
+  // ItemPriceDto[]: { id, product_item_id, price_definition_id, definition_name, amount, currency, updated_at }
+  listItemPrices: (itemId) => req('GET', `${CATALOG}/items/${itemId}/prices`),
+  putItemPrice: (itemId, defId, b) => req('PUT', `${CATALOG}/items/${itemId}/prices/${defId}`, { body: b }),
+  deleteItemPrice: (itemId, defId) => req('DELETE', `${CATALOG}/items/${itemId}/prices/${defId}`),
 
   // --- categories (Catalog modülü) ---
   listCategories: () => reqList(`${CATALOG}/categories`),
@@ -122,6 +127,12 @@ export const api = {
   assignCategoryAttribute: (id, b) => req('POST', `${CATALOG}/categories/${id}/attributes`, { body: b }),
   updateCategoryAttribute: (id, b) => req('PATCH', `${CATALOG}/category-attributes/${id}`, { body: b }),
   deleteCategoryAttribute: (id) => req('DELETE', `${CATALOG}/category-attributes/${id}`),
+
+  // --- brands (Catalog modülü) ---
+  listBrands: () => reqList(`${CATALOG}/brands`),
+  createBrand: (b) => req('POST', `${CATALOG}/brands`, { body: b }),
+  updateBrand: (id, b) => req('PATCH', `${CATALOG}/brands/${id}`, { body: b }),
+  deleteBrand: (id) => req('DELETE', `${CATALOG}/brands/${id}`),
 
   // --- attributes (Catalog modülü) ---
   listAttributes: () => reqList(`${CATALOG}/attributes`),
@@ -167,4 +178,8 @@ export const api = {
   // --- SKU oluşturucu (Catalog modülü) ---
   getSkuConfig: () => req('GET', `${CATALOG}/sku-config`),
   putSkuConfig: (b) => req('PUT', `${CATALOG}/sku-config`, { body: b }),
+
+  // --- Katalog ayarları (tenant tercihleri) ---
+  getCatalogSettings: () => req('GET', `${CATALOG}/settings`),
+  putCatalogSettings: (b) => req('PUT', `${CATALOG}/settings`, { body: b }),
 }

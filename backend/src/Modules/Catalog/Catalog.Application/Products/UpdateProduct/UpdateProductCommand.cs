@@ -8,4 +8,6 @@ public sealed record UpdateProductCommand(
     Guid CategoryId,
     string Name,
     string Status,
-    IReadOnlyList<AttributeValueInput>? AttributeValueInputs);
+    IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
+    Guid? BrandId = null,
+    string? Description = null);

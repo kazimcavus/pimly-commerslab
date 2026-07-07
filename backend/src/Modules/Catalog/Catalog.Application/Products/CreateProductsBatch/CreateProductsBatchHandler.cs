@@ -2,6 +2,7 @@ using Catalog.Application.Contracts;
 using Catalog.Application.SkuGenerator;
 using Catalog.Application.Validation;
 using Catalog.Domain;
+using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using FluentValidation;
 using SharedKernel;
@@ -33,19 +34,30 @@ public sealed class CreateProductsBatchHandler(
         var seenModelCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenBarcodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenVariantSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var verifiedCategoryIds = new Dictionary<Guid, bool>();
+        var categoriesById = new Dictionary<Guid, Category?>();
 
         foreach (var item in command.Products)
         {
-            if (!verifiedCategoryIds.TryGetValue(item.CategoryId, out var exists))
+            if (!categoriesById.TryGetValue(item.CategoryId, out var category))
             {
-                exists = await categories.GetByIdAsync(item.CategoryId, cancellationToken) is not null;
-                verifiedCategoryIds[item.CategoryId] = exists;
+                category = await categories.GetByIdAsync(item.CategoryId, cancellationToken);
+                categoriesById[item.CategoryId] = category;
             }
 
-            if (!exists)
+            if (category is null)
             {
                 return Result.Failure<CreateProductsBatchResult>(Error.NotFound("Category not found."));
+            }
+
+            var requiredAttributesResult = await ProductCreationSupport.EnsureRequiredCategoryAttributesAsync(
+                attributes,
+                category,
+                (item.AttributeValueInputs ?? []).Select(input => input.AttributeId).ToHashSet(),
+                cancellationToken);
+
+            if (requiredAttributesResult.IsFailure)
+            {
+                return Result.Failure<CreateProductsBatchResult>(requiredAttributesResult.Error);
             }
 
             var resolvedTypesResult = await ProductCreationSupport.ResolveVariantsAsync(
@@ -120,7 +132,9 @@ public sealed class CreateProductsBatchHandler(
                     plan,
                     item.CategoryId,
                     ProductMappings.ParseStatus(item.Status),
-                    attributeValuesResult.Value));
+                    attributeValuesResult.Value,
+                    item.BrandId,
+                    item.Description));
             }
         }
 
@@ -137,7 +151,9 @@ public sealed class CreateProductsBatchHandler(
                 entry.Plan.Variants,
                 entry.Plan.Items.ToList(),
                 entry.Plan.GroupCode,
-                entry.Plan.SlicerValue);
+                entry.Plan.SlicerValue,
+                entry.BrandId,
+                entry.Description);
 
             if (createResult.IsFailure)
             {
@@ -192,5 +208,7 @@ public sealed class CreateProductsBatchHandler(
         ProductCreatePlan Plan,
         Guid CategoryId,
         ProductStatus Status,
-        IReadOnlyList<AttributeValue> AttributeValues);
+        IReadOnlyList<AttributeValue> AttributeValues,
+        Guid? BrandId,
+        string? Description);
 }

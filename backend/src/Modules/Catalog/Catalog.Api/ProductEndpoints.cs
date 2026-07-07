@@ -5,6 +5,7 @@ using Catalog.Application.Products.DeleteProduct;
 using Catalog.Application.Products.GetProduct;
 using Catalog.Application.Products.ListProducts;
 using Catalog.Application.Products.UpdateProduct;
+using Catalog.Domain.Products;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 
@@ -55,7 +56,9 @@ internal static class ProductEndpoints
                 request.CategoryId,
                 request.Name,
                 request.Status,
-                attributeValues));
+                attributeValues,
+                request.BrandId,
+                request.Description));
             return result.ToHttpResult();
         });
 
@@ -76,7 +79,9 @@ internal static class ProductEndpoints
             request.CodeInputs,
             ProductInputMapper.MapAttributeValues(request.AttributeValues),
             ProductInputMapper.MapVariants(request.Variants),
-            MapItemInputs(request.Items));
+            MapItemInputs(request.Items),
+            request.BrandId,
+            request.Description);
 
     private static CreateProductsBatchItem MapBatchItem(BatchProductRequest request) =>
         new(
@@ -87,7 +92,16 @@ internal static class ProductEndpoints
             request.CodeInputs,
             ProductInputMapper.MapAttributeValues(request.AttributeValues),
             ProductInputMapper.MapVariants(request.Variants),
-            MapItemInputs(request.Items));
+            MapItemInputs(request.Items),
+            SplitOverrides: MapSplitOverrides(request.Splits),
+            BrandId: request.BrandId,
+            Description: request.Description);
+
+    private static List<ProductSplitOverride>? MapSplitOverrides(
+        IReadOnlyList<ProductSplitRequest>? splits) =>
+        splits?
+            .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name))
+            .ToList();
 
     private static List<CreateProductItemInput> MapItemInputs(
         IReadOnlyList<CreateProductItemRequest>? items) =>

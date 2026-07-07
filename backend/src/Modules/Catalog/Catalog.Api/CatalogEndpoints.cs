@@ -16,6 +16,8 @@ public static class CatalogEndpoints
             .RequireAuthorization();
 
         group.MapCategoryEndpoints();
+        group.MapBrandEndpoints();
+        group.MapPriceDefinitionEndpoints();
         group.MapAttributeEndpoints();
         group.MapAttributeValueEndpoints();
         group.MapVariantTypeEndpoints();
@@ -23,9 +25,10 @@ public static class CatalogEndpoints
         group.MapProductEndpoints();
         group.MapProductImageEndpoints();
         group.MapProductItemEndpoints();
-        group.MapChannelPriceEndpoints();
+        group.MapItemPriceEndpoints();
         group.MapBarcodeEndpoints();
         group.MapSkuGeneratorEndpoints();
+        group.MapCatalogSettingsEndpoints();
 
         return group;
     }

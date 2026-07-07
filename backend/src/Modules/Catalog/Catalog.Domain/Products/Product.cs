@@ -32,7 +32,9 @@ public sealed class Product : AggregateRoot<Guid>
         IReadOnlyList<AttributeValue> attributeValues,
         IReadOnlyList<Variant> variants,
         string? groupCode,
-        string? slicerValue)
+        string? slicerValue,
+        Guid? brandId,
+        string? description)
         : base(id)
     {
         GroupId = groupId;
@@ -43,6 +45,8 @@ public sealed class Product : AggregateRoot<Guid>
         AttributeValues = attributeValues;
         GroupCode = groupCode;
         SlicerValue = slicerValue;
+        BrandId = brandId;
+        Description = description;
         _variants.AddRange(variants);
     }
 
@@ -53,6 +57,10 @@ public sealed class Product : AggregateRoot<Guid>
     /// <summary>Gets ürünün bağlı olduğu katalog kategorisi.</summary>
     /// <example>Tişört kategorisinin Guid'i.</example>
     public Guid CategoryId { get; private set; }
+
+    /// <summary>Gets ürünün bağlı olduğu opsiyonel marka; markasız ürün için null.</summary>
+    /// <example>Pimly markasının Guid'i.</example>
+    public Guid? BrandId { get; private set; }
 
     /// <summary>Gets ürün model kodu.</summary>
     /// <example>GOMlek-001.</example>
@@ -73,6 +81,10 @@ public sealed class Product : AggregateRoot<Guid>
     /// <summary>Gets ürün adı.</summary>
     /// <example>Pamuklu Gömlek.</example>
     public string Name { get; private set; } = string.Empty;
+
+    /// <summary>Gets ürünün opsiyonel açıklama metni; boş bırakılmışsa null.</summary>
+    /// <example>Nefes alan pamuklu kumaştan klasik kesim gömlek.</example>
+    public string? Description { get; private set; }
 
     /// <summary>Gets ürünün yaşam döngüsü durumu.</summary>
     /// <example>Draft.</example>
@@ -104,6 +116,8 @@ public sealed class Product : AggregateRoot<Guid>
     /// <param name="items">Oluşturulacak satılabilir kalemler.</param>
     /// <param name="groupCode">Grubun paylaşılan insan-okur kodu; opsiyonel.</param>
     /// <param name="slicerValue">Slicer bölmesinden gelen eksen değeri (ör. renk); opsiyonel.</param>
+    /// <param name="brandId">Ürünün bağlanacağı opsiyonel marka; markasız için null.</param>
+    /// <param name="description">Ürünün opsiyonel açıklama metni; boş bırakılmışsa null.</param>
     public static Result<Product> Create(
         Guid groupId,
         Guid categoryId,
@@ -114,7 +128,9 @@ public sealed class Product : AggregateRoot<Guid>
         IReadOnlyList<Variant>? variants,
         IReadOnlyList<ProductItemDraft> items,
         string? groupCode = null,
-        string? slicerValue = null)
+        string? slicerValue = null,
+        Guid? brandId = null,
+        string? description = null)
     {
         if (groupId == Guid.Empty)
         {
@@ -154,7 +170,9 @@ public sealed class Product : AggregateRoot<Guid>
             attributeValues ?? [],
             snapshots,
             string.IsNullOrWhiteSpace(groupCode) ? null : groupCode.Trim(),
-            string.IsNullOrWhiteSpace(slicerValue) ? null : slicerValue.Trim());
+            string.IsNullOrWhiteSpace(slicerValue) ? null : slicerValue.Trim(),
+            brandId,
+            string.IsNullOrWhiteSpace(description) ? null : description.Trim());
 
         foreach (var draft in items)
         {
@@ -176,11 +194,15 @@ public sealed class Product : AggregateRoot<Guid>
     /// <param name="name">Yeni ürün adı.</param>
     /// <param name="status">Yeni yaşam döngüsü durumu.</param>
     /// <param name="attributeValues">Güncellenecek özellik değerleri; null ise mevcut değerler korunur.</param>
+    /// <param name="brandId">Yeni opsiyonel marka; markayı kaldırmak için null.</param>
+    /// <param name="description">Yeni opsiyonel açıklama metni; boş bırakılmışsa null olarak kaydedilir.</param>
     public Result UpdateDetails(
         Guid categoryId,
         string name,
         ProductStatus status,
-        IReadOnlyList<AttributeValue>? attributeValues)
+        IReadOnlyList<AttributeValue>? attributeValues,
+        Guid? brandId = null,
+        string? description = null)
     {
         if (categoryId == Guid.Empty)
         {
@@ -195,6 +217,8 @@ public sealed class Product : AggregateRoot<Guid>
         CategoryId = categoryId;
         Name = name.Trim();
         Status = status;
+        BrandId = brandId;
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
         if (attributeValues is not null)
         {
             AttributeValues = attributeValues;

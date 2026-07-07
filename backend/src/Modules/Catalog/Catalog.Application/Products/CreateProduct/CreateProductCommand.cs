@@ -13,7 +13,9 @@ public sealed record CreateProductCommand(
     IReadOnlyList<string>? CodeInputs,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     IReadOnlyList<Variant>? Variants,
-    IReadOnlyList<CreateProductItemInput> Items);
+    IReadOnlyList<CreateProductItemInput> Items,
+    Guid? BrandId = null,
+    string? Description = null);
 
 /// <summary>Yeni ürün kalemi oluşturma girdisi.</summary>
 public sealed record CreateProductItemInput(

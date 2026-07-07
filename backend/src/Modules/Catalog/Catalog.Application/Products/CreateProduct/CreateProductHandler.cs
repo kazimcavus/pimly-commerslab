@@ -13,6 +13,7 @@ public sealed class CreateProductHandler(
     IValidator<CreateProductCommand> validator,
     IProductRepository products,
     ICategoryRepository categories,
+    IBrandRepository brands,
     IVariantRepository variantTypes,
     IAttributeRepository attributes,
     ISkuGeneratorService skuGenerator,
@@ -29,10 +30,33 @@ public sealed class CreateProductHandler(
             return Result.Failure<ProductDto>(validationResult.Error);
         }
 
-        var categoryExists = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
-        if (categoryExists is null)
+        var category = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
+        if (category is null)
         {
             return Result.Failure<ProductDto>(Error.NotFound("Category not found."));
+        }
+
+        var requiredAttributesResult = await ProductCreationSupport.EnsureRequiredCategoryAttributesAsync(
+            attributes,
+            category,
+            (command.AttributeValueInputs ?? []).Select(input => input.AttributeId).ToHashSet(),
+            cancellationToken);
+
+        if (requiredAttributesResult.IsFailure)
+        {
+            return Result.Failure<ProductDto>(requiredAttributesResult.Error);
+        }
+
+        string? brandName = null;
+        if (command.BrandId.HasValue)
+        {
+            var brand = await brands.GetByIdAsync(command.BrandId.Value, cancellationToken);
+            if (brand is null)
+            {
+                return Result.Failure<ProductDto>(Error.NotFound("Brand not found."));
+            }
+
+            brandName = brand.Name;
         }
 
         var resolvedTypesResult = await ProductCreationSupport.ResolveVariantsAsync(
@@ -109,7 +133,9 @@ public sealed class CreateProductHandler(
             plan.Variants,
             plan.Items.ToList(),
             plan.GroupCode,
-            plan.SlicerValue);
+            plan.SlicerValue,
+            command.BrandId,
+            command.Description);
 
         if (createResult.IsFailure)
         {
@@ -119,6 +145,6 @@ public sealed class CreateProductHandler(
         await products.AddAsync(createResult.Value, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(createResult.Value.ToDto());
+        return Result.Success(createResult.Value.ToDto(brandName));
     }
 }

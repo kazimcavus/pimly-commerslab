@@ -81,7 +81,8 @@ internal sealed class TrendyolMarketplaceProductsClient(
                         attribute.AttributeValueId?.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         attribute.AttributeValue,
                         attribute.CustomAttributeValue))
-                    .ToList()))
+                    .ToList(),
+                product.BrandId?.ToString(System.Globalization.CultureInfo.InvariantCulture)))
             .ToList();
 
         return Result.Success(new MarketplaceProductPage(
@@ -104,6 +105,7 @@ internal sealed class TrendyolMarketplaceProductsClient(
         string? Title,
         string? ProductMainId,
         string? Brand,
+        long? BrandId,
         string? StockCode,
         int Quantity,
         decimal ListPrice,

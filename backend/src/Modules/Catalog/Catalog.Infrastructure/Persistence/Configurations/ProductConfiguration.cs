@@ -1,3 +1,4 @@
+using Catalog.Domain.Brands;
 using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using Catalog.Infrastructure.Persistence;
@@ -24,7 +25,16 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasForeignKey(p => p.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(p => p.CategoryId);
+
+        builder.Property(p => p.BrandId).HasColumnName("brand_id");
+        builder.HasOne<Brand>()
+            .WithMany()
+            .HasForeignKey(p => p.BrandId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(p => p.BrandId);
+
         builder.Property(p => p.Name).HasColumnName("title").IsRequired().HasMaxLength(500);
+        builder.Property(p => p.Description).HasColumnName("description");
         builder.Ignore(p => p.DomainEvents);
 
         builder.Property(p => p.ModelCode)

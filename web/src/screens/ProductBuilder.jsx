@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Field, Input, Select, Banner } from '../ds'
+import { Button, Field, Input, Select, Banner, Textarea } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
@@ -18,12 +18,15 @@ function cartesian(arrays) {
 const comboKey = (combo) => combo.map((v) => v.id).join('|')
 const swatchOf = (v) => v.image_url ? { backgroundImage: `url(${v.image_url})`, backgroundSize: 'cover' } : { background: v.color || '#d3ccc1' }
 
-export function ProductBuilder({ onNavigate, onSaved }) {
+export function ProductBuilder({ onNavigate, onToast, onSaved }) {
   const [categories, setCategories] = useState([])
+  const [brands, setBrands] = useState([])
   const [types, setTypes] = useState([]) // [{id,name,selection_style,values:[]}]
   const [categoryId, setCategoryId] = useState('')
+  const [brandId, setBrandId] = useState('')
   const [groupCode, setGroupCode] = useState('')
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [status, setStatus] = useState('draft')
   const [mode, setMode] = useState('variant') // 'simple' | 'variant'
 
@@ -34,6 +37,14 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   const [chosen, setChosen] = useState([]) // [{ typeId, valueIds: [] }]
   const [rowData, setRowData] = useState({}) // { comboKey: {price,compareAt,stock,sku} }
   const [adding, setAdding] = useState(false)
+  // Ayraç değeri başına ürün adı: yalnızca elle değiştirilen girişler tutulur;
+  // boş bırakılanlar ürün adından + katalog ayarındaki konum tercihinden türetilir.
+  const [splitNames, setSplitNames] = useState({}) // { slicerValueId: text }
+  const [namePos, setNamePos] = useState('suffix') // 'suffix' | 'prefix' — backend'den yüklenir
+
+  // Tanımlı fiyat alanları (Tanımlar → Fiyatlar): ürün seviyesinde opsiyonel tutarlar.
+  const [priceDefs, setPriceDefs] = useState([]) // [{id,name,code}]
+  const [defPrices, setDefPrices] = useState({}) // { defId: text }
 
   // Tenant settings: SKU generator + barcode config.
   const [skuCfg, setSkuCfg] = useState({ enabled: false, segments: [] })
@@ -50,7 +61,10 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   const [error, setError] = useState('')
 
   useEffect(() => { api.listCategories().then(setCategories).catch(() => {}) }, [])
+  useEffect(() => { api.listBrands().then(setBrands).catch(() => {}) }, [])
   useEffect(() => { api.listAttributes().then(setAllAttrs).catch(() => {}) }, [])
+  useEffect(() => { api.listPriceDefinitions().then(setPriceDefs).catch(() => {}) }, [])
+  useEffect(() => { api.getCatalogSettings().then((s) => setNamePos(s.slicer_name_position || 'suffix')).catch(() => {}) }, [])
 
   // Load the selected category's assigned attributes + each attribute's values.
   useEffect(() => {
@@ -194,6 +208,29 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     await assignAttribute(a.id)
   }
 
+  // Tanımlı fiyat alanları: dolu girilenleri oluşturulan TÜM kalemlere yaz
+  // (ayraç birden çok ürün üretebilir). Yanıt kalem id'si içermiyorsa üründen
+  // çekilir. Kısmi hata ürünü geri almaz — true dönerse çağıran uyarı gösterir.
+  const writeDefPrices = async (created) => {
+    const filled = priceDefs
+      .filter((d) => (defPrices[d.id] || '').trim())
+      .map((d) => ({ id: d.id, amount: parseTrMoney(defPrices[d.id]) }))
+    if (filled.length === 0) return false
+    let warn = false
+    const itemIds = []
+    for (const p of created) {
+      let its = Array.isArray(p.items) && p.items.every((it) => it?.id) ? p.items : null
+      if (!its) {
+        its = (await api.getProduct(p.id).catch(() => null))?.items || []
+        if (its.length === 0) warn = true
+      }
+      for (const it of its) if (it?.id) itemIds.push(it.id)
+    }
+    const results = await Promise.allSettled(itemIds.flatMap((itemId) =>
+      filled.map((d) => api.putItemPrice(itemId, d.id, { amount: d.amount, currency: 'TRY' }))))
+    return warn || results.some((r) => r.status === 'rejected')
+  }
+
   const totalVariants = mode === 'variant' ? combos.length : 1
   // Slicer-aware summary: a slicer axis splits into one product per value.
   const usedTypes = activeChosen.map((c) => typeById[c.typeId])
@@ -201,13 +238,28 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   const productCount = slicerSel !== -1 && combos.length ? new Set(combos.map((c) => c[slicerSel]?.id)).size : 1
   const buildSummary = slicerSel !== -1 && combos.length ? `${productCount} ürün · ${totalVariants} varyant` : `${totalVariants} varyant`
 
+  // Ayraç türü + bu üründe seçili değerleri — "X bazında ad ve stok kodu" paneli için.
+  const slicerType = slicerSel !== -1 ? usedTypes[slicerSel] : null
+  // Ayraç değeri ürün adı: elle girilmişse o, değilse ürün adından türet (konum Ayarlar'dan).
+  const derivedSplitName = (label) => {
+    const t = title.trim()
+    if (!t) return label
+    return namePos === 'prefix' ? `${label} ${t}` : `${t} - ${label}`
+  }
+  const splitNameOf = (v) => splitNames[v.id] ?? derivedSplitName(v.label)
+  const setSplitName = (id, text) =>
+    setSplitNames((m) => { const n = { ...m }; if (text === '') delete n[id]; else n[id] = text; return n })
+  const slicerValues = slicerType
+    ? (slicerType.values || []).filter((v) => activeChosen[slicerSel].valueIds.includes(v.id))
+    : []
+
   const save = async () => {
     setError('')
     if (!title.trim()) { setError('Ürün başlığı gerekli.'); return }
     if (!categoryId) { setError('Kategori seç — her ürün bir kategoriye bağlı olmalı.'); return }
     if (!skuOn && !groupCode.trim()) { setError('Ürün kodu gerekli — elle girin ya da Ayarlar\'dan ürün kodu üreticisini açın.'); return }
-    const missingAttr = catAttrs.find((ca) => ca.required && !attrPick[ca.attribute_id])
-    if (missingAttr) { setError(`"${missingAttr.name}" özelliği zorunlu — bir değer seç.`); return }
+    const missingAttrs = catAttrs.filter((ca) => ca.required && !attrPick[ca.attribute_id])
+    if (missingAttrs.length > 0) { setError(`Zorunlu özellikleri doldurun: ${missingAttrs.map((a) => a.name).join(', ')}`); return }
 
     let product
     if (mode === 'simple') {
@@ -291,11 +343,13 @@ export function ProductBuilder({ onNavigate, onSaved }) {
     // slicer variant type (read from the DB) into one product per slicer value.
     const netProduct = {
       category_id: categoryId,
+      brand_id: brandId || null,
       model_code: skuOn ? '' : (product.product_sku || groupCode || '').trim(),
       code_inputs: skuOn
         ? skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
         : undefined,
       name: title.trim(),
+      description: description.trim() || null,
       status,
       attribute_values: (product.attribute_values || []).map((a) => ({ attribute_id: a.attribute_id, attribute_value_id: a.attribute_value_id })),
       variants: (product.variant_types || []).map((t) => ({ id: t.id, name: t.name, selection_style: t.selection_style })),
@@ -308,13 +362,27 @@ export function ProductBuilder({ onNavigate, onSaved }) {
         variant_values: (v.options || []).map((o) => ({ variant_id: o.type_id, variant_value_id: o.value_id })),
       })),
     }
+
+    // Ayraç değeri başına ürün adı — ekranda görünen ad aynen gönderilir
+    // (elle girilmiş ya da konum tercihine göre türetilmiş). Stok kodu backend'e bırakılır.
+    if (mode === 'variant' && slicerType) {
+      netProduct.splits = slicerValues.map((v) => ({
+        value_name: v.label,
+        name: splitNameOf(v).trim() || null,
+        model_code: null,
+      }))
+    }
+
     const payload = { group_id: crypto.randomUUID(), products: [netProduct] }
     setSaving(true)
     try {
       const res = await api.productsBatch(payload)
       const created = res.products || []
       const itemCount = created.reduce((a, p) => a + (p.items?.length || p.variants?.length || 0), 0)
+      // Tanımlı fiyat alanlarını navigasyondan ÖNCE yaz (onSaved ürün listesine götürür).
+      const priceWarn = await writeDefPrices(created)
       onSaved?.(`${created.length} ürün · ${itemCount} varyant oluşturuldu.`)
+      if (priceWarn) onToast?.({ tone: 'danger', title: 'Bazı fiyat alanları kaydedilemedi', body: 'Ürün oluşturuldu; eksik fiyatları ürün detayından girebilirsiniz.' })
     } catch (e) {
       setError(e.message || 'Kaydedilemedi')
     } finally {
@@ -343,7 +411,7 @@ export function ProductBuilder({ onNavigate, onSaved }) {
         <div className="bnode">
           <div className="bnode__head">
             <span className="ic">{I('folder')}</span>
-            <div><div className="bnode__title">1 · Temel bilgiler</div><div className="list-meta">Başlık, kategori, durum</div></div>
+            <div><div className="bnode__title">1 · Temel bilgiler</div><div className="list-meta">Başlık, kategori, açıklama, durum</div></div>
             <div style={{ marginLeft: 'auto' }}>
               <div className="seg">
                 <button data-active={status === 'draft'} onClick={() => setStatus('draft')}>Taslak</button>
@@ -360,11 +428,21 @@ export function ProductBuilder({ onNavigate, onSaved }) {
                 <Select placeholder="Seç…" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
                   options={categories.map((c) => ({ value: c.id, label: c.name }))} />
               </Field>
+              <Field label="Marka">
+                <Select placeholder="Seç…" value={brandId} onChange={(e) => setBrandId(e.target.value)}
+                  options={brands.map((b) => ({ value: b.id, label: b.name }))} />
+              </Field>
               {!skuOn && (
                 <Field label="Ürün kodu" required auto="Ayarlar'dan üretici açılırsa otomatik gelir">
                   <Input mono value={groupCode} onChange={(e) => setGroupCode(e.target.value)} />
                 </Field>
               )}
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <Field label="Ürün açıklaması" optional>
+                <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ürün açıklaması…" />
+              </Field>
             </div>
 
             {skuOn && (
@@ -405,19 +483,27 @@ export function ProductBuilder({ onNavigate, onSaved }) {
             </div>
 
             {mode === 'simple' ? (
-              <div className="fieldgrid">
-                <Field label="Barkod" required={!bcOn} auto={bcOn ? 'otomatik üretilir' : "elle gir ya da Ayarlar'dan üreticiyi aç"}><Input mono value={simple.barcode} onChange={(e) => setSimple((s) => ({ ...s, barcode: e.target.value }))} placeholder={bcOn ? 'otomatik' : 'zorunlu'} /></Field>
-                <Field label="Satış fiyatı"><Input mono suffix="₺" value={simple.price} onChange={(e) => setSimple((s) => ({ ...s, price: e.target.value }))} placeholder="0,00" /></Field>
-                <Field label="Karşılaştırma fiyatı"><Input mono suffix="₺" value={simple.compareAt} onChange={(e) => setSimple((s) => ({ ...s, compareAt: e.target.value }))} placeholder="—" /></Field>
-                <Field label="Stok"><Input mono value={simple.stock} onChange={(e) => setSimple((s) => ({ ...s, stock: e.target.value }))} /></Field>
-              </div>
+              <>
+                <div className="fieldgrid">
+                  <Field label="SKU" optional={!skuOn} auto={skuOn ? 'şablondan otomatik üretilir' : undefined}><Input mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik üretilir (Ayarlar → Ürün Kodu Oluşturucu)' : undefined} value={skuOn ? (productCodePreview || '') : simple.sku} onChange={(e) => { if (!skuOn) setSimple((s) => ({ ...s, sku: e.target.value })) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} /></Field>
+                  <Field label="Barkod" required={!bcOn} auto={bcOn ? 'otomatik üretilir' : "elle gir ya da Ayarlar'dan üreticiyi aç"}><Input mono value={simple.barcode} onChange={(e) => setSimple((s) => ({ ...s, barcode: e.target.value }))} placeholder={bcOn ? 'otomatik' : 'zorunlu'} /></Field>
+                  <Field label="Satış fiyatı" help="Kendi siteniz için genel fiyat. Pazaryeri (Trendyol, Hepsiburada…) fiyatlarını ürün detayından kanal bazında ekleyebilirsiniz."><Input mono suffix="₺" value={simple.price} onChange={(e) => setSimple((s) => ({ ...s, price: e.target.value }))} placeholder="0,00" /></Field>
+                  <Field label="Karşılaştırma fiyatı" help="İndirim öncesi üstü çizili gösterilecek fiyat."><Input mono suffix="₺" value={simple.compareAt} onChange={(e) => setSimple((s) => ({ ...s, compareAt: e.target.value }))} placeholder="—" /></Field>
+                  <Field label="Stok"><Input mono value={simple.stock} onChange={(e) => setSimple((s) => ({ ...s, stock: e.target.value }))} /></Field>
+                </div>
+                <DefPriceFields defs={priceDefs} values={defPrices} setValues={setDefPrices} />
+              </>
             ) : (
-              <VariantSection
-                types={types} chosen={chosen} typeById={typeById} availableToAdd={availableToAdd}
-                adding={adding} setAdding={setAdding} addType={addType} removeType={removeType} toggleValue={toggleValue} addValue={addValue}
-                combos={combos} activeChosen={activeChosen} rowOf={rowOf} setRow={setRow}
-                skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
-              />
+              <>
+                <VariantSection
+                  types={types} chosen={chosen} typeById={typeById} availableToAdd={availableToAdd}
+                  adding={adding} setAdding={setAdding} addType={addType} removeType={removeType} toggleValue={toggleValue} addValue={addValue}
+                  combos={combos} activeChosen={activeChosen} rowOf={rowOf} setRow={setRow}
+                  skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
+                  splitNameOf={splitNameOf} setSplitName={setSplitName}
+                />
+                <DefPriceFields defs={priceDefs} values={defPrices} setValues={setDefPrices} />
+              </>
             )}
           </div>
         </div>
@@ -452,6 +538,29 @@ export function ProductBuilder({ onNavigate, onSaved }) {
   )
 }
 
+// Tanımlı fiyat alanları (Tanımlar → Fiyatlar): ürün seviyesinde opsiyonel tutarlar;
+// kayıttan sonra oluşturulan TÜM kalemlere yazılır. Tanım yoksa hiçbir şey çizilmez.
+function DefPriceFields({ defs, values, setValues }) {
+  if (defs.length === 0) return null
+  return (
+    <div style={{ marginTop: 14, padding: 12, background: 'var(--surface-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+      <div className="hstack" style={{ gap: 6, marginBottom: 10 }}>{I('banknote', { size: 15 })}<span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>Diğer fiyat alanları</span><span className="list-meta">Tanımlar → Fiyatlar</span></div>
+      <div className="hstack" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        {defs.map((d) => (
+          <Field key={d.id} label={d.name}>
+            <Input mono suffix="₺" value={values[d.id] || ''} placeholder="—" style={{ width: 130 }}
+              onChange={(e) => setValues((m) => ({ ...m, [d.id]: e.target.value }))} />
+          </Field>
+        ))}
+      </div>
+      <div className="list-meta" style={{ marginTop: 10 }}>Bu alanlar tüm varyantlara uygulanır; varyant bazında ürün detayından değiştirebilirsiniz.</div>
+    </div>
+  )
+}
+
+// Ayraç değeri başına ad/stok kodu override'ları: ayraç her değeri ayrı ürüne
+// böldüğünden, oluşacak her ürünün adı ve stok kodu burada özelleştirilebilir.
+// Boş bırakılanları backend türetir; üretici açıkken stok kodu şablondan gelir.
 function CategoryAttributesSection({ categoryId, catAttrs, attrVals, attrPick, allAttrs, selectAttrVal, addAttrValue, assignAttribute, createAndAssignAttribute, onError }) {
   const [addingFor, setAddingFor] = useState(null) // attribute_id whose value-add input is open
   const [valDraft, setValDraft] = useState('')
@@ -520,7 +629,7 @@ function CategoryAttributesSection({ categoryId, catAttrs, attrVals, attrPick, a
   )
 }
 
-function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview }) {
+function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName }) {
   const [newValFor, setNewValFor] = useState(null)
   const [valDraft, setValDraft] = useState('')
   if (types.length === 0) {
@@ -624,6 +733,11 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
                   {slicerType.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(sv)} />}
                   <span style={{ fontWeight: 700, color: 'var(--text-strong)' }}>{sv.label}</span>
                   <span className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>{I('scissors', { size: 11 })} ayrı ürün</span>
+                  {/* Bu değere ait ürünün adı — ürün adından canlı türetilir, elle değiştirilebilir. */}
+                  <span className="enter-field" style={{ flex: 1, maxWidth: 380, marginLeft: 8 }}>
+                    <Input size="sm" value={splitNameOf(sv)} onChange={(e) => setSplitName(sv.id, e.target.value)}
+                      title="Bu ürünün adı — ürün adına göre otomatik güncellenir; elle değiştirebilirsin (konum tercihi: Ayarlar)" />
+                  </span>
                   <span className="list-meta" style={{ marginLeft: 'auto' }}>{rows.length} varyant</span>
                 </div>
                 {rows.map(renderRow)}
@@ -635,7 +749,7 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
         return (
           <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '4px 12px 10px', overflowX: 'auto' }}>
             <div className="variant-row variant-row__head" style={{ gridTemplateColumns: VAR_COLS, minWidth: 720 }}>
-              <span>Varyant</span><span>Satış ₺</span><span>Karşılaştırma</span><span>Stok</span><span>SKU</span><span>Barkod</span>
+              <span>Varyant</span><span title="Kendi siteniz için genel fiyat; pazaryeri fiyatları ürün detayından eklenir">Satış ₺ (genel)</span><span>Karşılaştırma</span><span>Stok</span><span>SKU</span><span>Barkod</span>
             </div>
             {body}
             <div className="list-meta" style={{ marginTop: 8 }}>{I('info', { size: 13 })} {slicerIdx !== -1 ? `"${used[slicerIdx].name}" ayraç — her değer ayrı ürün olarak kaydedilir. ` : ''}{bcOn ? 'Barkod otomatik üretilir (Ayarlar).' : 'Barkod zorunlu — elle gir ya da Ayarlar\'dan üreticiyi aç.'} {skuOn ? 'SKU şablona göre otomatik.' : 'SKU opsiyonel.'}</div>

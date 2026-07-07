@@ -11,6 +11,7 @@ public sealed class UpdateProductHandler(
     IValidator<UpdateProductCommand> validator,
     IProductRepository products,
     ICategoryRepository categories,
+    IBrandRepository brands,
     IAttributeRepository attributes,
     IUnitOfWork unitOfWork) : IUpdateProductHandler
 {
@@ -37,6 +38,35 @@ public sealed class UpdateProductHandler(
             return Result.Failure<ProductDto>(Error.NotFound("Category not found."));
         }
 
+        // Null girdi mevcut değerleri koruduğu için zorunluluk, güncelleme sonrası geçerli
+        // olacak öznitelik kümesi üzerinden denetlenir.
+        var providedAttributeIds = command.AttributeValueInputs is null
+            ? product.AttributeValues.Select(value => value.Attribute.Id).ToHashSet()
+            : command.AttributeValueInputs.Select(input => input.AttributeId).ToHashSet();
+
+        var requiredAttributesResult = await ProductCreationSupport.EnsureRequiredCategoryAttributesAsync(
+            attributes,
+            category,
+            providedAttributeIds,
+            cancellationToken);
+
+        if (requiredAttributesResult.IsFailure)
+        {
+            return Result.Failure<ProductDto>(requiredAttributesResult.Error);
+        }
+
+        string? brandName = null;
+        if (command.BrandId.HasValue)
+        {
+            var brand = await brands.GetByIdAsync(command.BrandId.Value, cancellationToken);
+            if (brand is null)
+            {
+                return Result.Failure<ProductDto>(Error.NotFound("Brand not found."));
+            }
+
+            brandName = brand.Name;
+        }
+
         var attributeValuesResult = await ProductCreationSupport.ResolveAttributeValuesAsync(
             attributes,
             command.AttributeValueInputs,
@@ -52,7 +82,9 @@ public sealed class UpdateProductHandler(
             command.CategoryId,
             command.Name,
             status,
-            command.AttributeValueInputs is null ? null : attributeValuesResult.Value);
+            command.AttributeValueInputs is null ? null : attributeValuesResult.Value,
+            command.BrandId,
+            command.Description);
 
         if (updateResult.IsFailure)
         {
@@ -62,6 +94,6 @@ public sealed class UpdateProductHandler(
         products.Update(product);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(product.ToDto());
+        return Result.Success(product.ToDto(brandName));
     }
 }

@@ -1,5 +1,6 @@
 using Catalog.Application.Products;
 using Catalog.Domain;
+using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using SharedKernel;
 using ProductAttribute = Catalog.Domain.Products.Attribute;
@@ -163,6 +164,35 @@ internal static class ProductCreationSupport
         }
 
         return Result.Success<IReadOnlyList<AttributeValue>>(resolved);
+    }
+
+    /// <summary>
+    /// Kategoride zorunlu olarak işaretlenen her özniteliğin, ürün düzeyindeki özellik değeri
+    /// girdilerinde karşılığının bulunduğunu doğrular (AttributeId üzerinden eşleşir).
+    /// </summary>
+    /// <param name="attributes">Hata mesajında öznitelik adını çözmek için kullanılan depo.</param>
+    /// <param name="category">Zorunluluk atamalarıyla birlikte yüklenmiş kategori.</param>
+    /// <param name="providedAttributeIds">Ürün düzeyinde değer verilen öznitelik tanımlayıcıları.</param>
+    /// <param name="cancellationToken">İptal belirteci.</param>
+    internal static async Task<Result> EnsureRequiredCategoryAttributesAsync(
+        IAttributeRepository attributes,
+        Category category,
+        IReadOnlySet<Guid> providedAttributeIds,
+        CancellationToken cancellationToken)
+    {
+        foreach (var assignment in category.Assignments.Where(assignment => assignment.Required))
+        {
+            if (providedAttributeIds.Contains(assignment.AttributeId))
+            {
+                continue;
+            }
+
+            var attribute = await attributes.GetByIdAsync(assignment.AttributeId, cancellationToken);
+            var attributeName = attribute?.Name ?? assignment.AttributeId.ToString();
+            return Result.Failure(Error.Validation($"Required attribute missing: {attributeName}"));
+        }
+
+        return Result.Success();
     }
 
     internal static async Task<Result> EnsurePlanIsUniqueAsync(

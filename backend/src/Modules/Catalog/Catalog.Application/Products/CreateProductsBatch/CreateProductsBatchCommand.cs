@@ -19,4 +19,6 @@ public sealed record CreateProductsBatchItem(
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     IReadOnlyList<Variant>? Variants,
     IReadOnlyList<CreateProduct.CreateProductItemInput> Items,
-    IReadOnlyList<ProductSplitOverride>? SplitOverrides = null);
+    IReadOnlyList<ProductSplitOverride>? SplitOverrides = null,
+    Guid? BrandId = null,
+    string? Description = null);

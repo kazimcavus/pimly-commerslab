@@ -3,6 +3,7 @@ using Catalog.Application.Options;
 using Catalog.Application.SkuGenerator;
 using Catalog.Domain;
 using Catalog.Domain.Products;
+using Catalog.Domain.Settings;
 using Catalog.Domain.SkuGenerator;
 using Catalog.Infrastructure.Barcodes;
 using Catalog.Infrastructure.Persistence;
@@ -36,15 +37,18 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CatalogDbContext>());
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IBrandRepository, BrandRepository>();
         services.AddScoped<IAttributeRepository, AttributeRepository>();
         services.AddScoped<IVariantRepository, VariantRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<IChannelPriceRepository, ChannelPriceRepository>();
+        services.AddScoped<IPriceDefinitionRepository, PriceDefinitionRepository>();
+        services.AddScoped<IItemPriceRepository, ItemPriceRepository>();
         services.AddScoped<IBarcodeSequenceRepository, BarcodeSequenceRepository>();
         services.AddScoped<IBarcodeAllocationRepository, BarcodeAllocationRepository>();
         services.AddScoped<IBarcodeAllocator, BarcodeAllocator>();
         services.AddScoped<ISkuGeneratorConfigRepository, SkuGeneratorConfigRepository>();
         services.AddScoped<ISkuCounterAllocator, SkuCounterAllocator>();
+        services.AddScoped<ICatalogSettingsRepository, CatalogSettingsRepository>();
 
         return services;
     }

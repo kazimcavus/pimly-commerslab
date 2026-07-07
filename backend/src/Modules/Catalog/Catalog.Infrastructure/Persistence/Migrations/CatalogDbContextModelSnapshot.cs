@@ -106,6 +106,35 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.ToTable("barcode_sequence", "catalog");
                 });
 
+            modelBuilder.Entity("Catalog.Domain.Brands.Brand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("brands", "catalog");
+                });
+
             modelBuilder.Entity("Catalog.Domain.Categories.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -138,6 +167,35 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.ToTable("categories", "catalog");
                 });
 
+            modelBuilder.Entity("Catalog.Domain.PriceDefinitions.PriceDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("price_definitions", "catalog");
+                });
+
             modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -150,9 +208,17 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("attribute_values");
 
+                    b.Property<Guid?>("BrandId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("brand_id");
+
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid")
                         .HasColumnName("category_id");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
                     b.Property<string>("GroupCode")
                         .HasMaxLength(200)
@@ -196,6 +262,8 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnName("variants");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
 
                     b.HasIndex("CategoryId");
 
@@ -333,16 +401,16 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.ToTable("product_items", "catalog");
                 });
 
-            modelBuilder.Entity("Catalog.Domain.Products.ProductItemChannelPrice", b =>
+            modelBuilder.Entity("Catalog.Domain.Products.ProductItemPrice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<decimal?>("CompareAtPrice")
+                    b.Property<decimal>("Amount")
                         .HasColumnType("numeric(14,2)")
-                        .HasColumnName("compare_at_price");
+                        .HasColumnName("amount");
 
                     b.Property<string>("Currency")
                         .IsRequired()
@@ -350,15 +418,9 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("currency");
 
-                    b.Property<string>("MarketplaceKey")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("marketplace_key");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("price");
+                    b.Property<Guid>("PriceDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("price_definition_id");
 
                     b.Property<Guid>("ProductItemId")
                         .HasColumnType("uuid")
@@ -374,12 +436,33 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductItemId", "MarketplaceKey")
+                    b.HasIndex("PriceDefinitionId");
+
+                    b.HasIndex("ProductItemId", "PriceDefinitionId")
                         .IsUnique();
 
-                    b.HasIndex("TenantId", "MarketplaceKey");
+                    b.ToTable("product_item_prices", "catalog");
+                });
 
-                    b.ToTable("product_item_channel_prices", "catalog");
+            modelBuilder.Entity("Catalog.Domain.Settings.CatalogSettings", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<string>("SlicerNamePosition")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("slicer_name_position");
+
+                    b.HasKey("TenantId", "Id");
+
+                    b.ToTable("catalog_settings", "catalog");
                 });
 
             modelBuilder.Entity("Catalog.Domain.SkuGenerator.SkuGeneratorConfig", b =>
@@ -542,6 +625,11 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Catalog.Domain.Products.Product", b =>
                 {
+                    b.HasOne("Catalog.Domain.Brands.Brand", null)
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Catalog.Domain.Categories.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
@@ -567,8 +655,14 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Catalog.Domain.Products.ProductItemChannelPrice", b =>
+            modelBuilder.Entity("Catalog.Domain.Products.ProductItemPrice", b =>
                 {
+                    b.HasOne("Catalog.Domain.PriceDefinitions.PriceDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("PriceDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Catalog.Domain.Products.ProductItem", null)
                         .WithMany()
                         .HasForeignKey("ProductItemId")

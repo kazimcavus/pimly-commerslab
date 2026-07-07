@@ -1,7 +1,10 @@
 using Catalog.Domain;
 using Catalog.Domain.Barcodes;
+using Catalog.Domain.Brands;
 using Catalog.Domain.Categories;
+using Catalog.Domain.PriceDefinitions;
 using Catalog.Domain.Products;
+using Catalog.Domain.Settings;
 using Catalog.Domain.SkuGenerator;
 using Catalog.Domain.Variants;
 using Catalog.Infrastructure.Tenancy;
@@ -51,6 +54,8 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
 
     public DbSet<Category> Categories => Set<Category>();
 
+    public DbSet<Brand> Brands => Set<Brand>();
+
     public DbSet<DomainAttribute> Attributes => Set<DomainAttribute>();
 
     public DbSet<CatalogVariant> Variants => Set<CatalogVariant>();
@@ -59,13 +64,17 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
 
     public DbSet<ProductItem> ProductItems => Set<ProductItem>();
 
-    public DbSet<ProductItemChannelPrice> ProductItemChannelPrices => Set<ProductItemChannelPrice>();
+    public DbSet<PriceDefinition> PriceDefinitions => Set<PriceDefinition>();
+
+    public DbSet<ProductItemPrice> ProductItemPrices => Set<ProductItemPrice>();
 
     public DbSet<BarcodeSequence> BarcodeSequences => Set<BarcodeSequence>();
 
     public DbSet<BarcodeAllocation> BarcodeAllocations => Set<BarcodeAllocation>();
 
     public DbSet<SkuGeneratorConfig> SkuGeneratorConfigs => Set<SkuGeneratorConfig>();
+
+    public DbSet<CatalogSettings> CatalogSettings => Set<CatalogSettings>();
 
     /// <inheritdoc/>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

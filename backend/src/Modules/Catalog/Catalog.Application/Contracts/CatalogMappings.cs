@@ -1,5 +1,7 @@
 using Catalog.Domain.Attributes;
+using Catalog.Domain.Brands;
 using Catalog.Domain.Categories;
+using Catalog.Domain.PriceDefinitions;
 using Catalog.Domain.Variants;
 using DomainAttribute = Catalog.Domain.Attributes.Attribute;
 using DomainAttributeValue = Catalog.Domain.Attributes.AttributeValue;
@@ -11,6 +13,12 @@ internal static class CatalogMappings
 {
     public static CategoryDto ToDto(this Category category) =>
         new(category.Id, category.Name, category.Code, category.ParentId);
+
+    public static BrandDto ToDto(this Brand brand) =>
+        new(brand.Id, brand.Name, brand.Code);
+
+    public static PriceDefinitionDto ToDto(this PriceDefinition definition) =>
+        new(definition.Id, definition.Name, definition.Code);
 
     public static AttributeDto ToDto(this DomainAttribute attribute) =>
         new(attribute.Id, attribute.Key.Value, attribute.Name);

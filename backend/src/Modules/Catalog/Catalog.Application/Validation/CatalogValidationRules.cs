@@ -10,6 +10,10 @@ internal static class CatalogValidationRules
 {
     public const int CategoryNameMaxLength = 500;
     public const int CategoryCodeMaxLength = 100;
+    public const int BrandNameMaxLength = 500;
+    public const int BrandCodeMaxLength = 100;
+    public const int PriceDefinitionNameMaxLength = 200;
+    public const int PriceDefinitionCodeMaxLength = 100;
     public const int AttributeKeyMaxLength = 200;
     public const int AttributeNameMaxLength = 500;
     public const int AttributeValueNameMaxLength = 200;
@@ -47,6 +51,36 @@ internal static class CatalogValidationRules
             .MaximumLength(CategoryCodeMaxLength)
             .WithErrorCode(ValidationErrorCodes.MaxLength)
             .WithMessage(ValidationMessages.MaxLength("Code", CategoryCodeMaxLength));
+
+    public static IRuleBuilderOptions<T, string> BrandName<T>(this IRuleBuilder<T, string> ruleBuilder) =>
+        ruleBuilder
+            .NotEmpty()
+            .WithErrorCode(ValidationErrorCodes.Required)
+            .WithMessage(ValidationMessages.Required("Name"))
+            .MaximumLength(BrandNameMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Name", BrandNameMaxLength));
+
+    public static IRuleBuilderOptions<T, string?> BrandCode<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
+        ruleBuilder
+            .MaximumLength(BrandCodeMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Code", BrandCodeMaxLength));
+
+    public static IRuleBuilderOptions<T, string> PriceDefinitionName<T>(this IRuleBuilder<T, string> ruleBuilder) =>
+        ruleBuilder
+            .NotEmpty()
+            .WithErrorCode(ValidationErrorCodes.Required)
+            .WithMessage(ValidationMessages.Required("Name"))
+            .MaximumLength(PriceDefinitionNameMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Name", PriceDefinitionNameMaxLength));
+
+    public static IRuleBuilderOptions<T, string?> PriceDefinitionCode<T>(this IRuleBuilder<T, string?> ruleBuilder) =>
+        ruleBuilder
+            .MaximumLength(PriceDefinitionCodeMaxLength)
+            .WithErrorCode(ValidationErrorCodes.MaxLength)
+            .WithMessage(ValidationMessages.MaxLength("Code", PriceDefinitionCodeMaxLength));
 
     public static IRuleBuilderOptions<T, string> AttributeKey<T>(this IRuleBuilder<T, string> ruleBuilder) =>
         ruleBuilder

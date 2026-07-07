@@ -11,6 +11,8 @@ const NAV = [
       { id: 'categories', label: 'Kategoriler', icon: 'folder-tree' },
       { id: 'attributes', label: 'Özellikler', icon: 'tags' },
       { id: 'variants', label: 'Varyantlar', icon: 'layers' },
+      { id: 'brands', label: 'Markalar', icon: 'award' },
+      { id: 'prices', label: 'Fiyatlar', icon: 'banknote' },
     ],
   },
   { id: 'catalog', title: 'Katalog', icon: 'package', items: [{ id: 'products', label: 'Ürünler', icon: 'package' }] },

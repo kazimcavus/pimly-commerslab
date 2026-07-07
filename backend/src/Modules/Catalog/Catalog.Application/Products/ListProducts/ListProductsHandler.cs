@@ -5,7 +5,7 @@ using SharedKernel;
 namespace Catalog.Application.Products.ListProducts;
 
 /// <summary>Ürünleri sayfalı biçimde listeleme işlemini gerçekleştirir.</summary>
-public sealed class ListProductsHandler(IProductRepository products) : IListProductsHandler
+public sealed class ListProductsHandler(IProductRepository products, IBrandRepository brands) : IListProductsHandler
 {
     /// <inheritdoc/>
     public async Task<Result<PagedResult<ProductDto>>> ExecuteAsync(
@@ -19,6 +19,13 @@ public sealed class ListProductsHandler(IProductRepository products) : IListProd
         }
 
         var page = await products.ListAsync(paginationResult.Value, cancellationToken);
-        return Result.Success(page.Map(product => product.ToDto()));
+
+        var brandNamesById = (await brands.ListAsync(cancellationToken))
+            .ToDictionary(brand => brand.Id, brand => brand.Name);
+
+        return Result.Success(page.Map(product => product.ToDto(
+            product.BrandId.HasValue && brandNamesById.TryGetValue(product.BrandId.Value, out var brandName)
+                ? brandName
+                : null)));
     }
 }

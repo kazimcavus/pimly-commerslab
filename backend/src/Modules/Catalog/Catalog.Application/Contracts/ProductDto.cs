@@ -16,7 +16,10 @@ public sealed record ProductDto(
     IReadOnlyList<ProductItemDto> Items,
     IReadOnlyList<ProductImageDto> Images,
     string? GroupCode = null,
-    string? SlicerValue = null);
+    string? SlicerValue = null,
+    Guid? BrandId = null,
+    string? BrandName = null,
+    string? Description = null);
 
 /// <summary>Ürün galerisi görseli API yanıt modeli.</summary>
 public sealed record ProductImageDto(

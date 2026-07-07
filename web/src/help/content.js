@@ -57,6 +57,33 @@ export const HELP = {
     ],
     tips: ['Tutarlı özellikler, müşterinin doğru ürünü bulmasını ve pazaryeri onayını kolaylaştırır.'],
   },
+  brands: {
+    eyebrow: 'Tanımlar',
+    title: 'Markalar',
+    lead: 'Markalar ürünlerinizin üreticisini/etiketini belirtir (örn. Nike, Adidas). Bir kez tanımlarsınız, ürün açarken ya da ürün detayında seçersiniz.',
+    video: 'Marka nasıl tanımlanır? (1 dk)',
+    steps: [
+      'Sağ üstten “Marka ekle” ile yeni bir marka oluşturun (örn. Nike).',
+      'İsterseniz markaya kısa bir kod verin (opsiyonel — örn. NKE).',
+      'Ürün oluştururken ya da ürün detayında markayı seçin.',
+    ],
+    tips: ['Tutarlı marka adları, pazaryeri eşlemesini ve raporlamayı kolaylaştırır.'],
+  },
+  prices: {
+    eyebrow: 'Tanımlar',
+    title: 'Fiyatlar',
+    lead: 'Fiyat alanları, aynı ürüne birden fazla fiyat girmenizi sağlar — örn. "TY Satış", "TY Karşılaştırma", "Toptan fiyat". Bir kez tanımlarsınız; ürün eklerken ve ürün detayında her varyanta bu alanlara tutar girersiniz. Genel (site) fiyatı ayrıdır ve her zaman vardır.',
+    video: 'Fiyat alanları nasıl çalışır? (1 dk)',
+    steps: [
+      'Sağ üstten "Fiyat tanımı ekle" ile yeni bir alan oluşturun (örn. "Toptan fiyat").',
+      'İsterseniz kısa bir kod verin (opsiyonel — örn. ty_sale).',
+      'Ürün oluştururken tutar girin (tüm varyantlara uygulanır) ya da ürün detayında varyant bazında düzenleyin.',
+    ],
+    tips: [
+      'Trendyol import\'u "TY Satış" ve "TY Karşılaştırma" alanlarını otomatik oluşturur ve çekilen fiyatlarla doldurur.',
+      'Bir tanımı silerseniz ürünlerde o alana girilmiş fiyatlar da silinir.',
+    ],
+  },
   variants: {
     eyebrow: 'Tanımlar',
     title: 'Varyantlar',
@@ -126,7 +153,7 @@ export const HELP = {
       'Özet ekranında sayıları kontrol edin; “Ürünlerime git” ile katalogda zenginleştirmeye başlayın.',
     ],
     tips: [
-      'Fiyatlar hem temel fiyat hem “Trendyol kanal fiyatı” olarak kaydedilir — ileride kanal bazlı farklı fiyat verebilirsiniz.',
+      'Fiyatlar hem genel (site) fiyatı hem de “TY Satış” / “TY Karşılaştırma” fiyat alanları olarak kaydedilir (bkz. Tanımlar → Fiyatlar).',
       'Aynı barkod/model kodu zaten kataloğunuzdaysa o ürün atlanır; iki kez içe aktarmak güvenlidir.',
     ],
   },

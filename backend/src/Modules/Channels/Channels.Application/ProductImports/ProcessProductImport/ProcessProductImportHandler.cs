@@ -29,7 +29,7 @@ namespace Channels.Application.ProductImports.ProcessProductImport;
 /// taksonomi cache'i (external_categories) senkronize edilmiş olmalı.</para>
 /// <para><b>Ana akış:</b> Ürün sayfaları çekilir → kategori attribute cache'i tazelenir →
 /// <see cref="ProductImportPlanner"/> ile plan kurulur → kategori zinciri + eksen/özellik tanımları +
-/// kanal eşlemeleri garanti edilir → grup başına ürün oluşturulur, kanal fiyatı ve görseller yazılır →
+/// kanal eşlemeleri garanti edilir → grup başına ürün oluşturulur, fiyat tanımı tutarları ve görseller yazılır →
 /// ilerleme periyodik kaydedilir → run tamamlanır.</para>
 /// <para><b>Hata durumları:</b> Altyapı hataları (bağlantı/istemci) run'ı Failed yapar; grup düzeyi
 /// hatalar run hatası olarak kaydedilip diğer gruplarla devam edilir (completed_with_errors).</para>
@@ -211,7 +211,7 @@ public sealed class ProcessProductImportHandler(
                 return;
             }
 
-            await WriteChannelPricesAsync(context, group, createResult.Value, run, cancellationToken);
+            await WriteItemPricesAsync(context, group, createResult.Value, run, cancellationToken);
             await AttachImagesAsync(group, createResult.Value, run, cancellationToken);
 
             progress.Imported++;
@@ -415,6 +415,18 @@ public sealed class ProcessProductImportHandler(
         ProductGroupPlan group,
         CancellationToken cancellationToken)
     {
+        // Marka: ada göre tenant içinde idempotent garanti edilir; başarısız olsa bile
+        // (marka opsiyonel olduğundan) import'u bozmaz, yalnızca ürün markasız kalır.
+        Guid? brandId = null;
+        if (!string.IsNullOrWhiteSpace(group.BrandName))
+        {
+            var brandResult = await catalog.EnsureBrandAsync(group.BrandName, group.BrandExternalId, cancellationToken);
+            if (brandResult.IsSuccess)
+            {
+                brandId = brandResult.Value;
+            }
+        }
+
         // Varyant eksenleri: global (tenant) düzeyde ada göre tekilleştirilir.
         var axisInputs = new List<CatalogVariantAxisInput>();
         var axisByExternalId = new Dictionary<string, EnsuredAxis>(StringComparer.Ordinal);
@@ -497,7 +509,8 @@ public sealed class ProcessProductImportHandler(
             itemInputs,
             group.SplitOverrides
                 .Select(split => new CatalogSplitInput(split.ValueName, split.StockCode, split.Title))
-                .ToList()));
+                .ToList(),
+            BrandId: brandId));
     }
 
     private async Task<Result<EnsuredAxis>> EnsureAxisAsync(
@@ -726,13 +739,21 @@ public sealed class ProcessProductImportHandler(
         }
     }
 
-    private async Task WriteChannelPricesAsync(
+    private async Task WriteItemPricesAsync(
         ImportContext context,
         ProductGroupPlan group,
         IReadOnlyList<CreatedProductSnapshot> createdProducts,
         ProductImportRun run,
         CancellationToken cancellationToken)
     {
+        var definitionsResult = await EnsurePriceDefinitionsAsync(context, cancellationToken);
+        if (definitionsResult.IsFailure)
+        {
+            run.AddError(group.ProductMainId, null, $"Fiyat tanımı oluşturulamadı: {definitionsResult.Error.Message}");
+            return;
+        }
+
+        var definitions = definitionsResult.Value;
         var itemsByBarcode = group.Items.ToDictionary(item => item.Barcode, StringComparer.OrdinalIgnoreCase);
 
         foreach (var product in createdProducts)
@@ -744,20 +765,77 @@ public sealed class ProcessProductImportHandler(
                     continue;
                 }
 
-                var priceResult = await catalog.UpsertItemChannelPriceAsync(
+                var saleResult = await catalog.UpsertItemPriceAsync(
                     itemId,
-                    context.Marketplace.Code,
+                    definitions.SaleDefinitionId,
                     plannedItem.Price,
-                    plannedItem.CompareAtPrice,
                     plannedItem.Currency,
                     cancellationToken);
 
-                if (priceResult.IsFailure)
+                if (saleResult.IsFailure)
                 {
-                    run.AddError(group.ProductMainId, barcode, $"Kanal fiyatı yazılamadı: {priceResult.Error.Message}");
+                    run.AddError(group.ProductMainId, barcode, $"Satış fiyatı yazılamadı: {saleResult.Error.Message}");
+                }
+
+                if (plannedItem.CompareAtPrice is not { } compareAtPrice)
+                {
+                    continue;
+                }
+
+                var compareResult = await catalog.UpsertItemPriceAsync(
+                    itemId,
+                    definitions.CompareDefinitionId,
+                    compareAtPrice,
+                    plannedItem.Currency,
+                    cancellationToken);
+
+                if (compareResult.IsFailure)
+                {
+                    run.AddError(
+                        group.ProductMainId,
+                        barcode,
+                        $"Karşılaştırma fiyatı yazılamadı: {compareResult.Error.Message}");
                 }
             }
         }
+    }
+
+    // Pazaryerine özgü satış/karşılaştırma fiyat tanımlarını run başına bir kez garanti eder
+    // (ör. TY → "TY Satış"/"ty_sale" ve "TY Karşılaştırma"/"ty_compare"); sonuç context'te önbelleklenir.
+    private async Task<Result<PriceDefinitionPair>> EnsurePriceDefinitionsAsync(
+        ImportContext context,
+        CancellationToken cancellationToken)
+    {
+        if (context.PriceDefinitions is not null)
+        {
+            return Result.Success(context.PriceDefinitions);
+        }
+
+        var namePrefix = context.Marketplace.Code.ToUpperInvariant();
+        var codePrefix = context.Marketplace.Code.ToLowerInvariant();
+
+        var saleResult = await catalog.EnsurePriceDefinitionAsync(
+            $"{namePrefix} Satış",
+            $"{codePrefix}_sale",
+            cancellationToken);
+
+        if (saleResult.IsFailure)
+        {
+            return Result.Failure<PriceDefinitionPair>(saleResult.Error);
+        }
+
+        var compareResult = await catalog.EnsurePriceDefinitionAsync(
+            $"{namePrefix} Karşılaştırma",
+            $"{codePrefix}_compare",
+            cancellationToken);
+
+        if (compareResult.IsFailure)
+        {
+            return Result.Failure<PriceDefinitionPair>(compareResult.Error);
+        }
+
+        context.PriceDefinitions = new PriceDefinitionPair(saleResult.Value, compareResult.Value);
+        return Result.Success(context.PriceDefinitions);
     }
 
     private async Task AttachImagesAsync(
@@ -867,7 +945,12 @@ public sealed class ProcessProductImportHandler(
         public Dictionary<(Guid CategoryId, AttributeMappingSourceType SourceType, Guid CatalogSourceId), Guid> AttributeMappingIds { get; } = [];
 
         public HashSet<(Guid MappingId, Guid CatalogValueId)> MappedValues { get; } = [];
+
+        // Run başına bir kez garanti edilen satış/karşılaştırma fiyat tanımları (lazy önbellek).
+        public PriceDefinitionPair? PriceDefinitions { get; set; }
     }
+
+    private sealed record PriceDefinitionPair(Guid SaleDefinitionId, Guid CompareDefinitionId);
 
     private sealed record CategorySetup(Guid CatalogCategoryId, string ExternalCategoryId);
 

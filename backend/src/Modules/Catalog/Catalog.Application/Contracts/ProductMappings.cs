@@ -9,7 +9,7 @@ namespace Catalog.Application.Contracts;
 /// <summary>Product domain modelleri ile DTO'lar arasında dönüşüm sağlar.</summary>
 internal static class ProductMappings
 {
-    public static ProductDto ToDto(this Product product) =>
+    public static ProductDto ToDto(this Product product, string? brandName = null) =>
         new(
             product.Id,
             product.GroupId,
@@ -22,7 +22,10 @@ internal static class ProductMappings
             product.Items.Select(item => item.ToDto(product.Id)).ToList(),
             product.Images.Select(image => image.ToDto()).ToList(),
             product.GroupCode,
-            product.SlicerValue);
+            product.SlicerValue,
+            product.BrandId,
+            brandName,
+            product.Description);
 
     public static ProductItemDto ToDto(this ProductItem item, Guid productId) =>
         new(

@@ -23,6 +23,15 @@ public interface ICatalogImportGateway
     /// <summary>Özelliği ada göre garanti eder (anahtar addan türetilir).</summary>
     Task<Result<Guid>> EnsureAttributeAsync(string name, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Markayı ada göre garanti eder (tenant içinde idempotent). Varsa mevcut markanın
+    /// kimliğini döndürür; yoksa <paramref name="externalId"/> kodunu taşıyan yeni marka oluşturur.
+    /// </summary>
+    /// <param name="name">Marka adı.</param>
+    /// <param name="externalId">Opsiyonel harici marka kimliği (ör. Trendyol brandId); marka koduna yazılır.</param>
+    /// <param name="cancellationToken">Iptal belirteci.</param>
+    Task<Result<Guid>> EnsureBrandAsync(string name, string? externalId, CancellationToken cancellationToken = default);
+
     /// <summary>Özellik değerini garanti eder.</summary>
     Task<Result<Guid>> EnsureAttributeValueAsync(
         Guid attributeId,
@@ -72,12 +81,23 @@ public interface ICatalogImportGateway
         bool isPrimary,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Kalem için pazaryeri kanal fiyatını yazar.</summary>
-    Task<Result> UpsertItemChannelPriceAsync(
+    /// <summary>
+    /// Fiyat tanımını ada göre garanti eder (tenant içinde idempotent). Varsa mevcut tanımın
+    /// kimliğini döndürür; yoksa <paramref name="code"/> makine kodunu taşıyan yeni tanım oluşturur.
+    /// </summary>
+    /// <param name="name">Fiyat tanımı adı (ör. "TY Satış").</param>
+    /// <param name="code">Opsiyonel makine kodu (ör. "ty_sale").</param>
+    /// <param name="cancellationToken">Iptal belirteci.</param>
+    Task<Result<Guid>> EnsurePriceDefinitionAsync(
+        string name,
+        string? code,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Kalemin belirtilen fiyat tanımındaki tutarını yazar (upsert).</summary>
+    Task<Result> UpsertItemPriceAsync(
         Guid productItemId,
-        string marketplaceKey,
-        decimal price,
-        decimal? compareAtPrice,
+        Guid priceDefinitionId,
+        decimal amount,
         string? currency,
         CancellationToken cancellationToken = default);
 }
@@ -96,7 +116,8 @@ public sealed record CatalogProductBatchInput(
     IReadOnlyList<CatalogSelectionInput> AttributeValues,
     IReadOnlyList<CatalogVariantAxisInput> Variants,
     IReadOnlyList<CatalogProductItemInput> Items,
-    IReadOnlyList<CatalogSplitInput>? Splits = null);
+    IReadOnlyList<CatalogSplitInput>? Splits = null,
+    Guid? BrandId = null);
 
 /// <summary>Slicer değerine özel ürün geçersiz kılmaları (kod/ad).</summary>
 /// <example>ValueName "Antrasit", ModelCode "25CSM02817GR52", Name "Antrasit Klasik Göbekli Halı".</example>

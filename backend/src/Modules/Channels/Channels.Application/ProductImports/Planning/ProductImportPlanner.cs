@@ -320,7 +320,9 @@ public static class ProductImportPlanner
             items,
             warnings,
             Error: null,
-            splits);
+            splits,
+            BrandName: string.IsNullOrWhiteSpace(first.Brand) ? null : first.Brand.Trim(),
+            BrandExternalId: string.IsNullOrWhiteSpace(first.BrandExternalId) ? null : first.BrandExternalId.Trim());
     }
 
     private sealed record PendingItem(
@@ -373,7 +375,9 @@ public sealed record ProductGroupPlan(
     IReadOnlyList<PlannedItem> Items,
     IReadOnlyList<string> Warnings,
     string? Error,
-    IReadOnlyList<PlannedSplit>? Splits = null)
+    IReadOnlyList<PlannedSplit>? Splits = null,
+    string? BrandName = null,
+    string? BrandExternalId = null)
 {
     /// <summary>Gets slicer değeri başına kod/başlık geçersiz kılmaları; boş olabilir.</summary>
     public IReadOnlyList<PlannedSplit> SplitOverrides => Splits ?? [];

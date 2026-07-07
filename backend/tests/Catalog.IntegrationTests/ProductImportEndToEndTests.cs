@@ -16,7 +16,7 @@ namespace Catalog.IntegrationTests;
 
 /// <summary>
 /// Trendyol import hattının uçtan uca testi: API üzerinden bağlantı + import kuyruğu,
-/// worker kompozisyonuyla işleme, HTTP üzerinden katalog/eşleme/fiyat doğrulamaları.
+/// worker kompozisyonuyla işleme, HTTP üzerinden katalog/eşleme/fiyat tanımı doğrulamaları.
 /// Stub client'lar kullanılır (Gömlek/Telefon sahte kataloğu).
 /// </summary>
 public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : CatalogIntegrationTestBase(fixture)
@@ -24,7 +24,7 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
     private readonly CatalogPostgresFixture _fixture = fixture;
 
     [SkippableFact]
-    public async Task TrendyolImport_EndToEnd_BuildsCatalogMappingsAndChannelPrices()
+    public async Task TrendyolImport_EndToEnd_BuildsCatalogMappingsAndItemPrices()
     {
         // --- 1. Bağlantı + taksonomi cache ---
         await UpsertConnectionAsync();
@@ -81,14 +81,20 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
         var gomlekAttrs = await ListAsync<CategoryAttributeResponse>($"/api/v1/catalog/categories/{gomlek.Id}/attributes");
         gomlekAttrs.Select(a => a.Name).Should().Contain("Kumaş");
 
-        // --- 5. Kanal fiyatı: satış 449.90, karşılaştırma 599.90 (ty anahtarıyla) ---
+        // --- 5. Fiyat tanımları: "TY Satış" 449.90, "TY Karşılaştırma" 599.90 ---
         var gomlekItem = products.SelectMany(p => p.Items).Single(i => i.Barcode == "8680000000011");
         gomlekItem.Price.Should().Be(449.90m);
         gomlekItem.CompareAtPrice.Should().Be(599.90m);
         gomlekItem.Stock.Should().Be(25);
 
-        var channelPrices = await ListAsync<ChannelPriceResponse>($"/api/v1/catalog/items/{gomlekItem.Id}/channel-prices");
-        channelPrices.Should().ContainSingle(p => p.MarketplaceKey == "ty" && p.Price == 449.90m);
+        var priceDefinitions = await ListAsync<PriceDefinitionResponse>(
+            "/api/v1/catalog/price-definitions?page=1&page_size=100");
+        priceDefinitions.Should().ContainSingle(d => d.Name == "TY Satış" && d.Code == "ty_sale");
+        priceDefinitions.Should().ContainSingle(d => d.Name == "TY Karşılaştırma" && d.Code == "ty_compare");
+
+        var itemPrices = await ListAsync<ItemPriceResponse>($"/api/v1/catalog/items/{gomlekItem.Id}/prices");
+        itemPrices.Should().ContainSingle(p => p.DefinitionName == "TY Satış" && p.Amount == 449.90m);
+        itemPrices.Should().ContainSingle(p => p.DefinitionName == "TY Karşılaştırma" && p.Amount == 599.90m);
 
         // --- 6. Kanal eşlemeleri gönderim fazına hazır ---
         var categoryMappings = await ListAsync<CategoryMappingResponse>(
@@ -271,7 +277,15 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
 
     private sealed record CategoryAttributeResponse(Guid AttributeId, string Name, bool Required);
 
-    private sealed record ChannelPriceResponse(Guid Id, string MarketplaceKey, decimal Price, decimal? CompareAtPrice);
+    private sealed record PriceDefinitionResponse(Guid Id, string Name, string? Code);
+
+    private sealed record ItemPriceResponse(
+        Guid Id,
+        Guid ProductItemId,
+        Guid PriceDefinitionId,
+        string DefinitionName,
+        decimal Amount,
+        string Currency);
 
     private sealed record CategoryMappingResponse(Guid Id, Guid CatalogCategoryId, string ExternalId);
 
