@@ -284,19 +284,20 @@ public static class ProductImportPlanner
                     colorLevelValues.Add(valueGroup.Key);
                 }
 
-                splits.Add(new PlannedSplit(valueGroup.Key, code, title));
+                var description = valueGroup
+                    .Select(p => string.IsNullOrWhiteSpace(p.Row.Description) ? null : p.Row.Description.Trim())
+                    .FirstOrDefault(d => d is not null);
+
+                splits.Add(new PlannedSplit(valueGroup.Key, code, title, description));
             }
         }
 
+        var slicerAttributeId = slicerAxis?.ExternalAttributeId;
         var items = new List<PlannedItem>();
         foreach (var pending in pendingItems)
         {
-            // Renk-düzeyi kod ürünün model kodu olacağı için kalem SKU'su boş kalır;
-            // kalem-düzeyi kodlarda eski kural: import genelinde tekilse SKU'ya yazılır.
             var isColorLevelCode = pending.SlicerValueName is not null && colorLevelValues.Contains(pending.SlicerValueName);
-            var sku = !isColorLevelCode && pending.StockCode is not null && usedSkus.Add(pending.StockCode)
-                ? pending.StockCode
-                : null;
+            var sku = DeriveItemSku(pending, isColorLevelCode, slicerAttributeId, usedSkus);
 
             items.Add(new PlannedItem(
                 pending.Row.Barcode,
@@ -322,8 +323,51 @@ public static class ProductImportPlanner
             Error: null,
             splits,
             BrandName: string.IsNullOrWhiteSpace(first.Brand) ? null : first.Brand.Trim(),
-            BrandExternalId: string.IsNullOrWhiteSpace(first.BrandExternalId) ? null : first.BrandExternalId.Trim());
+            BrandExternalId: string.IsNullOrWhiteSpace(first.BrandExternalId) ? null : first.BrandExternalId.Trim(),
+            Description: string.IsNullOrWhiteSpace(first.Description) ? null : first.Description.Trim());
     }
+
+    // Kalem SKU'su: kalem-düzeyi stok kodu import genelinde tekilse doğrudan kullanılır;
+    // renk-düzeyi kod (aynı kod tüm bedenlerde) slicer-dışı eksen değeriyle (ör. beden)
+    // benzersizleştirilir → "26AKR0009R05-80X150". Tekilleştirilemezse veya 200 karakteri
+    // aşarsa null döner (çakışan SKU asla yazılmaz).
+    private static string? DeriveItemSku(
+        PendingItem pending,
+        bool isColorLevelCode,
+        string? slicerAttributeId,
+        HashSet<string> usedSkus)
+    {
+        if (pending.StockCode is null)
+        {
+            return null;
+        }
+
+        if (!isColorLevelCode)
+        {
+            return usedSkus.Add(pending.StockCode) ? pending.StockCode : null;
+        }
+
+        var suffix = string.Concat(pending.Selections
+            .Where(selection => slicerAttributeId is null
+                || !string.Equals(selection.ExternalAttributeId, slicerAttributeId, StringComparison.Ordinal))
+            .Select(selection => NormalizeSkuToken(selection.ValueName)));
+
+        if (suffix.Length == 0)
+        {
+            return null;
+        }
+
+        var candidate = $"{pending.StockCode}-{suffix}";
+        if (candidate.Length > 200 || !usedSkus.Add(candidate))
+        {
+            return null;
+        }
+
+        return candidate;
+    }
+
+    private static string NormalizeSkuToken(string value) =>
+        new string(value.Where(ch => !char.IsWhiteSpace(ch)).ToArray()).ToUpperInvariant();
 
     private sealed record PendingItem(
         MarketplaceProductNode Row,
@@ -377,7 +421,8 @@ public sealed record ProductGroupPlan(
     string? Error,
     IReadOnlyList<PlannedSplit>? Splits = null,
     string? BrandName = null,
-    string? BrandExternalId = null)
+    string? BrandExternalId = null,
+    string? Description = null)
 {
     /// <summary>Gets slicer değeri başına kod/başlık geçersiz kılmaları; boş olabilir.</summary>
     public IReadOnlyList<PlannedSplit> SplitOverrides => Splits ?? [];
@@ -392,7 +437,8 @@ public sealed record ProductGroupPlan(
 public sealed record PlannedSplit(
     string ValueName,
     string? StockCode,
-    string? Title);
+    string? Title,
+    string? Description = null);
 
 /// <summary>Planlanan varyant ekseni.</summary>
 public sealed record PlannedVariantAxis(

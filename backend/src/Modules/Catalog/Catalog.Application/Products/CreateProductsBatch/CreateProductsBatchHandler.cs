@@ -134,7 +134,7 @@ public sealed class CreateProductsBatchHandler(
                     ProductMappings.ParseStatus(item.Status),
                     attributeValuesResult.Value,
                     item.BrandId,
-                    item.Description));
+                    plan.Description ?? item.Description)); // slicer (renk) açıklaması yoksa grup açıklaması
             }
         }
 

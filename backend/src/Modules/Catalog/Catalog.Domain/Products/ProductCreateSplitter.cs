@@ -11,18 +11,20 @@ public sealed record ProductCreatePlan(
     IReadOnlyList<Variant> Variants,
     IReadOnlyList<ProductItemDraft> Items,
     string? GroupCode = null,
-    string? SlicerValue = null);
+    string? SlicerValue = null,
+    string? Description = null);
 
 /// <summary>
 /// Slicer değerine özel plan geçersiz kılmaları. Pazaryeri import'unda renk ürününün
-/// gerçek stok kodu ve orijinal listeleme başlığı buradan taşınır; verilmeyen alanlar
-/// için türetilmiş varsayılanlar (temel kod + slug, "ad - değer") kullanılır.
+/// gerçek stok kodu, orijinal listeleme başlığı ve açıklaması buradan taşınır; verilmeyen
+/// alanlar için türetilmiş varsayılanlar (temel kod + slug, "ad - değer") kullanılır.
 /// </summary>
 /// <example>ValueName "Antrasit", ModelCode "25CSM02817GR52", Name "Antrasit Klasik Göbekli Halı".</example>
 public sealed record ProductSplitOverride(
     string ValueName,
     string? ModelCode,
-    string? Name);
+    string? Name,
+    string? Description = null);
 
 /// <summary>Slicer varyant türüne göre ürün oluşturma planlarını üretir.</summary>
 /// <example>
@@ -121,7 +123,8 @@ public static class ProductCreateSplitter
                 productVariants,
                 group.Items,
                 GroupCode: baseModelCode,
-                SlicerValue: group.Selection.Name));
+                SlicerValue: group.Selection.Name,
+                Description: string.IsNullOrWhiteSpace(groupOverride?.Description) ? null : groupOverride!.Description!.Trim()));
         }
 
         return Result.Success<IReadOnlyList<ProductCreatePlan>>(plans);

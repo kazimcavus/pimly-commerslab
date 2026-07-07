@@ -100,7 +100,7 @@ internal static class ProductEndpoints
     private static List<ProductSplitOverride>? MapSplitOverrides(
         IReadOnlyList<ProductSplitRequest>? splits) =>
         splits?
-            .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name))
+            .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name, split.Description))
             .ToList();
 
     private static List<CreateProductItemInput> MapItemInputs(

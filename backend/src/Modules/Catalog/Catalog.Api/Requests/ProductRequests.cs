@@ -41,7 +41,8 @@ public sealed record BatchProductRequest(
 public sealed record ProductSplitRequest(
     [property: JsonPropertyName("value_name")] string ValueName,
     [property: JsonPropertyName("model_code")] string? ModelCode = null,
-    string? Name = null);
+    string? Name = null,
+    string? Description = null);
 
 /// <summary>Ürün güncelleme isteği.</summary>
 public sealed record UpdateProductRequest(

@@ -508,9 +508,10 @@ public sealed class ProcessProductImportHandler(
             axisInputs,
             itemInputs,
             group.SplitOverrides
-                .Select(split => new CatalogSplitInput(split.ValueName, split.StockCode, split.Title))
+                .Select(split => new CatalogSplitInput(split.ValueName, split.StockCode, split.Title, split.Description))
                 .ToList(),
-            BrandId: brandId));
+            BrandId: brandId,
+            Description: group.Description));
     }
 
     private async Task<Result<EnsuredAxis>> EnsureAxisAsync(

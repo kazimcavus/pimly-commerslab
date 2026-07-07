@@ -314,7 +314,7 @@ internal sealed class CatalogImportGateway(
         CancellationToken cancellationToken = default)
     {
         var splitOverrides = input.Splits?
-            .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name))
+            .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name, split.Description))
             .ToList();
 
         var batchItem = new CreateProductsBatchItem(
@@ -352,7 +352,8 @@ internal sealed class CatalogImportGateway(
                         .ToList()))
                 .ToList(),
             splitOverrides,
-            input.BrandId);
+            input.BrandId,
+            input.Description);
 
         var createResult = await createProductsBatch.ExecuteAsync(
             new CreateProductsBatchCommand(input.GroupId, [batchItem]),
@@ -386,26 +387,13 @@ internal sealed class CatalogImportGateway(
         // Harici görsel medya deposuna alınır; ProductImage doğrulaması yalnızca /media/ URL kabul eder.
         var httpClient = httpClientFactory.CreateClient(nameof(CatalogImportGateway));
 
-        byte[] bytes;
-        try
+        var downloadResult = await DownloadImageWithRetryAsync(httpClient, sourceUrl, cancellationToken);
+        if (downloadResult.IsFailure)
         {
-            using var response = await httpClient.GetAsync(sourceUrl, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                return Result.Failure(Error.Failure($"Image download failed with status {(int)response.StatusCode}."));
-            }
-
-            if (response.Content.Headers.ContentLength is > MaxImageBytes)
-            {
-                return Result.Failure(Error.Validation("Image exceeds the allowed size."));
-            }
-
-            bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return Result.Failure(downloadResult.Error);
         }
-        catch (HttpRequestException ex)
-        {
-            return Result.Failure(Error.Failure($"Image download failed: {ex.Message}"));
-        }
+
+        var bytes = downloadResult.Value;
 
         if (bytes.LongLength > MaxImageBytes)
         {
@@ -433,6 +421,48 @@ internal sealed class CatalogImportGateway(
             cancellationToken);
 
         return addResult.IsFailure ? Result.Failure(addResult.Error) : Result.Success();
+    }
+
+    // Trendyol CDN'i ara sıra geçici DNS/timeout hatası verir; artan beklemeyle en fazla
+    // 3 deneme yapılır (1s, 3s). Kalıcı hata ve gerçek iptal aynen üst katmana taşınır.
+    private static readonly TimeSpan[] ImageRetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)];
+
+    private static async Task<Result<byte[]>> DownloadImageWithRetryAsync(
+        HttpClient httpClient,
+        string sourceUrl,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                using var response = await httpClient.GetAsync(sourceUrl, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return Result.Failure<byte[]>(Error.Failure($"Image download failed with status {(int)response.StatusCode}."));
+                }
+
+                if (response.Content.Headers.ContentLength is > MaxImageBytes)
+                {
+                    return Result.Failure<byte[]>(Error.Validation("Image exceeds the allowed size."));
+                }
+
+                return Result.Success(await response.Content.ReadAsByteArrayAsync(cancellationToken));
+            }
+            catch (Exception ex)
+                when ((ex is HttpRequestException or TaskCanceledException)
+                    && !cancellationToken.IsCancellationRequested
+                    && attempt < ImageRetryDelays.Length)
+            {
+                await Task.Delay(ImageRetryDelays[attempt], cancellationToken);
+            }
+            catch (Exception ex)
+                when ((ex is HttpRequestException or TaskCanceledException)
+                    && !cancellationToken.IsCancellationRequested)
+            {
+                return Result.Failure<byte[]>(Error.Failure($"Image download failed: {ex.Message}"));
+            }
+        }
     }
 
     /// <inheritdoc/>

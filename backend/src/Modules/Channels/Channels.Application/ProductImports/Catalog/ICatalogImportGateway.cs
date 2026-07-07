@@ -117,14 +117,16 @@ public sealed record CatalogProductBatchInput(
     IReadOnlyList<CatalogVariantAxisInput> Variants,
     IReadOnlyList<CatalogProductItemInput> Items,
     IReadOnlyList<CatalogSplitInput>? Splits = null,
-    Guid? BrandId = null);
+    Guid? BrandId = null,
+    string? Description = null);
 
-/// <summary>Slicer değerine özel ürün geçersiz kılmaları (kod/ad).</summary>
+/// <summary>Slicer değerine özel ürün geçersiz kılmaları (kod/ad/açıklama).</summary>
 /// <example>ValueName "Antrasit", ModelCode "25CSM02817GR52", Name "Antrasit Klasik Göbekli Halı".</example>
 public sealed record CatalogSplitInput(
     string ValueName,
     string? ModelCode,
-    string? Name);
+    string? Name,
+    string? Description = null);
 
 /// <summary>Ürünün kullandığı varyant ekseni.</summary>
 public sealed record CatalogVariantAxisInput(Guid VariantId, bool IsColor, bool Slicer);
