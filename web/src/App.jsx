@@ -107,7 +107,7 @@ export function App() {
 
   const screens = {
     dashboard: <Dashboard onNavigate={navigate} user={user} />,
-    products: <ProductList onNavigate={navigate} onToast={showToast} />,
+    products: <ProductList onNavigate={navigate} onToast={showToast} initialFilter={routeParam} />,
     product: <ProductDetail productId={routeParam} onNavigate={navigate} onToast={showToast} />,
     builder: <ProductBuilder onNavigate={navigate} onToast={showToast} onSaved={(msg) => { navigate('products'); showToast({ tone: 'success', title: 'Ürün kaydedildi', body: msg }) }} />,
     categories: <Categories onToast={showToast} />,

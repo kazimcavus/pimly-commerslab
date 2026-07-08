@@ -6,9 +6,12 @@ import { api } from '../lib/api.js'
 
 // Ürünler (.NET Catalog): her ürün bir "model" (group_id) altında yaşar. Slicer'lı
 // bir ürün renk renk ayrı ürünlere bölünür; burada aynı model_id altında gruplanır.
-export function ProductList({ onNavigate, onToast }) {
+const FILTERS = ['all', 'active', 'draft', 'archived']
+
+export function ProductList({ onNavigate, onToast, initialFilter }) {
   const [products, setProducts] = useState([])
-  const [filter, setFilter] = useState('all')
+  // Panel kartlarından gelen durum filtresiyle açılabilir (ör. "Aktif" kartı → active).
+  const [filter, setFilter] = useState(FILTERS.includes(initialFilter) ? initialFilter : 'all')
   const [q, setQ] = useState('')
 
   const load = () => { api.listProducts().then(setProducts).catch(() => {}) }

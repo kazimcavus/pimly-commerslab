@@ -10,8 +10,15 @@ const MEDIA = '/api/v1/media'
 
 let token = localStorage.getItem('pimly_token') || ''
 
+// Ürün listesi önbelleği (oturum-içi bellek). Panele/ürünlere geri dönünce
+// son başarılı listeyi anında gösterip arkada tazelemek için — boş-durum flash'ı olmasın.
+// Token değişince (giriş/çıkış, tenant değişimi) temizlenir ki başka tenant verisi sızmasın.
+let productsCache = null
+export function getCachedProducts() { return productsCache }
+
 export function setToken(t) {
   token = t || ''
+  productsCache = null
   if (t) localStorage.setItem('pimly_token', t)
   else localStorage.removeItem('pimly_token')
 }
@@ -158,7 +165,7 @@ export const api = {
 
   // --- products (Catalog modülü) ---
   productsBatch: (b) => req('POST', `${CATALOG}/products:batch`, { body: b }),
-  listProducts: () => reqList(`${CATALOG}/products`),
+  listProducts: async () => { const items = await reqList(`${CATALOG}/products`); productsCache = items; return items },
   getProduct: (id) => req('GET', `${CATALOG}/products/${id}`),
   updateProduct: (id, b) => req('PATCH', `${CATALOG}/products/${id}`, { body: b }),
   deleteProduct: (id) => req('DELETE', `${CATALOG}/products/${id}`),

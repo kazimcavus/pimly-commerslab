@@ -2,12 +2,21 @@ import React, { useEffect, useState } from 'react'
 import { Button, Badge, Card, CardHeader, CardBody } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
-import { api } from '../lib/api.js'
+import { api, getCachedProducts } from '../lib/api.js'
 
 // Hafif panel — .NET Catalog ürün verisinden anlık durum (grup yok).
 export function Dashboard({ onNavigate, user }) {
-  const [products, setProducts] = useState([])
-  useEffect(() => { api.listProducts().then(setProducts).catch(() => {}) }, [])
+  // Önbellekteki listeyle anında paint et; ilk açılışta (cache yoksa) skeleton göster.
+  const [products, setProducts] = useState(() => getCachedProducts() || [])
+  const [loading, setLoading] = useState(() => getCachedProducts() == null)
+  useEffect(() => {
+    let alive = true
+    api.listProducts()
+      .then((p) => { if (alive) setProducts(p) })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
 
   const count = (s) => products.filter((p) => p.status === s).length
   const total = products.length
@@ -15,12 +24,15 @@ export function Dashboard({ onNavigate, user }) {
   const drafts = count('draft')
   const archived = count('archived')
   const activePct = total ? Math.round((100 * active) / total) : 0
+  // İlk yüklemede henüz veri yokken kartlar ve tablo skeleton gösterir.
+  const showSkeleton = loading && total === 0
 
+  // Her kart ürünler sayfasını ilgili durum filtresiyle açar.
   const stats = [
-    { label: 'Ürün', icon: 'package', value: String(total), delta: 'canlı katalog' },
-    { label: 'Aktif', icon: 'circle-check-big', value: String(active), delta: `%${activePct} oran` },
-    { label: 'Taslak', icon: 'file-pen-line', value: String(drafts), delta: 'yayına hazırlanıyor' },
-    { label: 'Arşiv', icon: 'archive', value: String(archived), delta: '' },
+    { label: 'Ürün', icon: 'package', value: String(total), delta: 'canlı katalog', filter: 'all' },
+    { label: 'Aktif', icon: 'circle-check-big', value: String(active), delta: `%${activePct} oran`, filter: 'active' },
+    { label: 'Taslak', icon: 'file-pen-line', value: String(drafts), delta: 'yayına hazırlanıyor', filter: 'draft' },
+    { label: 'Arşiv', icon: 'archive', value: String(archived), delta: '', filter: 'archived' },
   ]
 
   return (
@@ -31,7 +43,7 @@ export function Dashboard({ onNavigate, user }) {
         sub={`${user?.name || 'Mağaza'} kataloğunun anlık durumu.`}
         actions={<Button variant="accent" iconLeft={I('plus')} onClick={() => onNavigate('builder')}>Ürün Oluştur</Button>}
       />
-      {total === 0 && (
+      {!loading && total === 0 && (
         <Card style={{ marginBottom: 16 }}>
           <CardBody>
             <div className="between" style={{ flexWrap: 'wrap', gap: 12 }}>
@@ -49,10 +61,19 @@ export function Dashboard({ onNavigate, user }) {
       )}
       <div className="stats">
         {stats.map((s) => (
-          <div className="stat" key={s.label}>
+          <div
+            className="stat stat--link"
+            key={s.label}
+            role="button"
+            tabIndex={0}
+            onClick={() => onNavigate('products', s.filter)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate('products', s.filter) } }}
+          >
             <div className="stat__label">{I(s.icon)}{s.label}</div>
-            <div className="stat__value">{s.value}</div>
-            <div className="stat__delta">{s.delta}</div>
+            {showSkeleton
+              ? <div className="skel" style={{ width: 56, height: 32, marginTop: 10 }}></div>
+              : <div className="stat__value">{s.value}</div>}
+            <div className="stat__delta">{showSkeleton ? '' : s.delta}</div>
           </div>
         ))}
       </div>
@@ -63,14 +84,21 @@ export function Dashboard({ onNavigate, user }) {
             <table className="pim-table">
               <thead><tr><th>Ürün</th><th>Model kodu</th><th>Durum</th></tr></thead>
               <tbody>
-                {products.slice(0, 6).map((p) => (
-                  <tr key={p.id} onClick={() => onNavigate('products')} style={{ cursor: 'pointer' }}>
+                {showSkeleton && [0, 1, 2, 3, 4, 5].map((i) => (
+                  <tr key={`skel-${i}`}>
+                    <td><div className="cellrow"><span className="thumb skel"></span><span className="skel" style={{ width: 220, height: 13 }}></span></div></td>
+                    <td><span className="skel" style={{ width: 90, height: 13 }}></span></td>
+                    <td><span className="skel" style={{ width: 52, height: 20, borderRadius: 999 }}></span></td>
+                  </tr>
+                ))}
+                {!showSkeleton && products.slice(0, 6).map((p) => (
+                  <tr key={p.id} onClick={() => onNavigate('product', p.id)} style={{ cursor: 'pointer' }}>
                     <td><div className="cellrow"><span className="thumb">{I('package')}</span><span className="pim-td-strong">{p.name || '(başlıksız)'}</span></div></td>
                     <td className="pim-td-mono">{p.model_code}</td>
                     <td><StatusBadge status={p.status} /></td>
                   </tr>
                 ))}
-                {total === 0 && (
+                {!loading && total === 0 && (
                   <tr><td colSpan={3} className="subtle" style={{ padding: 18 }}>Henüz ürün yok — “Ürün Oluştur” ile başla.</td></tr>
                 )}
               </tbody>

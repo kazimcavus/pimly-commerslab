@@ -78,6 +78,14 @@
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
 .stat { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
 .stat:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.stat--link { cursor: pointer; }
+.stat--link:hover { border-color: var(--border-default); }
+.stat--link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Skeleton — ilk yükleme sırasında boş-durum flash'ı yerine yumuşak placeholder. */
+.skel { display: inline-block; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-subtle) 37%, var(--surface-sunken) 63%); background-size: 400% 100%; animation: pim-skel 1.4s ease infinite; }
+@keyframes pim-skel { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
 .stat__label { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 7px; }
 .stat__label svg { width: 15px; height: 15px; color: var(--accent); }
 .stat__value { font-size: 32px; font-weight: 700; color: var(--text-strong); letter-spacing: -.025em; margin-top: 10px; font-variant-numeric: tabular-nums; }
