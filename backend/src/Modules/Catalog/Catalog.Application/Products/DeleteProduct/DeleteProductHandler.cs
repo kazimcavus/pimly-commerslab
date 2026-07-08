@@ -19,6 +19,7 @@ public sealed class DeleteProductHandler(
             return Result.Failure(Error.NotFound("Product not found."));
         }
 
+        product.PrepareForRemoval();
         products.Remove(product);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Success();

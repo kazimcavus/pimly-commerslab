@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Catalog.Domain;
 using Catalog.Domain.Barcodes;
 using Catalog.Domain.Brands;
@@ -7,8 +8,10 @@ using Catalog.Domain.Products;
 using Catalog.Domain.Settings;
 using Catalog.Domain.SkuGenerator;
 using Catalog.Domain.Variants;
+using Catalog.Infrastructure.Outbox;
 using Catalog.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel;
 using SharedKernel.Tenancy;
 using CatalogVariant = Catalog.Domain.Variants.Variant;
 using DomainAttribute = Catalog.Domain.Attributes.Attribute;
@@ -76,15 +79,57 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
 
     public DbSet<CatalogSettings> CatalogSettings => Set<CatalogSettings>();
 
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
     /// <inheritdoc/>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         if (_tenantContext is not null)
         {
             this.StampTenantId(CurrentTenantId);
+            WriteOutboxMessages(CurrentTenantId);
         }
 
         return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    // Integration olaylarını aggregate değişiklikleriyle aynı transaction'da outbox'a yazar.
+    private void WriteOutboxMessages(Guid tenantId)
+    {
+        var holders = ChangeTracker.Entries()
+            .Select(entry => entry.Entity)
+            .OfType<IHasDomainEvents>()
+            .Where(holder => holder.DomainEvents.Count > 0)
+            .ToList();
+
+        if (holders.Count == 0)
+        {
+            return;
+        }
+
+        var messages = new List<OutboxMessage>();
+        foreach (var holder in holders)
+        {
+            foreach (var integrationEvent in holder.DomainEvents.OfType<IntegrationEvent>())
+            {
+                var eventType = integrationEvent.GetType();
+                messages.Add(new OutboxMessage
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    Type = eventType.FullName!,
+                    Payload = JsonSerializer.Serialize(integrationEvent, eventType, OutboxSerialization.JsonOptions),
+                    OccurredOnUtc = integrationEvent.OccurredOnUtc,
+                });
+            }
+
+            holder.ClearDomainEvents();
+        }
+
+        if (messages.Count > 0)
+        {
+            OutboxMessages.AddRange(messages);
+        }
     }
 
     /// <inheritdoc/>

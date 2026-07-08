@@ -183,6 +183,7 @@ public sealed class Product : AggregateRoot<Guid>
             }
 
             product._items.Add(itemResult.Value);
+            product.RaiseDomainEvent(new ProductItemCreated(itemResult.Value.Id, product.Id));
         }
 
         product.RaiseDomainEvent(new ProductCreated(product.Id, product.ModelCode.Value));
@@ -305,6 +306,7 @@ public sealed class Product : AggregateRoot<Guid>
         }
 
         _items.Add(itemResult.Value);
+        RaiseDomainEvent(new ProductItemCreated(itemResult.Value.Id, Id));
         return Result.Success(itemResult.Value);
     }
 
@@ -332,7 +334,20 @@ public sealed class Product : AggregateRoot<Guid>
         }
 
         _items.Remove(item);
+        RaiseDomainEvent(new ProductItemDeleted(item.Id, Id));
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Ürün tümüyle silinmeden önce çağrılır; mevcut her satılabilir kalem için
+    /// <see cref="ProductItemDeleted"/> yayımlar. Böylece uydu context'ler fiyat/stok kayıtlarını temizler.
+    /// </summary>
+    public void PrepareForRemoval()
+    {
+        foreach (var item in _items)
+        {
+            RaiseDomainEvent(new ProductItemDeleted(item.Id, Id));
+        }
     }
 
     /// <summary>Ürün galerisine yeni görsel ekler; birincil görsel seçilirse diğerleri sıfırlanır.</summary>

@@ -3,7 +3,7 @@ namespace SharedKernel;
 /// <summary>
 /// Benzersiz kimlik ve alan olayları içeren temel varlık sınıfı.
 /// </summary>
-public abstract class Entity<TId>
+public abstract class Entity<TId> : IHasDomainEvents
     where TId : notnull
 {
     private readonly List<DomainEvent> _domainEvents = [];
