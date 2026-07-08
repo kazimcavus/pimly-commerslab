@@ -6,6 +6,7 @@ const BASE = import.meta.env.VITE_API_BASE || ''
 const IDENTITY = '/api/v1/identity'
 const CATALOG = '/api/v1/catalog'
 const CHANNELS = '/api/v1/channels'
+const MEDIA = '/api/v1/media'
 
 let token = localStorage.getItem('pimly_token') || ''
 
@@ -182,4 +183,16 @@ export const api = {
   // --- Katalog ayarları (tenant tercihleri) ---
   getCatalogSettings: () => req('GET', `${CATALOG}/settings`),
   putCatalogSettings: (b) => req('PUT', `${CATALOG}/settings`, { body: b }),
+
+  // --- Medya + ürün görselleri ---
+  // Dosyayı medya deposuna yükler → { url, content_type, size_bytes }. url = /media/{tenant}/…
+  uploadImage: (file, purpose = 'product') => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return req('POST', `${MEDIA}/uploads?purpose=${purpose}`, { form: fd })
+  },
+  // Yüklenmiş bir /media url'ini ürüne görsel olarak ekler.
+  addProductImage: (productId, b) => req('POST', `${CATALOG}/products/${productId}/images`, { body: b }),
+  updateProductImage: (imageId, b) => req('PATCH', `${CATALOG}/product-images/${imageId}`, { body: b }),
+  deleteProductImage: (imageId) => req('DELETE', `${CATALOG}/product-images/${imageId}`),
 }

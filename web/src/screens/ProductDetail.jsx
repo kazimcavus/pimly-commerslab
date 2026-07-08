@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Field, Input, Select, Banner, Textarea } from '../ds'
+import { Button, Field, Input, Select, Banner, RichText } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { isHtmlEmpty } from '../lib/sanitizeHtml.js'
+import { PhotoGallery } from './parts/PhotoGallery.jsx'
+import { AttributeEditor } from './parts/AttributeEditor.jsx'
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Aktif' },
@@ -31,18 +34,33 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   const [newItem, setNewItem] = useState({ selections: {}, sku: '', barcode: '', price: '', stock: '0' })
   const [savingNew, setSavingNew] = useState(false)
 
-  // Tanımlı fiyatlar: itemId -> ItemPriceDto[]; panel tek kalem için açılır.
+  // Tanımlı fiyatlar: itemId -> ItemPriceDto[]; matris hücrelerinde düzenlenir.
   const [priceDefs, setPriceDefs] = useState([])      // fiyat tanımları (Tanımlar → Fiyatlar)
   const [itemPrices, setItemPrices] = useState({})
-  const [pricesOpenFor, setPricesOpenFor] = useState(null)
   const [dpEdits, setDpEdits] = useState({})          // `${itemId}:${defId}` -> tutar metni
-  const [priceBusy, setPriceBusy] = useState(false)
-  const [baseEdit, setBaseEdit] = useState(null)      // { compareAt } — panel içi karşılaştırma fiyatı düzenleme
+
+  // Düzenlenebilir ürün alanları: marka, kategori, özellik seçimleri.
+  const [brandId, setBrandId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [brands, setBrands] = useState([])
+  const [categories, setCategories] = useState([])
+  const [attrPick, setAttrPick] = useState({})        // { attribute_id: value_id }
+  const [initialAttrPick, setInitialAttrPick] = useState({})
+  const [catAttrsMeta, setCatAttrsMeta] = useState([])
+
+  useEffect(() => { api.listBrands().then(setBrands).catch(() => {}) }, [])
+  useEffect(() => { api.listCategories().then(setCategories).catch(() => {}) }, [])
 
   const load = () => {
     if (!productId) return
     api.getProduct(productId)
-      .then((p) => { setProduct(p); setName(p.name || ''); setDescription(p.description || ''); setStatus(p.status || 'active'); setItemEdits({}) })
+      .then((p) => {
+        setProduct(p); setName(p.name || ''); setDescription(p.description || ''); setStatus(p.status || 'active')
+        setBrandId(p.brand_id || ''); setCategoryId(p.category_id || '')
+        const pick = Object.fromEntries((p.attribute_values || []).map((av) => [av.attribute?.id, av.id]))
+        setAttrPick(pick); setInitialAttrPick(pick)
+        setItemEdits({})
+      })
       .catch((e) => setError(e.message || 'Ürün yüklenemedi'))
   }
   useEffect(() => { load() }, [productId])
@@ -69,18 +87,7 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
     return () => { alive = false }
   }, [product])
 
-  const reloadItemPrices = async (itemId) => {
-    const rows = await api.listItemPrices(itemId).catch(() => [])
-    setItemPrices((cur) => ({ ...cur, [itemId]: Array.isArray(rows) ? rows : rows?.items || [] }))
-  }
-
-  const togglePrices = (it) => {
-    setDpEdits({})
-    setBaseEdit(null)
-    setPricesOpenFor((cur) => (cur === it.id ? null : it.id))
-  }
-
-  // Tanım satırı: kayıtlı değer varsa onun metni, yoksa boş; düzenleme metni öncelikli.
+  // Tanım hücresi: kayıtlı değer varsa metni, yoksa boş; düzenleme metni öncelikli.
   const dpValOf = (itemId, def, stored) => {
     const e = dpEdits[`${itemId}:${def.id}`]
     return e !== undefined ? e : fmtMoney(stored?.amount ?? null)
@@ -90,71 +97,8 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   const dpDirty = (itemId, def, stored) => {
     const e = dpEdits[`${itemId}:${def.id}`]
     if (e === undefined) return false
-    if (!e.trim()) return false // boş bırakılan alan kaydedilmez; silme çöp kutusundan
+    if (!e.trim()) return !!stored // boş bırakıldı: değer varsa "kirli" (kaydet → sil)
     return !stored || parseMoney(e) !== Number(stored.amount)
-  }
-
-  const saveItemPrice = async (itemId, def, amountText) => {
-    const amount = parseMoney(amountText)
-    if (!Number.isFinite(amount) || amount < 0) { onToast?.({ tone: 'danger', title: 'Geçersiz fiyat' }); return }
-    setPriceBusy(true)
-    try {
-      await api.putItemPrice(itemId, def.id, { amount, currency: 'TRY' })
-      onToast?.({ tone: 'success', title: `${def.name} fiyatı kaydedildi` })
-      await reloadItemPrices(itemId)
-      setDpEdits((cur) => { const next = { ...cur }; delete next[`${itemId}:${def.id}`]; return next })
-    } catch (e) {
-      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message })
-    } finally {
-      setPriceBusy(false)
-    }
-  }
-
-  const removeItemPrice = async (itemId, def) => {
-    if (!confirm(`"${def.name}" için girilen fiyat silinecek. Emin misin?`)) return
-    try {
-      await api.deleteItemPrice(itemId, def.id)
-      onToast?.({ tone: 'success', title: `${def.name} fiyatı silindi` })
-      await reloadItemPrices(itemId)
-      setDpEdits((cur) => { const next = { ...cur }; delete next[`${itemId}:${def.id}`]; return next })
-    } catch (e) {
-      onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message })
-    }
-  }
-
-  // Panelden genel fiyatı kaydet: satırdaki fiyat/stok düzenlemesi ile panel
-  // karşılaştırma fiyatını TEK updateItem çağrısında birleştirir (yarış olmasın).
-  const saveBasePrice = async (it) => {
-    const e = editOf(it)
-    const price = parseMoney(e.price)
-    const stock = Math.max(0, Math.trunc(Number(e.stock)))
-    const compareAt = baseEdit != null
-      ? (String(baseEdit.compareAt || '').trim() ? parseMoney(baseEdit.compareAt) : null)
-      : (it.compare_at_price ?? null)
-    if (!Number.isFinite(price) || price < 0) { onToast?.({ tone: 'danger', title: 'Geçersiz fiyat' }); return }
-    if (compareAt != null && (!Number.isFinite(compareAt) || compareAt < 0)) { onToast?.({ tone: 'danger', title: 'Geçersiz karşılaştırma fiyatı' }); return }
-    setPriceBusy(true)
-    try {
-      await api.updateItem(it.id, {
-        gtin: it.gtin,
-        mpn: it.mpn,
-        axis_value_entry_id: it.axis_value_entry_id,
-        axis_value: it.axis_value,
-        price,
-        compare_at_price: compareAt,
-        stock: Number.isFinite(stock) ? stock : it.stock,
-        // null → koru (sku/barkod bu panelden değişmez).
-        sku: null,
-        barcode: null,
-      })
-      onToast?.({ tone: 'success', title: 'Genel fiyat güncellendi' })
-      setBaseEdit(null)
-      load()
-    } catch (e2) {
-      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e2.message })
-    } finally {
-      setPriceBusy(false)
-    }
   }
 
   if (error) {
@@ -168,19 +112,33 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   if (!product) return <div className="page"><div className="list-meta">Yükleniyor…</div></div>
 
   const images = product.images || []
-  const dirtyProduct = name !== product.name || status !== product.status || description !== (product.description || '')
+  const attrValues = Object.entries(attrPick)
+    .filter(([, v]) => v)
+    .map(([attribute_id, attribute_value_id]) => ({ attribute_id, attribute_value_id }))
+  const attrDirty = JSON.stringify(attrPick) !== JSON.stringify(initialAttrPick)
+  const dirtyProduct = name !== product.name || status !== product.status
+    || description !== (product.description || '')
+    || (brandId || '') !== (product.brand_id || '')
+    || (categoryId || '') !== (product.category_id || '')
+    || attrDirty
 
   const saveProduct = async () => {
+    // Zorunlu özellik istemci-tarafı kontrolü (backend de doğrular).
+    const missing = catAttrsMeta.filter((ca) => ca.required && !attrPick[ca.attribute_id]).map((ca) => ca.name)
+    if (missing.length) { onToast?.({ tone: 'danger', title: 'Zorunlu özellikler eksik', body: missing.join(', ') }); return }
     setSavingProduct(true)
     try {
       const updated = await api.updateProduct(product.id, {
-        category_id: product.category_id,
-        brand_id: product.brand_id,
+        category_id: categoryId || product.category_id,
+        brand_id: brandId || null,
         name: name.trim(),
-        description: description.trim() || null,
+        description: isHtmlEmpty(description) ? null : description,
         status,
+        attribute_values: attrValues,
       })
       setProduct(updated)
+      const pick = Object.fromEntries((updated.attribute_values || []).map((av) => [av.attribute?.id, av.id]))
+      setAttrPick(pick); setInitialAttrPick(pick)
       onToast?.({ tone: 'success', title: 'Ürün güncellendi' })
     } catch (e) {
       onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message })
@@ -190,39 +148,52 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   }
 
   const editOf = (it) => itemEdits[it.id] || {
-    sku: it.sku || '', barcode: it.barcode || '', price: String(it.price ?? ''), stock: String(it.stock ?? 0),
+    sku: it.sku || '', barcode: it.barcode || '',
+    price: fmtMoney(it.price), compareAt: fmtMoney(it.compare_at_price), stock: String(it.stock ?? 0),
   }
   const setEdit = (it, patch) => setItemEdits((cur) => ({ ...cur, [it.id]: { ...editOf(it), ...patch } }))
+  const anyDefDirty = (it) => priceDefs.some((def) =>
+    dpDirty(it.id, def, (itemPrices[it.id] || []).find((p) => p.price_definition_id === def.id)))
   const itemDirty = (it) => {
     const e = itemEdits[it.id]
-    if (!e) return false
-    return Number(e.price) !== Number(it.price)
-      || Number(e.stock) !== Number(it.stock)
+    if (!e) return anyDefDirty(it)
+    return parseMoney(e.price) !== Number(it.price)
+      || (e.compareAt.trim() ? parseMoney(e.compareAt) : null) !== (it.compare_at_price ?? null)
+      || Math.trunc(Number(e.stock)) !== Number(it.stock)
       || e.sku !== (it.sku || '')
       || e.barcode !== (it.barcode || '')
+      || anyDefDirty(it)
   }
 
-  const saveItem = async (it) => {
+  // Satırın tüm değişikliklerini tek seferde kaydeder: genel fiyat/karş/stok/sku/barkod
+  // (updateItem) + değişen tanımlı fiyatlar (putItemPrice / boşsa deleteItemPrice).
+  const saveItemRow = async (it) => {
     const e = editOf(it)
-    const price = Number(String(e.price).replace(',', '.'))
+    const price = parseMoney(e.price)
+    const compareAt = e.compareAt.trim() ? parseMoney(e.compareAt) : null
     const stock = Math.max(0, Math.trunc(Number(e.stock)))
     if (!Number.isFinite(price) || price < 0) { onToast?.({ tone: 'danger', title: 'Geçersiz fiyat' }); return }
+    if (compareAt != null && (!Number.isFinite(compareAt) || compareAt < 0)) { onToast?.({ tone: 'danger', title: 'Geçersiz karşılaştırma fiyatı' }); return }
     if (!Number.isFinite(stock)) { onToast?.({ tone: 'danger', title: 'Geçersiz stok' }); return }
     if (!e.barcode.trim()) { onToast?.({ tone: 'danger', title: 'Barkod boş olamaz' }); return }
     setSavingItem(it.id)
     try {
       await api.updateItem(it.id, {
-        gtin: it.gtin,
-        mpn: it.mpn,
-        axis_value_entry_id: it.axis_value_entry_id,
-        axis_value: it.axis_value,
-        price,
-        compare_at_price: it.compare_at_price,
-        stock,
-        // null → koru; sku'da boş metin SKU'yu temizler.
+        gtin: it.gtin, mpn: it.mpn, axis_value_entry_id: it.axis_value_entry_id, axis_value: it.axis_value,
+        price, compare_at_price: compareAt, stock,
         sku: e.sku !== (it.sku || '') ? e.sku : null,
         barcode: e.barcode !== (it.barcode || '') ? e.barcode.trim() : null,
       })
+      const ips = itemPrices[it.id] || []
+      for (const def of priceDefs) {
+        const key = `${it.id}:${def.id}`
+        if (!(key in dpEdits)) continue
+        const txt = dpEdits[key]
+        const stored = ips.find((p) => p.price_definition_id === def.id)
+        if (!txt.trim()) { if (stored) await api.deleteItemPrice(it.id, def.id) }
+        else await api.putItemPrice(it.id, def.id, { amount: parseMoney(txt), currency: 'TRY' })
+      }
+      setDpEdits((cur) => { const n = { ...cur }; priceDefs.forEach((def) => delete n[`${it.id}:${def.id}`]); return n })
       onToast?.({ tone: 'success', title: 'Varyant güncellendi' })
       load()
     } catch (e2) {
@@ -309,24 +280,23 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
       />
 
       {/* Görseller */}
-      {images.length > 0 && (
-        <div className="hstack" style={{ gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          {images.slice(0, 8).map((im) => (
-            <a key={im.id} href={im.url} target="_blank" rel="noreferrer"
-              style={{ width: 72, height: 72, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-              <img src={im.url} alt={im.alt_text || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </a>
-          ))}
-          {images.length > 8 && <span className="list-meta">+{images.length - 8} görsel</span>}
+      <div className="bnode" style={{ marginBottom: 14 }}>
+        <div className="bnode__head">
+          <span className="ic">{I('image')}</span>
+          <div><div className="bnode__title">Görseller</div>
+            <div className="list-meta">{images.length} görsel · yükle, kapak yap, sırala, sil.</div></div>
         </div>
-      )}
+        <div className="bnode__body">
+          <PhotoGallery images={images} productId={product.id} onChanged={load} onToast={onToast} />
+        </div>
+      </div>
 
       {/* Ürün bilgileri */}
       <div className="bnode">
         <div className="bnode__head">
           <span className="ic">{I('package')}</span>
           <div><div className="bnode__title">Ürün bilgileri</div>
-            <div className="list-meta">Ad, açıklama ve durum düzenlenebilir; kodlar import ile eşlendiği için sabittir.</div></div>
+            <div className="list-meta">Ad, marka, kategori, açıklama, durum ve özellikler düzenlenebilir; kodlar import ile eşlendiği için sabittir.</div></div>
           <div className="hstack" style={{ marginLeft: 'auto' }}>
             <Button variant="primary" size="sm" loading={savingProduct} disabled={!dirtyProduct} onClick={saveProduct}>Kaydet</Button>
           </div>
@@ -336,32 +306,31 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
             <Field label="Ürün adı" required>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="Durum">
-              <Select value={status} onChange={(e) => setStatus(e.target.value)} options={STATUS_OPTIONS} />
+            <Field label="Kategori" required>
+              <Select value={categoryId} placeholder="Seç…" onChange={(e) => setCategoryId(e.target.value)}
+                options={categories.map((c) => ({ value: c.id, label: c.name }))} />
             </Field>
             <Field label="Marka">
-              <Input value={product.brand_name || '—'} readOnly />
+              <Select value={brandId} placeholder="Seç…" onChange={(e) => setBrandId(e.target.value)}
+                options={brands.map((b) => ({ value: b.id, label: b.name }))} />
+            </Field>
+            <Field label="Durum">
+              <Select value={status} onChange={(e) => setStatus(e.target.value)} options={STATUS_OPTIONS} />
             </Field>
           </div>
 
           <div style={{ marginTop: 14 }}>
             <Field label="Ürün açıklaması" optional>
-              <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ürün açıklaması…" />
+              <RichText value={description} onChange={setDescription} placeholder="Ürün açıklaması…"
+                uploadImage={(f) => api.uploadImage(f, 'product').then((r) => r.url)} />
             </Field>
           </div>
 
-          {(product.attribute_values || []).length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div className="list-meta" style={{ fontWeight: 600, marginBottom: 8 }}>Özellikler</div>
-              <div className="hstack" style={{ gap: 6, flexWrap: 'wrap' }}>
-                {product.attribute_values.map((av) => (
-                  <span key={av.id} className="pim-badge" style={{ background: 'var(--surface-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    <span className="list-meta">{av.attribute?.name}:</span>&nbsp;{av.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          <div style={{ marginTop: 16 }}>
+            <div className="list-meta" style={{ fontWeight: 600, marginBottom: 8 }}>Özellikler</div>
+            <AttributeEditor categoryId={categoryId} pick={attrPick} onPickChange={setAttrPick}
+              onAttrsLoaded={setCatAttrsMeta} onToast={onToast} />
+          </div>
         </div>
       </div>
 
@@ -370,14 +339,14 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
         <div className="bnode__head">
           <span className="ic">{I('layers')}</span>
           <div><div className="bnode__title">Varyantlar</div>
-            <div className="list-meta">{items.length} kalem · SKU, barkod, genel fiyat ve stok satırda düzenlenir · {I('coins', { size: 12 })} ile tanımlı fiyat alanları (TY Satış, Toptan…) yönetilir.</div></div>
+            <div className="list-meta">{items.length} kalem · <b>Fiyatlar</b> ve <b>Stok & Kodlar</b> sekmelerinden düzenlenir; her fiyat tanımı bir sütundur.</div></div>
           <div className="hstack" style={{ marginLeft: 'auto' }}>
             <Button variant="secondary" size="sm" iconLeft={I('plus')} onClick={openAdd} disabled={adding}>Varyant Ekle</Button>
           </div>
         </div>
-        <div className="bnode__body" style={{ padding: 0 }}>
+        <div className="bnode__body">
           {adding && (
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-subtle)' }}>
+            <div style={{ padding: '14px 16px', marginBottom: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--surface-subtle)' }}>
               <div className="list-meta" style={{ fontWeight: 600, marginBottom: 10 }}>Yeni varyant</div>
               <div className="hstack" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 {(product.variants || []).map((t) => (
@@ -406,131 +375,55 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
               </div>
             </div>
           )}
-          <div className="pim-table-wrap" style={{ border: 0, borderRadius: 0 }}>
-            <table className="pim-table">
-              <thead><tr>
-                <th>Varyant</th><th>SKU</th><th>Barkod</th>
-                <th style={{ width: 130 }} title="Kendi siteniz için geçerli varsayılan satış fiyatı">Genel fiyat</th>
-                <th style={{ width: 90 }}>Stok</th><th style={{ width: 120 }}></th>
-              </tr></thead>
-              <tbody>
+          {items.length === 0 ? (
+            <div className="subtle" style={{ padding: 8 }}>Bu üründe kalem kalmadı.</div>
+          ) : (() => {
+            const label = (it) => (it.variant_values || []).map((v) => v.name).join(' / ') || '—'
+            const rowActions = (it) => (
+              <span className="rowact" style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                {itemDirty(it) && (
+                  <button className="tb__icon" title="Kaydet" style={{ width: 28, height: 28, color: 'var(--accent, #4f7d5a)' }}
+                    disabled={savingItem === it.id} onClick={() => saveItemRow(it)}>{I('check')}</button>
+                )}
+                <button className="tb__icon" title="Varyantı sil" style={{ width: 28, height: 28 }} onClick={() => removeItem(it)}>{I('trash-2')}</button>
+              </span>
+            )
+            const priceCount = 2 + priceDefs.length
+            const cols = `minmax(150px,1.3fr) 0.7fr 1.05fr 1.05fr 2px repeat(${priceCount}, minmax(120px,1fr)) 64px`
+            const minW = 150 + 76 + 150 + 150 + 2 + priceCount * 128 + 64
+            return (
+              <div className="hscroll">
+                <div className="pmatrix__row pmatrix__head" style={{ gridTemplateColumns: cols, minWidth: minW }}>
+                  <span>Varyant</span><span>Stok</span><span>Barkod</span><span>SKU</span>
+                  <span className="pmatrix__vrule" />
+                  <span className="pmatrix__pcol">Genel Satış ₺</span><span className="pmatrix__pcol">Genel Karş. ₺</span>
+                  {priceDefs.map((d) => <span key={d.id} className="pmatrix__pcol">{d.name}</span>)}
+                  <span />
+                </div>
                 {items.map((it) => {
-                  const e = editOf(it)
-                  const ips = itemPrices[it.id] || []
-                  const open = pricesOpenFor === it.id
+                  const e = editOf(it); const ips = itemPrices[it.id] || []
                   return (
-                    <React.Fragment key={it.id}>
-                    <tr>
-                      <td className="pim-td-strong">{(it.variant_values || []).map((v) => v.name).join(' / ') || '—'}</td>
-                      <td>
-                        <input className="pim-input pim-input--sm mono" style={{ width: 150 }} placeholder="—"
-                          value={e.sku} onChange={(ev) => setEdit(it, { sku: ev.target.value })} />
-                      </td>
-                      <td>
-                        <input className="pim-input pim-input--sm mono" style={{ width: 140 }}
-                          value={e.barcode} onChange={(ev) => setEdit(it, { barcode: ev.target.value })} />
-                      </td>
-                      <td>
-                        <input className="pim-input pim-input--sm mono" style={{ width: 100 }}
-                          value={e.price} onChange={(ev) => setEdit(it, { price: ev.target.value })} />
-                        {ips.length > 0 && (
-                          <div className="list-meta" style={{ marginTop: 3, cursor: 'pointer' }} onClick={() => togglePrices(it)}
-                            title="Fiyat alanlarını görüntüle">
-                            {ips.map((p) => p.definition_name).join(' · ')}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <input className="pim-input pim-input--sm mono" style={{ width: 70 }}
-                          value={e.stock} onChange={(ev) => setEdit(it, { stock: ev.target.value })} />
-                      </td>
-                      <td>
-                        <div className="rowact" style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                          {itemDirty(it) && (
-                            <button className="tb__icon" title="Kaydet" style={{ width: 28, height: 28, color: 'var(--accent, #4f7d5a)' }}
-                              disabled={savingItem === it.id} onClick={() => saveItem(it)}>{I('check')}</button>
-                          )}
-                          <button className="tb__icon" title="Fiyat alanları (TY Satış, Toptan…)"
-                            style={{ width: 28, height: 28, color: open ? 'var(--accent, #4f7d5a)' : undefined }}
-                            onClick={() => togglePrices(it)}>{I('coins')}</button>
-                          <button className="tb__icon" title="Varyantı sil" style={{ width: 28, height: 28 }}
-                            onClick={() => removeItem(it)}>{I('trash-2')}</button>
-                        </div>
-                      </td>
-                    </tr>
-                    {open && (
-                      <tr>
-                        <td colSpan={6} style={{ padding: 0, background: 'var(--surface-subtle)' }}>
-                          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
-                            <div className="list-meta" style={{ fontWeight: 600, marginBottom: 4 }}>
-                              Fiyatlar — {(it.variant_values || []).map((v) => v.name).join(' / ') || it.barcode}
-                            </div>
-                            <div className="list-meta" style={{ marginBottom: 12 }}>
-                              Genel fiyat kendi siteniz için geçerlidir. Diğer fiyat alanlarını Tanımlar → Fiyatlar&apos;dan yönetebilirsiniz;
-                              Trendyol&apos;dan import edilen ürünlerde TY Satış ve TY Karşılaştırma otomatik dolar.
-                            </div>
-
-                            {/* Genel (kendi siteniz) fiyatı */}
-                            <div className="hstack" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-                              <span className="pim-badge" style={{ minWidth: 110, justifyContent: 'center' }}>Genel (site)</span>
-                              <Field label="Satış fiyatı">
-                                <Input size="sm" mono suffix="₺" value={e.price} style={{ width: 110 }}
-                                  onChange={(ev) => setEdit(it, { price: ev.target.value })} />
-                              </Field>
-                              <Field label="Karşılaştırma (üstü çizili)">
-                                <Input size="sm" mono suffix="₺" style={{ width: 110 }} placeholder="—"
-                                  value={baseEdit ? baseEdit.compareAt : fmtMoney(it.compare_at_price)}
-                                  onChange={(ev) => setBaseEdit({ compareAt: ev.target.value })} />
-                              </Field>
-                              {(baseEdit != null || itemDirty(it)) && (
-                                <Button variant="primary" size="sm" loading={priceBusy || savingItem === it.id}
-                                  onClick={() => saveBasePrice(it)}>
-                                  Kaydet
-                                </Button>
-                              )}
-                            </div>
-
-                            {/* Tanımlı fiyat alanları — tanım başına bir satır */}
-                            {priceDefs.map((def) => {
-                              const stored = ips.find((p) => p.price_definition_id === def.id)
-                              return (
-                                <div key={def.id} className="hstack" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 8 }}>
-                                  <span className="pim-badge pim-badge--count" style={{ minWidth: 110, justifyContent: 'center' }}>
-                                    {def.name}
-                                  </span>
-                                  <Field label="Fiyat">
-                                    <Input size="sm" mono suffix="₺" value={dpValOf(it.id, def, stored)} style={{ width: 110 }} placeholder="—"
-                                      onChange={(ev) => setDpEdit(it.id, def, ev.target.value)} />
-                                  </Field>
-                                  {dpDirty(it.id, def, stored) && (
-                                    <Button variant="primary" size="sm" loading={priceBusy}
-                                      onClick={() => saveItemPrice(it.id, def, dpValOf(it.id, def, stored))}>Kaydet</Button>
-                                  )}
-                                  {stored && (
-                                    <button className="tb__icon" title={`${def.name} — değeri sil`}
-                                      style={{ width: 28, height: 28 }} onClick={() => removeItemPrice(it.id, def)}>{I('trash-2')}</button>
-                                  )}
-                                </div>
-                              )
-                            })}
-                            {priceDefs.length === 0 && (
-                              <div className="list-meta" style={{ marginTop: 4 }}>
-                                Henüz fiyat tanımı yok — Tanımlar → Fiyatlar&apos;dan ekleyin.
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    </React.Fragment>
+                    <div className="pmatrix__row" key={it.id} style={{ gridTemplateColumns: cols, minWidth: minW }}>
+                      <span className="pim-td-strong">{label(it)}</span>
+                      <Input size="sm" mono value={e.stock} onChange={(ev) => setEdit(it, { stock: ev.target.value })} />
+                      <Input size="sm" mono value={e.barcode} onChange={(ev) => setEdit(it, { barcode: ev.target.value })} />
+                      <Input size="sm" mono value={e.sku} onChange={(ev) => setEdit(it, { sku: ev.target.value })} placeholder="—" />
+                      <span className="pmatrix__vrule" />
+                      <Input size="sm" mono suffix="₺" value={e.price} onChange={(ev) => setEdit(it, { price: ev.target.value })} placeholder="0,00" />
+                      <Input size="sm" mono suffix="₺" value={e.compareAt} onChange={(ev) => setEdit(it, { compareAt: ev.target.value })} placeholder="—" />
+                      {priceDefs.map((def) => {
+                        const stored = ips.find((p) => p.price_definition_id === def.id)
+                        return <Input key={def.id} size="sm" mono suffix="₺" value={dpValOf(it.id, def, stored)} placeholder="—"
+                          onChange={(ev) => setDpEdit(it.id, def, ev.target.value)} />
+                      })}
+                      {rowActions(it)}
+                    </div>
                   )
                 })}
-                {items.length === 0 && (
-                  <tr><td colSpan={6} className="subtle" style={{ padding: 18 }}>Bu üründe kalem kalmadı.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                <div className="list-meta" style={{ marginTop: 10 }}>{I('info', { size: 13 })} Önde ürün bilgisi, ayraçtan sonra fiyatlar. Genel fiyat kendi siteniz içindir; Trendyol import'unda TY sütunları otomatik dolar. Değişiklikleri satır sonundaki ✓ ile kaydedin.</div>
+              </div>
+            )
+          })()}
         </div>
       </div>
 

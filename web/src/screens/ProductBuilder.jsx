@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Field, Input, Select, Banner, Textarea } from '../ds'
+import { Button, Field, Input, Select, Banner, RichText } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
 import { parseTrMoney } from '../lib/format.js'
+import { isHtmlEmpty } from '../lib/sanitizeHtml.js'
 import { loadSkuConfig } from '../lib/skuConfig.js'
 
 const MAX_TYPES = 3
@@ -42,9 +43,10 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
   const [splitNames, setSplitNames] = useState({}) // { slicerValueId: text }
   const [namePos, setNamePos] = useState('suffix') // 'suffix' | 'prefix' — backend'den yüklenir
 
-  // Tanımlı fiyat alanları (Tanımlar → Fiyatlar): ürün seviyesinde opsiyonel tutarlar.
+  // Tanımlı fiyat alanları (Tanımlar → Fiyatlar).
   const [priceDefs, setPriceDefs] = useState([]) // [{id,name,code}]
-  const [defPrices, setDefPrices] = useState({}) // { defId: text }
+  const [defPrices, setDefPrices] = useState({}) // basit ürün: { defId: text }
+  const [itemDefPrices, setItemDefPrices] = useState({}) // varyant: { comboKey: { defId: text } }
 
   // Tenant settings: SKU generator + barcode config.
   const [skuCfg, setSkuCfg] = useState({ enabled: false, segments: [] })
@@ -211,25 +213,59 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
   // Tanımlı fiyat alanları: dolu girilenleri oluşturulan TÜM kalemlere yaz
   // (ayraç birden çok ürün üretebilir). Yanıt kalem id'si içermiyorsa üründen
   // çekilir. Kısmi hata ürünü geri almaz — true dönerse çağıran uyarı gösterir.
-  const writeDefPrices = async (created) => {
-    const filled = priceDefs
-      .filter((d) => (defPrices[d.id] || '').trim())
-      .map((d) => ({ id: d.id, amount: parseTrMoney(defPrices[d.id]) }))
-    if (filled.length === 0) return false
+  // itemDefPrices/defPrices (varyant başına ya da basit ürün) yalnızca create sonrası
+  // yazılabilir (kalem id'si gerekir). Oluşan kalemleri BARKOD ile eşleyip her tanım
+  // için putItemPrice çağırır. Kısmi hata ürünü geri almaz; true dönerse uyarı gösterilir.
+  const writeItemDefPrices = async (created, byBarcode) => {
+    if (!byBarcode || Object.keys(byBarcode).length === 0) return false
     let warn = false
-    const itemIds = []
+    const calls = []
     for (const p of created) {
       let its = Array.isArray(p.items) && p.items.every((it) => it?.id) ? p.items : null
       if (!its) {
         its = (await api.getProduct(p.id).catch(() => null))?.items || []
         if (its.length === 0) warn = true
       }
-      for (const it of its) if (it?.id) itemIds.push(it.id)
+      for (const it of its) {
+        const defs = byBarcode[(it.barcode || '').trim()]
+        if (!defs || !it?.id) continue
+        for (const d of defs) calls.push(api.putItemPrice(it.id, d.id, { amount: d.amount, currency: 'TRY' }))
+      }
     }
-    const results = await Promise.allSettled(itemIds.flatMap((itemId) =>
-      filled.map((d) => api.putItemPrice(itemId, d.id, { amount: d.amount, currency: 'TRY' }))))
+    const results = await Promise.allSettled(calls)
     return warn || results.some((r) => r.status === 'rejected')
   }
+
+  // Barkod → [{id, amount}] tanımlı fiyat haritası (create sonrası yazım için).
+  const buildDefPriceByBarcode = () => {
+    const map = {}
+    if (mode === 'variant') {
+      for (const combo of combos) {
+        const key = comboKey(combo)
+        const bc = (rowOf(key).barcode || '').trim()
+        if (!bc) continue
+        const defs = priceDefs
+          .filter((d) => (itemDefPrices[key]?.[d.id] || '').trim())
+          .map((d) => ({ id: d.id, amount: parseTrMoney(itemDefPrices[key][d.id]) }))
+        if (defs.length) map[bc] = defs
+      }
+    } else {
+      const bc = (simple.barcode || '').trim()
+      const defs = priceDefs
+        .filter((d) => (defPrices[d.id] || '').trim())
+        .map((d) => ({ id: d.id, amount: parseTrMoney(defPrices[d.id]) }))
+      if (bc && defs.length) map[bc] = defs
+    }
+    return map
+  }
+
+  // Varyant başına tanımlı fiyat setter'ı (matris hücreleri) + gruba toplu doldurma.
+  const setItemDef = (key, defId, value) =>
+    setItemDefPrices((m) => ({ ...m, [key]: { ...(m[key] || {}), [defId]: value } }))
+  const fillGroupDef = (keys, defId, value) =>
+    setItemDefPrices((m) => { const n = { ...m }; keys.forEach((k) => { n[k] = { ...(n[k] || {}), [defId]: value } }); return n })
+  const fillGroupRow = (keys, field, value) =>
+    setRowData((d) => { const n = { ...d }; keys.forEach((k) => { n[k] = { ...(n[k] || rowOf(k)), [field]: value } }); return n })
 
   const totalVariants = mode === 'variant' ? combos.length : 1
   // Slicer-aware summary: a slicer axis splits into one product per value.
@@ -349,7 +385,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
         ? skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
         : undefined,
       name: title.trim(),
-      description: description.trim() || null,
+      description: isHtmlEmpty(description) ? null : description,
       status,
       attribute_values: (product.attribute_values || []).map((a) => ({ attribute_id: a.attribute_id, attribute_value_id: a.attribute_value_id })),
       variants: (product.variant_types || []).map((t) => ({ id: t.id, name: t.name, selection_style: t.selection_style })),
@@ -380,7 +416,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       const created = res.products || []
       const itemCount = created.reduce((a, p) => a + (p.items?.length || p.variants?.length || 0), 0)
       // Tanımlı fiyat alanlarını navigasyondan ÖNCE yaz (onSaved ürün listesine götürür).
-      const priceWarn = await writeDefPrices(created)
+      const priceWarn = await writeItemDefPrices(created, buildDefPriceByBarcode())
       onSaved?.(`${created.length} ürün · ${itemCount} varyant oluşturuldu.`)
       if (priceWarn) onToast?.({ tone: 'danger', title: 'Bazı fiyat alanları kaydedilemedi', body: 'Ürün oluşturuldu; eksik fiyatları ürün detayından girebilirsiniz.' })
     } catch (e) {
@@ -441,7 +477,8 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
 
             <div style={{ marginTop: 14 }}>
               <Field label="Ürün açıklaması" optional>
-                <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ürün açıklaması…" />
+                <RichText value={description} onChange={setDescription} placeholder="Ürün açıklaması…"
+                  uploadImage={(f) => api.uploadImage(f, 'product').then((r) => r.url)} />
               </Field>
             </div>
 
@@ -501,8 +538,9 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
                   combos={combos} activeChosen={activeChosen} rowOf={rowOf} setRow={setRow}
                   skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
                   splitNameOf={splitNameOf} setSplitName={setSplitName}
+                  priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
+                  fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
                 />
-                <DefPriceFields defs={priceDefs} values={defPrices} setValues={setDefPrices} />
               </>
             )}
           </div>
@@ -629,7 +667,7 @@ function CategoryAttributesSection({ categoryId, catAttrs, attrVals, attrPick, a
   )
 }
 
-function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName }) {
+function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow }) {
   const [newValFor, setNewValFor] = useState(null)
   const [valDraft, setValDraft] = useState('')
   if (types.length === 0) {
@@ -686,76 +724,131 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
         )
       )}
 
-      {combos.length > 0 && (() => {
-        const used = activeChosen.map((c) => typeById[c.typeId])
-        const slicerIdx = used.findIndex((t) => t?.slicer)
+      {combos.length > 0 && (
+        <VariantGroups
+          combos={combos} activeChosen={activeChosen} typeById={typeById}
+          rowOf={rowOf} setRow={setRow} skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
+          priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
+          fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
+          splitNameOf={splitNameOf} setSplitName={setSplitName}
+        />
+      )}
+    </div>
+  )
+}
 
-        const renderRow = (combo) => {
-          const key = comboKey(combo)
-          const r = rowOf(key)
-          const labels = combo.filter((_, i) => i !== slicerIdx)
-          return (
-            <div className="variant-row" key={key} style={{ gridTemplateColumns: VAR_COLS, minWidth: 720 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                {labels.length === 0
-                  ? <span className="list-meta">tek varyant</span>
-                  : labels.map((v) => {
-                    const ti = combo.indexOf(v)
-                    return (
-                      <span key={v.id} className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {used[ti]?.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(v)} />}{v.label}
-                      </span>
-                    )
-                  })}
-              </span>
-              <Input size="sm" mono suffix="₺" value={r.price} onChange={(e) => setRow(key, { price: e.target.value })} placeholder="0,00" />
-              <Input size="sm" mono suffix="₺" value={r.compareAt} onChange={(e) => setRow(key, { compareAt: e.target.value })} placeholder="—" />
-              <Input size="sm" mono value={r.stock} onChange={(e) => setRow(key, { stock: e.target.value })} />
-              <Input size="sm" mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik üretilir (Ayarlar → Ürün Kodu Oluşturucu)' : undefined}
-                value={skuOn ? (variantSkuPreview(combo) || '') : r.sku}
-                onChange={(e) => { if (!skuOn) setRow(key, { sku: e.target.value }) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} />
-              <Input size="sm" mono value={r.barcode} onChange={(e) => setRow(key, { barcode: e.target.value })} placeholder={bcOn ? 'ayrılıyor…' : 'zorunlu'} />
-            </div>
-          )
-        }
+// Varyant düzenleyici: ayraç (renk) başına kart; kart içinde iki sekme —
+// "Fiyatlar" (Genel Satış/Karş + her tanımlı fiyat bir sütun, yatay büyür, sütun
+// başlığından tümüne uygula) ve "Stok & Kodlar" (stok/barkod/SKU).
+function VariantGroups({ combos, activeChosen, typeById, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, splitNameOf, setSplitName }) {
+  const used = activeChosen.map((c) => typeById[c.typeId])
+  const slicerIdx = used.findIndex((t) => t?.slicer)
+  const slicerType = slicerIdx !== -1 ? used[slicerIdx] : null
 
-        let body
-        if (slicerIdx === -1) {
-          body = combos.map(renderRow)
-        } else {
-          const slicerType = used[slicerIdx]
-          const groupVals = (slicerType.values || []).filter((v) => combos.some((c) => c[slicerIdx]?.id === v.id))
-          body = groupVals.map((sv, gi) => {
-            const rows = combos.filter((c) => c[slicerIdx]?.id === sv.id)
-            return (
-              <div key={sv.id} style={{ borderTop: gi > 0 ? '1px solid var(--border-subtle)' : 'none', marginTop: gi > 0 ? 6 : 0, paddingTop: gi > 0 ? 8 : 0 }}>
-                <div className="hstack" style={{ gap: 8, padding: '4px 2px 8px' }}>
-                  {slicerType.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(sv)} />}
-                  <span style={{ fontWeight: 700, color: 'var(--text-strong)' }}>{sv.label}</span>
-                  <span className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>{I('scissors', { size: 11 })} ayrı ürün</span>
-                  {/* Bu değere ait ürünün adı — ürün adından canlı türetilir, elle değiştirilebilir. */}
-                  <span className="enter-field" style={{ flex: 1, maxWidth: 380, marginLeft: 8 }}>
-                    <Input size="sm" value={splitNameOf(sv)} onChange={(e) => setSplitName(sv.id, e.target.value)}
-                      title="Bu ürünün adı — ürün adına göre otomatik güncellenir; elle değiştirebilirsin (konum tercihi: Ayarlar)" />
-                  </span>
-                  <span className="list-meta" style={{ marginLeft: 'auto' }}>{rows.length} varyant</span>
-                </div>
-                {rows.map(renderRow)}
-              </div>
-            )
-          })
-        }
+  const variantLabel = (combo) => {
+    const labels = combo.filter((_, i) => i !== slicerIdx)
+    if (labels.length === 0) return <span className="list-meta">tek varyant</span>
+    return labels.map((v) => {
+      const ti = combo.indexOf(v)
+      return (
+        <span key={v.id} className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {used[ti]?.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(v)} />}{v.label}
+        </span>
+      )
+    })
+  }
 
+  const table = (rows) => (
+    <MatrixTable rows={rows} keys={rows.map(comboKey)} variantLabel={variantLabel}
+      rowOf={rowOf} setRow={setRow} skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
+      priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
+      fillGroupRow={fillGroupRow} fillGroupDef={fillGroupDef} />
+  )
+
+  if (slicerIdx === -1) {
+    return (
+      <div className="vcard">
+        <div className="vcard__head vcard__head--plain">
+          <span className="vcard__title">Varyantlar</span>
+          <span className="list-meta" style={{ marginLeft: 'auto' }}>{combos.length} varyant</span>
+        </div>
+        <div className="vcard__body">{table(combos)}</div>
+      </div>
+    )
+  }
+
+  const groupVals = (slicerType.values || []).filter((v) => combos.some((c) => c[slicerIdx]?.id === v.id))
+  return (
+    <div className="stack" style={{ gap: 12 }}>
+      {groupVals.map((sv) => {
+        const rows = combos.filter((c) => c[slicerIdx]?.id === sv.id)
         return (
-          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '4px 12px 10px', overflowX: 'auto' }}>
-            <div className="variant-row variant-row__head" style={{ gridTemplateColumns: VAR_COLS, minWidth: 720 }}>
-              <span>Varyant</span><span title="Kendi siteniz için genel fiyat; pazaryeri fiyatları ürün detayından eklenir">Satış ₺ (genel)</span><span>Karşılaştırma</span><span>Stok</span><span>SKU</span><span>Barkod</span>
+          <div className="vcard" key={sv.id}>
+            <div className="vcard__head">
+              <div className="vcard__titlerow">
+                {slicerType.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(sv)} />}
+                <span className="vcard__title">{sv.label}</span>
+                <span className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>{I('scissors', { size: 11 })} ayrı ürün</span>
+                <span className="list-meta" style={{ marginLeft: 'auto' }}>{rows.length} varyant</span>
+              </div>
+              <div className="vcard__namerow">
+                <Field label="Ürün adı">
+                  <Input size="sm" value={splitNameOf(sv)} onChange={(e) => setSplitName(sv.id, e.target.value)}
+                    title="Ürün adına göre otomatik türetilir; elle değiştirebilirsin (konum: Ayarlar)" />
+                </Field>
+              </div>
             </div>
-            {body}
-            <div className="list-meta" style={{ marginTop: 8 }}>{I('info', { size: 13 })} {slicerIdx !== -1 ? `"${used[slicerIdx].name}" ayraç — her değer ayrı ürün olarak kaydedilir. ` : ''}{bcOn ? 'Barkod otomatik üretilir (Ayarlar).' : 'Barkod zorunlu — elle gir ya da Ayarlar\'dan üreticiyi aç.'} {skuOn ? 'SKU şablona göre otomatik.' : 'SKU opsiyonel.'}</div>
+            <div className="vcard__body">{table(rows)}</div>
           </div>
         )
-      })()}
+      })}
+    </div>
+  )
+}
+
+// Tek geniş varyant tablosu: Varyant | Stok | Barkod | SKU ‖ Genel Satış | Genel Karş | [tanımlar].
+// Önde ürün bilgisi, dikey ayraç, sonra fiyatlar; tanım eklendikçe yatay büyür (hscroll).
+// Sütun başlığındaki küçük "tümü" alanı o kolonu tüm satırlara doldurur.
+function MatrixTable({ rows, keys, variantLabel, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupRow, fillGroupDef }) {
+  const priceCount = 2 + priceDefs.length
+  const cols = `minmax(150px,1.3fr) 0.7fr 1.05fr 1.05fr 2px repeat(${priceCount}, minmax(120px,1fr))`
+  const minW = 150 + 76 + 150 + 150 + 2 + priceCount * 128
+  return (
+    <div className="hscroll">
+      <div className="pmatrix__row pmatrix__head" style={{ gridTemplateColumns: cols, minWidth: minW }}>
+        <span>Varyant</span>
+        <span>Stok<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupRow(keys, 'stock', e.target.value)} /></span>
+        <span>Barkod</span>
+        <span>SKU</span>
+        <span className="pmatrix__vrule" />
+        <span className="pmatrix__pcol">Genel Satış ₺<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupRow(keys, 'price', e.target.value)} /></span>
+        <span className="pmatrix__pcol">Genel Karş. ₺<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupRow(keys, 'compareAt', e.target.value)} /></span>
+        {priceDefs.map((d) => (
+          <span key={d.id} className="pmatrix__pcol">{d.name}<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupDef(keys, d.id, e.target.value)} /></span>
+        ))}
+      </div>
+      {rows.map((combo) => {
+        const key = comboKey(combo)
+        const r = rowOf(key)
+        return (
+          <div className="pmatrix__row" key={key} style={{ gridTemplateColumns: cols, minWidth: minW }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{variantLabel(combo)}</span>
+            <Input size="sm" mono value={r.stock} onChange={(e) => setRow(key, { stock: e.target.value })} />
+            <Input size="sm" mono value={r.barcode} onChange={(e) => setRow(key, { barcode: e.target.value })} placeholder={bcOn ? 'ayrılıyor…' : 'zorunlu'} />
+            <Input size="sm" mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik (Ayarlar → Ürün Kodu)' : undefined}
+              value={skuOn ? (variantSkuPreview(combo) || '') : r.sku}
+              onChange={(e) => { if (!skuOn) setRow(key, { sku: e.target.value }) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} />
+            <span className="pmatrix__vrule" />
+            <Input size="sm" mono suffix="₺" value={r.price} onChange={(e) => setRow(key, { price: e.target.value })} placeholder="0,00" />
+            <Input size="sm" mono suffix="₺" value={r.compareAt} onChange={(e) => setRow(key, { compareAt: e.target.value })} placeholder="—" />
+            {priceDefs.map((d) => (
+              <Input key={d.id} size="sm" mono suffix="₺" value={itemDefPrices[key]?.[d.id] || ''} placeholder="—"
+                onChange={(e) => setItemDef(key, d.id, e.target.value)} />
+            ))}
+          </div>
+        )
+      })}
+      <div className="list-meta" style={{ marginTop: 8 }}>{I('info', { size: 13 })} Önde ürün bilgisi (stok/barkod/SKU), ayraçtan sonra fiyatlar. {priceDefs.length === 0 ? 'Pazaryeri/özel fiyat sütunları için Tanımlar → Fiyatlar.' : 'Fiyat tanımı ekledikçe tablo sağa doğru genişler.'}</div>
     </div>
   )
 }
