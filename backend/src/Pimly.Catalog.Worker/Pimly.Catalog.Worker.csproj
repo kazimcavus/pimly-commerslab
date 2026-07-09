@@ -14,6 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Modules\Catalog\Catalog.Application\Catalog.Application.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Pricing\Pricing.Application\Pricing.Application.csproj" />
+    <ProjectReference Include="..\Modules\Pricing\Pricing.Infrastructure\Pricing.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

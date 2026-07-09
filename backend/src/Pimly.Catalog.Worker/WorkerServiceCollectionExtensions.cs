@@ -1,6 +1,8 @@
 using Catalog.Domain.Products.Events;
 using Catalog.Infrastructure;
 using Catalog.Infrastructure.Outbox;
+using Pricing.Application;
+using Pricing.Infrastructure;
 using SharedKernel;
 using SharedKernel.Tenancy;
 
@@ -17,6 +19,10 @@ public static class WorkerServiceCollectionExtensions
     {
         services.AddCatalogInfrastructure(configuration);
 
+        // Pricing, kalem silindiğinde ilgili fiyatları temizlemek için dinler.
+        services.AddPricingApplication();
+        services.AddPricingInfrastructure(configuration);
+
         // HTTP bağlamı yok: tenant, iş başına elle set edilen ambient bağlamdan akar.
         services.AddScoped<AmbientTenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<AmbientTenantContext>());
@@ -25,6 +31,9 @@ public static class WorkerServiceCollectionExtensions
 
         // İskelet kanıtı: gerçek Pricing/Inventory handler'ları gelene kadar loglayan subscriber.
         services.AddScoped<IIntegrationEventHandler<ProductItemCreated>, ProductItemCreatedLoggingHandler>();
+
+        // Kalem silindiğinde Pricing'deki kalem fiyatlarını temizler.
+        services.AddScoped<IIntegrationEventHandler<ProductItemDeleted>, ProductItemDeletedPricingHandler>();
 
         services.AddHostedService<OutboxDispatcherBackgroundService>();
 
