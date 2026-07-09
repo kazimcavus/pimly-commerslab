@@ -1,10 +1,10 @@
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.ExternalCatalog;
-using Channels.Domain.Marketplaces;
 using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel;
 
 namespace Channels.Infrastructure.Repositories;
 

@@ -1,6 +1,5 @@
 using Channels.Application.Contracts;
 using Channels.Application.Validation;
-using Channels.Domain.Marketplaces;
 using Channels.Domain.ProductImports;
 using FluentValidation;
 using SharedKernel;

@@ -3,10 +3,10 @@ using System.Net.Http.Json;
 using Catalog.IntegrationTests.Infrastructure;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.ProcessTaxonomySync;
-using Channels.Domain.Marketplaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using SharedKernel;
 
 namespace Catalog.IntegrationTests;
 

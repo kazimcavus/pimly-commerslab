@@ -1,6 +1,5 @@
 using Channels.Application.Contracts;
 using Channels.Domain.Connections;
-using Channels.Domain.Marketplaces;
 using SharedKernel;
 
 namespace Channels.Application.Marketplaces.ListMarketplaces;

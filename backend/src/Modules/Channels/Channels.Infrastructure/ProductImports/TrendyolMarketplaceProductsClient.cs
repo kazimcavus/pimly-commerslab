@@ -1,6 +1,5 @@
 using Channels.Application.Connections;
 using Channels.Application.ProductImports;
-using Channels.Domain.Marketplaces;
 using Channels.Infrastructure.Options;
 using Channels.Infrastructure.Taxonomy;
 using Channels.Infrastructure.Trendyol;

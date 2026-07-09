@@ -1,5 +1,4 @@
 using Channels.Application.ProductImports;
-using Channels.Domain.Marketplaces;
 using Microsoft.Extensions.DependencyInjection;
 using SharedKernel;
 

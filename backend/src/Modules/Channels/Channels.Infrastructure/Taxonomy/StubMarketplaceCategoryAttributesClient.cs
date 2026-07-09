@@ -1,5 +1,4 @@
 using Channels.Application.ExternalCatalog;
-using Channels.Domain.Marketplaces;
 using SharedKernel;
 
 namespace Channels.Infrastructure.Taxonomy;

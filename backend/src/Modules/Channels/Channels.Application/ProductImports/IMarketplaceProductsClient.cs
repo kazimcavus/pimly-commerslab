@@ -1,5 +1,4 @@
 using Channels.Application.Connections;
-using Channels.Domain.Marketplaces;
 using SharedKernel;
 
 namespace Channels.Application.ProductImports;

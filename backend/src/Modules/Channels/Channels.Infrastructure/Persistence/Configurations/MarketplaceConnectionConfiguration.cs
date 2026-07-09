@@ -1,5 +1,4 @@
 using Channels.Domain.Connections;
-using Channels.Domain.Marketplaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

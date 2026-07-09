@@ -6,7 +6,6 @@ using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
-using Channels.Domain.Marketplaces;
 using Channels.Domain.ProductImports;
 using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Options;
@@ -18,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SharedKernel;
 
 namespace Channels.Infrastructure;
 

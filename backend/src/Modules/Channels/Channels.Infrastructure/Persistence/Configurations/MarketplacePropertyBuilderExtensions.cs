@@ -1,7 +1,7 @@
-using Channels.Domain.Marketplaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SharedKernel;
 
 namespace Channels.Infrastructure.Persistence.Configurations;
 

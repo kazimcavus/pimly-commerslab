@@ -5,7 +5,6 @@ using Channels.Domain;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.ExternalCatalog;
-using Channels.Domain.Marketplaces;
 using Channels.Domain.TaxonomySync;
 using FluentValidation;
 using SharedKernel;

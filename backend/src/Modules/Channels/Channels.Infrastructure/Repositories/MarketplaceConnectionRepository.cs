@@ -1,7 +1,7 @@
 using Channels.Domain.Connections;
-using Channels.Domain.Marketplaces;
 using Channels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel;
 
 namespace Channels.Infrastructure.Repositories;
 

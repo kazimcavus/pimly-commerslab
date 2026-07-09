@@ -21,7 +21,6 @@ using Channels.Application.ProductImports.ListProductImportRuns;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.GetTaxonomyStatus;
 using Channels.Application.TaxonomySync.GetTaxonomySyncRun;
-using Channels.Domain.Marketplaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;

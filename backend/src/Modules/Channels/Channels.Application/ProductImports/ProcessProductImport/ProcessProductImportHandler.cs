@@ -8,7 +8,6 @@ using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
-using Channels.Domain.Marketplaces;
 using Channels.Domain.ProductImports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

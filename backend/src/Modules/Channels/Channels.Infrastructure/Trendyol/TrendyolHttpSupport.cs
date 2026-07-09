@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using Channels.Application.Connections;
 using Channels.Domain.Connections;
-using Channels.Domain.Marketplaces;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
 

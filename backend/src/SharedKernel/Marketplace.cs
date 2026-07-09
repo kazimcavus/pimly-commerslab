@@ -1,8 +1,9 @@
-using SharedKernel;
+namespace SharedKernel;
 
-namespace Channels.Domain.Marketplaces;
-
-/// <summary>Platform tarafından entegre edilen kapalı evren pazaryeri.</summary>
+/// <summary>
+/// Platform tarafından entegre edilen kapalı evren pazaryeri. Bağlamlar arası paylaşılan kanonik
+/// kimlik (SharedKernel): hem Channels (yayın) hem Pricing (karar) aynı Marketplace'e referans verir.
+/// </summary>
 public sealed class Marketplace : ValueObject
 {
     public const int MaxCodeLength = 10;

@@ -4,12 +4,12 @@ using Catalog.IntegrationTests.Infrastructure;
 using Channels.Application.ProductImports.ProcessProductImport;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.ProcessTaxonomySync;
-using Channels.Domain.Marketplaces;
 using Channels.Domain.ProductImports;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pimly.ProductImports.Worker;
+using SharedKernel;
 using SharedKernel.Tenancy;
 
 namespace Catalog.IntegrationTests;

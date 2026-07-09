@@ -1,6 +1,6 @@
-using Channels.Domain.Marketplaces;
 using Channels.Domain.ProductImports;
 using FluentAssertions;
+using SharedKernel;
 
 namespace Channels.UnitTests;
 

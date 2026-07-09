@@ -1,4 +1,3 @@
-using Channels.Domain.Marketplaces;
 using SharedKernel;
 
 namespace Channels.Domain.Connections;

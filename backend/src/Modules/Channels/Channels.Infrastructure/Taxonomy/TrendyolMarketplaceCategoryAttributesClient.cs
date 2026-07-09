@@ -1,6 +1,5 @@
 using Channels.Application.ExternalCatalog;
 using Channels.Domain.Connections;
-using Channels.Domain.Marketplaces;
 using Channels.Infrastructure.Options;
 using Channels.Infrastructure.Trendyol;
 using Microsoft.Extensions.Logging;
