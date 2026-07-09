@@ -67,14 +67,6 @@ public class UpdateProductItemCommandValidatorTests
     private readonly UpdateProductItemCommandValidator _validator = new();
 
     [Fact]
-    public void Validate_NegativePrice_Fails()
-    {
-        var result = _validator.Validate(ValidCommand() with { Price = -1m });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Price");
-    }
-
-    [Fact]
     public void Validate_NegativeStock_Fails()
     {
         var result = _validator.Validate(ValidCommand() with { Stock = -1 });
@@ -90,7 +82,7 @@ public class UpdateProductItemCommandValidatorTests
     }
 
     private static UpdateProductItemCommand ValidCommand() =>
-        new(Guid.NewGuid(), null, null, null, null, 10m, null, 5, null);
+        new(Guid.NewGuid(), null, null, null, null, 5, null);
 }
 
 /// <summary>UpdateCategoryCommandValidator için birim testleri.</summary>

@@ -41,8 +41,6 @@ public static class DependencyInjection
         services.AddScoped<IAttributeRepository, AttributeRepository>();
         services.AddScoped<IVariantRepository, VariantRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<IPriceDefinitionRepository, PriceDefinitionRepository>();
-        services.AddScoped<IItemPriceRepository, ItemPriceRepository>();
         services.AddScoped<IBarcodeSequenceRepository, BarcodeSequenceRepository>();
         services.AddScoped<IBarcodeAllocationRepository, BarcodeAllocationRepository>();
         services.AddScoped<IBarcodeAllocator, BarcodeAllocator>();

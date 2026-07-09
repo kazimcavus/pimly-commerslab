@@ -21,8 +21,6 @@ internal sealed class ProductItemConfiguration : IEntityTypeConfiguration<Produc
         builder.Property(v => v.Mpn).HasColumnName("mpn").HasMaxLength(100);
         builder.Property(v => v.AxisValueEntryId).HasColumnName("axis_value_entry_id");
         builder.Property(v => v.AxisValue).HasColumnName("axis_value").HasMaxLength(500);
-        builder.Property(v => v.Price).HasColumnName("price").HasColumnType("numeric(14,2)").IsRequired();
-        builder.Property(v => v.CompareAtPrice).HasColumnName("compare_at_price").HasColumnType("numeric(14,2)");
         builder.Property(v => v.Stock).HasColumnName("stock").IsRequired();
         builder.Ignore(v => v.DomainEvents);
 

@@ -3,6 +3,7 @@ using System;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Catalog.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CatalogDbContext))]
-    partial class CatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709105801_DropCatalogPriceTables")]
+    partial class DropCatalogPriceTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -318,6 +321,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("barcode");
 
+                    b.Property<decimal?>("CompareAtPrice")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("compare_at_price");
+
                     b.Property<string>("Gtin")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
@@ -327,6 +334,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("mpn");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("price");
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid")

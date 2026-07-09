@@ -12,7 +12,7 @@ public class ProductTests
     private static readonly Guid TestCategoryId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     private static ProductItemDraft BasicVariant(string barcode = "BC-001") =>
-        new(null, barcode, null, null, null, null, 10m, null, 5, null, null);
+        new(null, barcode, null, null, null, null, 5, null, null);
 
     [Fact]
     public void Create_WithEmptySku_Fails()
@@ -233,7 +233,7 @@ public class ProductTests
             [],
             [BasicVariant()]).Value;
 
-        var result = product.UpdateItem(Guid.NewGuid(), new ProductItemUpdate(null, null, null, null, 10m, null, 5, null));
+        var result = product.UpdateItem(Guid.NewGuid(), new ProductItemUpdate(null, null, null, null, 5, null));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("not_found");
@@ -271,8 +271,6 @@ public class ProductTests
             null,
             null,
             null,
-            null,
-            10m,
             null,
             5,
             null,
@@ -358,7 +356,7 @@ public class ProductTests
         var item = product.Items.Single();
 
         var result = product.UpdateItem(item.Id, new ProductItemUpdate(
-            null, null, null, null, 10m, null, 5, null, Sku: "NEW-SKU", Barcode: "BC-NEW"));
+            null, null, null, null, 5, null, Sku: "NEW-SKU", Barcode: "BC-NEW"));
 
         result.IsSuccess.Should().BeTrue();
         item.Sku.Should().Be("NEW-SKU");
@@ -373,11 +371,11 @@ public class ProductTests
         var originalBarcode = item.Barcode;
 
         var result = product.UpdateItem(item.Id, new ProductItemUpdate(
-            null, null, null, null, 12m, null, 3, null));
+            null, null, null, null, 3, null));
 
         result.IsSuccess.Should().BeTrue();
         item.Barcode.Should().Be(originalBarcode);
-        item.Price.Should().Be(12m);
+        item.Stock.Should().Be(3);
     }
 
     [Fact]
@@ -388,7 +386,7 @@ public class ProductTests
         var second = product.Items.Last();
 
         var result = product.UpdateItem(second.Id, new ProductItemUpdate(
-            null, null, null, null, 10m, null, 5, null, Barcode: "BC-001"));
+            null, null, null, null, 5, null, Barcode: "BC-001"));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("conflict");

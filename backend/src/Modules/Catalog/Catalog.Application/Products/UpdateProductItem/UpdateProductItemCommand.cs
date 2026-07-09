@@ -10,8 +10,6 @@ public sealed record UpdateProductItemCommand(
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    decimal Price,
-    decimal? CompareAtPrice,
     int Stock,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     string? Sku = null,

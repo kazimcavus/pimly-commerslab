@@ -233,7 +233,7 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
     }
 
     [SkippableFact]
-    public async Task PatchProductItem_NegativePrice_Returns400()
+    public async Task PatchProductItem_NegativeStock_Returns400()
     {
         var categoryId = await CreateCategoryAsync();
         var createResponse = await Client.PostAsJsonAsync("/api/v1/catalog/products", new
@@ -245,13 +245,13 @@ public class ProductsApiValidationTests(CatalogPostgresFixture fixture) : Catalo
             status = "draft",
             attribute_values = Array.Empty<object>(),
             variants = Array.Empty<object>(),
-            items = new[] { new { barcode = NextNumericBarcode(), price = 10m, stock = 1 } },
+            items = new[] { new { barcode = NextNumericBarcode(), stock = 1 } },
         });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var product = await createResponse.Content.ReadFromJsonAsync<ProductResponse>(CatalogJson.Options);
         var itemId = product!.Items[0].Id;
 
-        var response = await Client.PatchAsJsonAsync($"/api/v1/catalog/items/{itemId}", new { price = -1m, stock = 1 });
+        var response = await Client.PatchAsJsonAsync($"/api/v1/catalog/items/{itemId}", new { stock = -1 });
 
         await CatalogHttpAssertions.AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation");
 

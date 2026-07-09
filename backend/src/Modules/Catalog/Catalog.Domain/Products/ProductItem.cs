@@ -4,10 +4,10 @@ namespace Catalog.Domain.Products;
 
 /// <summary>
 /// Ürün altında satılabilir SKU/barkod birimini temsil eden varlık.
-/// Fiyat, stok ve eksen/özellik değerlerini taşır.
+/// Kimlik, stok ve eksen/özellik değerlerini taşır. Fiyat, Pricing bağlamına taşınmıştır.
 /// </summary>
 /// <example>
-/// Renk: Kırmızı, Beden: S seçimleriyle Barcode "8690000001", Price 299.99, Stock 10.
+/// Renk: Kırmızı, Beden: S seçimleriyle Barcode "8690000001", Stock 10.
 /// </example>
 public sealed class ProductItem : Entity<Guid>
 {
@@ -23,8 +23,6 @@ public sealed class ProductItem : Entity<Guid>
         string? mpn,
         Guid? axisValueEntryId,
         string? axisValue,
-        decimal price,
-        decimal? compareAtPrice,
         int stock,
         IReadOnlyList<AttributeValue> attributeValues,
         IReadOnlyList<VariantValue> variantValues)
@@ -36,8 +34,6 @@ public sealed class ProductItem : Entity<Guid>
         Mpn = mpn;
         AxisValueEntryId = axisValueEntryId;
         AxisValue = axisValue;
-        Price = price;
-        CompareAtPrice = compareAtPrice;
         Stock = stock;
         AttributeValues = attributeValues;
         VariantValues = variantValues;
@@ -67,14 +63,6 @@ public sealed class ProductItem : Entity<Guid>
     /// <example>Özel baskı metni.</example>
     public string? AxisValue { get; private set; }
 
-    /// <summary>Gets satış fiyatı.</summary>
-    /// <example>299.99.</example>
-    public decimal Price { get; private set; }
-
-    /// <summary>Gets karşılaştırma veya indirim öncesi fiyat; opsiyonel.</summary>
-    /// <example>349.99.</example>
-    public decimal? CompareAtPrice { get; private set; }
-
     /// <summary>Gets stok miktarı.</summary>
     /// <example>10.</example>
     public int Stock { get; private set; }
@@ -96,11 +84,6 @@ public sealed class ProductItem : Entity<Guid>
             return Result.Failure<ProductItem>(Error.Validation("Variant barcode is required."));
         }
 
-        if (draft.Price < 0)
-        {
-            return Result.Failure<ProductItem>(Error.Validation("Variant price cannot be negative."));
-        }
-
         if (draft.Stock < 0)
         {
             return Result.Failure<ProductItem>(Error.Validation("Variant stock cannot be negative."));
@@ -114,8 +97,6 @@ public sealed class ProductItem : Entity<Guid>
             NullIfWhiteSpace(draft.Mpn),
             draft.AxisValueEntryId,
             NullIfWhiteSpace(draft.AxisValue),
-            draft.Price,
-            draft.CompareAtPrice,
             draft.Stock,
             draft.AttributeValues ?? [],
             draft.VariantValues ?? []));
@@ -126,11 +107,6 @@ public sealed class ProductItem : Entity<Guid>
     /// <remarks>Barcode null ise mevcut barkod korunur; Sku null ise mevcut SKU korunur (boş metin SKU'yu temizler).</remarks>
     internal Result Update(ProductItemUpdate update)
     {
-        if (update.Price < 0)
-        {
-            return Result.Failure(Error.Validation("Variant price cannot be negative."));
-        }
-
         if (update.Stock < 0)
         {
             return Result.Failure(Error.Validation("Variant stock cannot be negative."));
@@ -155,8 +131,6 @@ public sealed class ProductItem : Entity<Guid>
         Mpn = NullIfWhiteSpace(update.Mpn);
         AxisValueEntryId = update.AxisValueEntryId;
         AxisValue = NullIfWhiteSpace(update.AxisValue);
-        Price = update.Price;
-        CompareAtPrice = update.CompareAtPrice;
         Stock = update.Stock;
         if (update.AttributeValues is not null)
         {
@@ -171,7 +145,7 @@ public sealed class ProductItem : Entity<Guid>
 }
 
 /// <summary>Yeni satılabilir kalem oluşturma girdisi.</summary>
-/// <example>Barcode "8690000001", Renk/Beden seçimleri ve fiyat/stok bilgisi.</example>
+/// <example>Barcode "8690000001", Renk/Beden seçimleri ve stok bilgisi.</example>
 public sealed record ProductItemDraft(
     string? Sku,
     string Barcode,
@@ -179,22 +153,18 @@ public sealed record ProductItemDraft(
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    decimal Price,
-    decimal? CompareAtPrice,
     int Stock,
     IReadOnlyList<AttributeValue>? AttributeValues,
     IReadOnlyList<VariantValue>? VariantValues);
 
 /// <summary>Mevcut satılabilir kalem güncelleme girdisi.</summary>
-/// <example>Price 279.99, Stock 8 ve güncellenmiş özellik değerleri.</example>
+/// <example>Stock 8 ve güncellenmiş özellik değerleri.</example>
 /// <remarks>Barcode/Sku null bırakılırsa mevcut değer korunur; boş Sku metni SKU'yu temizler.</remarks>
 public sealed record ProductItemUpdate(
     string? Gtin,
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    decimal Price,
-    decimal? CompareAtPrice,
     int Stock,
     IReadOnlyList<AttributeValue>? AttributeValues,
     string? Sku = null,

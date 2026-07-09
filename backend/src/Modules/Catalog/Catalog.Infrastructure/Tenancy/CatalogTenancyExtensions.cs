@@ -1,7 +1,6 @@
 using Catalog.Domain.Barcodes;
 using Catalog.Domain.Brands;
 using Catalog.Domain.Categories;
-using Catalog.Domain.PriceDefinitions;
 using Catalog.Domain.Products;
 using Catalog.Domain.Settings;
 using Catalog.Domain.SkuGenerator;
@@ -26,8 +25,6 @@ internal static class CatalogTenancyExtensions
         ConfigureTenantRoot<Product>(modelBuilder, tenantId);
         ConfigureTenantRoot<ProductItem>(modelBuilder, tenantId);
         ConfigureTenantRoot<ProductImage>(modelBuilder, tenantId);
-        ConfigureTenantRoot<PriceDefinition>(modelBuilder, tenantId);
-        ConfigureTenantRoot<ProductItemPrice>(modelBuilder, tenantId);
         ConfigureTenantRoot<BarcodeSequence>(modelBuilder, tenantId);
         ConfigureTenantRoot<BarcodeAllocation>(modelBuilder, tenantId);
         ConfigureTenantRoot<SkuGeneratorConfig>(modelBuilder, tenantId);

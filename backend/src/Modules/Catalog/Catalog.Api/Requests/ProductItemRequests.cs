@@ -11,8 +11,6 @@ public sealed record CreateProductItemRequest(
     string? Mpn,
     [property: JsonPropertyName("axis_value_entry_id")] Guid? AxisValueEntryId,
     [property: JsonPropertyName("axis_value")] string? AxisValue,
-    decimal Price,
-    [property: JsonPropertyName("compare_at_price")] decimal? CompareAtPrice,
     int Stock,
     [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues,
     [property: JsonPropertyName("variant_values")] JsonElement? VariantValues);
@@ -24,8 +22,6 @@ public sealed record UpdateProductItemRequest(
     string? Mpn,
     [property: JsonPropertyName("axis_value_entry_id")] Guid? AxisValueEntryId,
     [property: JsonPropertyName("axis_value")] string? AxisValue,
-    decimal Price,
-    [property: JsonPropertyName("compare_at_price")] decimal? CompareAtPrice,
     int Stock,
     [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues,
     string? Sku = null,

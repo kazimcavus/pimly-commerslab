@@ -3,7 +3,6 @@ using Catalog.Domain;
 using Catalog.Domain.Barcodes;
 using Catalog.Domain.Brands;
 using Catalog.Domain.Categories;
-using Catalog.Domain.PriceDefinitions;
 using Catalog.Domain.Products;
 using Catalog.Domain.Settings;
 using Catalog.Domain.SkuGenerator;
@@ -67,10 +66,6 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
 
     public DbSet<ProductItem> ProductItems => Set<ProductItem>();
 
-    public DbSet<PriceDefinition> PriceDefinitions => Set<PriceDefinition>();
-
-    public DbSet<ProductItemPrice> ProductItemPrices => Set<ProductItemPrice>();
-
     public DbSet<BarcodeSequence> BarcodeSequences => Set<BarcodeSequence>();
 
     public DbSet<BarcodeAllocation> BarcodeAllocations => Set<BarcodeAllocation>();
@@ -86,8 +81,12 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
     {
         if (_tenantContext is not null)
         {
-            this.StampTenantId(CurrentTenantId);
-            WriteOutboxMessages(CurrentTenantId);
+            // Tenant yalnızca tenant-kapsamlı EKLEME veya integration olay varsa zorunludur.
+            // Outbox'ı "işlendi" işaretleyen tenant'sız kaydetmeler (dispatcher üst scope'u) serbest
+            // geçer; StampTenantId ve WriteOutboxMessages boş tenant'ta ekleme/olay bulursa hata verir.
+            var tenantId = ModelCacheTenantId;
+            this.StampTenantId(tenantId);
+            WriteOutboxMessages(tenantId);
         }
 
         return await base.SaveChangesAsync(cancellationToken);
@@ -128,6 +127,11 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
 
         if (messages.Count > 0)
         {
+            if (tenantId == Guid.Empty)
+            {
+                throw new InvalidOperationException("Tenant id is required to persist integration events.");
+            }
+
             OutboxMessages.AddRange(messages);
         }
     }

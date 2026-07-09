@@ -40,8 +40,6 @@ public sealed record ProductItemDto(
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    decimal Price,
-    decimal? CompareAtPrice,
     int Stock,
     IReadOnlyList<ProductAttributeValueDto> AttributeValues,
     IReadOnlyList<ProductVariantValueDto> VariantValues);

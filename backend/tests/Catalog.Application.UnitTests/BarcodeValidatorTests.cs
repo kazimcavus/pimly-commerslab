@@ -55,5 +55,5 @@ public class CreateProductItemInputValidatorTests
     }
 
     private static CreateProductItemInput ValidItem() =>
-        new(null, "8690000001", null, null, null, null, 10m, null, 5, null, null);
+        new(null, "8690000001", null, null, null, null, 5, null, null);
 }

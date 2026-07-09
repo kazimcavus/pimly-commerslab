@@ -12,8 +12,6 @@ public sealed class UpdateProductItemCommandValidator : AbstractValidator<Update
     public UpdateProductItemCommandValidator()
     {
         RuleFor(x => x.Id).RequiredId();
-        RuleFor(x => x.Price).GreaterThanOrEqualTo(0)
-            .WithMessage("Price cannot be negative.");
         RuleFor(x => x.Stock).GreaterThanOrEqualTo(0)
             .WithMessage("Stock cannot be negative.");
     }

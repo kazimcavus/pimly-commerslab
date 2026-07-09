@@ -37,8 +37,6 @@ internal static class ProductMappings
             item.Mpn,
             item.AxisValueEntryId,
             item.AxisValue,
-            item.Price,
-            item.CompareAtPrice,
             item.Stock,
             item.AttributeValues.Select(value => value.ToDto()).ToList(),
             item.VariantValues.Select(value => value.ToDto()).ToList());

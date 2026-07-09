@@ -25,8 +25,6 @@ public sealed record CreateProductItemInput(
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    decimal Price,
-    decimal? CompareAtPrice,
     int Stock,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     IReadOnlyList<VariantValueInput>? VariantValueInputs);

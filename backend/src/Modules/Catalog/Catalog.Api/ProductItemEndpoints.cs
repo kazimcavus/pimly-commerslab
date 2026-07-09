@@ -34,8 +34,6 @@ internal static class ProductItemEndpoints
                     request.Mpn,
                     request.AxisValueEntryId,
                     request.AxisValue,
-                    request.Price,
-                    request.CompareAtPrice,
                     request.Stock,
                     ProductInputMapper.MapAttributeValues(request.AttributeValues),
                     ProductInputMapper.MapVariantValues(request.VariantValues))));
@@ -50,8 +48,6 @@ internal static class ProductItemEndpoints
                 request.Mpn,
                 request.AxisValueEntryId,
                 request.AxisValue,
-                request.Price,
-                request.CompareAtPrice,
                 request.Stock,
                 ProductInputMapper.MapAttributeValues(request.AttributeValues),
                 request.Sku,

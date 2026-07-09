@@ -47,8 +47,6 @@ internal static class ProductCreationSupport
                 item.Mpn,
                 item.AxisValueEntryId,
                 item.AxisValue,
-                item.Price,
-                item.CompareAtPrice,
                 item.Stock,
                 attributeValuesResult.Value,
                 variantValuesResult.Value));

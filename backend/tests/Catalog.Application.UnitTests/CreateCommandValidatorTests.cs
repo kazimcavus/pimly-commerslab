@@ -75,15 +75,6 @@ public class CreateProductCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_NegativeItemPrice_Fails()
-    {
-        var item = ValidItem() with { Price = -1m };
-        var result = _validator.Validate(ValidCommand() with { Items = [item] });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Items[0].Price");
-    }
-
-    [Fact]
     public void Validate_NegativeItemStock_Fails()
     {
         var item = ValidItem() with { Stock = -1 };
@@ -105,7 +96,7 @@ public class CreateProductCommandValidatorTests
             [ValidItem()]);
 
     private static CreateProductItemInput ValidItem() =>
-        new(null, "8690000001", null, null, null, null, 10m, null, 5, null, null);
+        new(null, "8690000001", null, null, null, null, 5, null, null);
 }
 
 /// <summary>CreateProductsBatchCommandValidator için smoke testleri.</summary>
@@ -132,28 +123,10 @@ public class CreateProductsBatchCommandValidatorTests
             null,
             null,
             [],
-            [new CreateProductItemInput(null, "8690000001", null, null, null, null, 10m, null, 5, null, null)]);
+            [new CreateProductItemInput(null, "8690000001", null, null, null, null, 5, null, null)]);
 
         var result = _validator.Validate(new CreateProductsBatchCommand(Guid.NewGuid(), [item]));
         result.IsValid.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Validate_NegativeNestedItemPrice_Fails()
-    {
-        var item = new CreateProductsBatchItem(
-            Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            "SKU-001",
-            "Title",
-            "draft",
-            null,
-            null,
-            [],
-            [new CreateProductItemInput(null, "8690000002", null, null, null, null, -1m, null, 5, null, null)]);
-
-        var result = _validator.Validate(new CreateProductsBatchCommand(Guid.NewGuid(), [item]));
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Products[0].Items[0].Price");
     }
 }
 

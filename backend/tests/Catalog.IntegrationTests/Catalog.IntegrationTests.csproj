@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pimly.Api\Pimly.Api.csproj" />
     <ProjectReference Include="..\..\src\Pimly.ProductImports.Worker\Pimly.ProductImports.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Pimly.Catalog.Worker\Pimly.Catalog.Worker.csproj" />
   </ItemGroup>
 
 </Project>

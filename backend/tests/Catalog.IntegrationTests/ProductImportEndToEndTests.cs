@@ -83,18 +83,22 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
 
         // --- 5. Fiyat tanımları: "TY Satış" 449.90, "TY Karşılaştırma" 599.90 ---
         var gomlekItem = products.SelectMany(p => p.Items).Single(i => i.Barcode == "8680000000011");
-        gomlekItem.Price.Should().Be(449.90m);
-        gomlekItem.CompareAtPrice.Should().Be(599.90m);
         gomlekItem.Stock.Should().Be(25);
 
         var priceDefinitions = await ListAsync<PriceDefinitionResponse>(
-            "/api/v1/catalog/price-definitions?page=1&page_size=100");
+            "/api/v1/pricing/price-definitions?page=1&page_size=100");
         priceDefinitions.Should().ContainSingle(d => d.Name == "TY Satış" && d.Code == "ty_sale");
         priceDefinitions.Should().ContainSingle(d => d.Name == "TY Karşılaştırma" && d.Code == "ty_compare");
 
-        var itemPrices = await ListAsync<ItemPriceResponse>($"/api/v1/catalog/items/{gomlekItem.Id}/prices");
+        var itemPrices = await ListAsync<ItemPriceResponse>($"/api/v1/pricing/items/{gomlekItem.Id}/prices");
         itemPrices.Should().ContainSingle(p => p.DefinitionName == "TY Satış" && p.Amount == 449.90m);
         itemPrices.Should().ContainSingle(p => p.DefinitionName == "TY Karşılaştırma" && p.Amount == 599.90m);
+
+        // Temel fiyat Pricing'e yazılmış olmalı (Catalog kaleminin price/compare_at_price'ı ile aynı).
+        var basePrice = await Client.GetFromJsonAsync<BasePriceResponse>(
+            $"/api/v1/pricing/items/{gomlekItem.Id}/base-price", CatalogJson.Options);
+        basePrice!.Amount.Should().Be(449.90m);
+        basePrice.CompareAtAmount.Should().Be(599.90m);
 
         // --- 6. Kanal eşlemeleri gönderim fazına hazır ---
         var categoryMappings = await ListAsync<CategoryMappingResponse>(
@@ -265,8 +269,6 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
         Guid Id,
         string? Sku,
         string Barcode,
-        decimal Price,
-        decimal? CompareAtPrice,
         int Stock);
 
     private sealed record VariantTypeResponse(Guid Id, string Key, string Name, string SelectionStyle, bool Slicer);
@@ -285,6 +287,12 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
         Guid PriceDefinitionId,
         string DefinitionName,
         decimal Amount,
+        string Currency);
+
+    private sealed record BasePriceResponse(
+        Guid ProductItemId,
+        decimal Amount,
+        decimal? CompareAtAmount,
         string Currency);
 
     private sealed record CategoryMappingResponse(Guid Id, Guid CatalogCategoryId, string ExternalId);

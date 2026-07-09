@@ -41,7 +41,7 @@ public class ProductImageTests
             ProductStatus.Draft,
             [],
             [],
-            [new ProductItemDraft(null, "8690000001", null, null, null, null, 10m, null, 1, [], [])]).Value;
+            [new ProductItemDraft(null, "8690000001", null, null, null, null, 1, [], [])]).Value;
 
         return product;
     }

@@ -17,7 +17,10 @@ public static class CatalogEndpoints
 
         group.MapCategoryEndpoints();
         group.MapBrandEndpoints();
-        group.MapPriceDefinitionEndpoints();
+
+        // Fiyat tanımı ve kalem fiyatı rotaları Pricing modülüne (/api/v1/pricing) taşındı.
+        // Catalog'daki fiyat kodu ve tabloları expand-contract gereği dormant kalır; contract
+        // diliminde kaldırılacaktır.
         group.MapAttributeEndpoints();
         group.MapAttributeValueEndpoints();
         group.MapVariantTypeEndpoints();
@@ -25,7 +28,6 @@ public static class CatalogEndpoints
         group.MapProductEndpoints();
         group.MapProductImageEndpoints();
         group.MapProductItemEndpoints();
-        group.MapItemPriceEndpoints();
         group.MapBarcodeEndpoints();
         group.MapSkuGeneratorEndpoints();
         group.MapCatalogSettingsEndpoints();
