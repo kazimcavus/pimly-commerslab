@@ -23,6 +23,10 @@ using Pimly.Api.ExceptionHandling;
 using Pimly.Api.Integration;
 using Pimly.AspNetCore.Observability;
 using Pimly.AspNetCore.Tenancy;
+using Pricing.Api;
+using Pricing.Application;
+using Pricing.Application.ItemPrices.Catalog;
+using Pricing.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,9 +36,12 @@ builder.Services.AddCatalogApplication();
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
 builder.Services.AddChannelsApplication();
 builder.Services.AddChannelsInfrastructure(builder.Configuration);
+builder.Services.AddPricingApplication();
+builder.Services.AddPricingInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICatalogCategoryGateway, CatalogCategoryGateway>();
 builder.Services.AddScoped<ICatalogAttributeGateway, CatalogAttributeGateway>();
 builder.Services.AddScoped<ICatalogVariantGateway, CatalogVariantGateway>();
+builder.Services.AddScoped<ICatalogProductItemGateway, CatalogProductItemGateway>();
 builder.Services.AddIdentityApplication();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddMediaApplication();
@@ -79,6 +86,7 @@ builder.Services.AddPimlyTenancy();
 var app = builder.Build();
 
 await app.Services.ApplyCatalogMigrationsAsync(app.Configuration);
+await app.Services.ApplyPricingMigrationsAsync(app.Configuration);
 await app.Services.ApplyChannelsMigrationsAsync(app.Configuration);
 await app.Services.ApplyIdentityMigrationsAsync(app.Configuration);
 
@@ -107,6 +115,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.MapCatalogEndpoints();
+app.MapPricingEndpoints();
 app.MapChannelsEndpoints();
 app.MapIdentityEndpoints();
 app.MapMediaEndpoints();

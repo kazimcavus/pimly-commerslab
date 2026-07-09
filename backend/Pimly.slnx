@@ -31,6 +31,12 @@
     <Project Path="src/Modules/Channels/Channels.Api/Channels.Api.csproj" />
     <Project Path="src/Modules/Channels/Channels.Infrastructure/Channels.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Pricing/">
+    <Project Path="src/Modules/Pricing/Pricing.Domain/Pricing.Domain.csproj" />
+    <Project Path="src/Modules/Pricing/Pricing.Application/Pricing.Application.csproj" />
+    <Project Path="src/Modules/Pricing/Pricing.Api/Pricing.Api.csproj" />
+    <Project Path="src/Modules/Pricing/Pricing.Infrastructure/Pricing.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Catalog.Domain.UnitTests/Catalog.Domain.UnitTests.csproj" />
     <Project Path="tests/Catalog.Application.UnitTests/Catalog.Application.UnitTests.csproj" />

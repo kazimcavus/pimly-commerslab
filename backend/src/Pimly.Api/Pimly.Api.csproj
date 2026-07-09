@@ -31,6 +31,9 @@
     <ProjectReference Include="..\Modules\Channels\Channels.Api\Channels.Api.csproj" />
     <ProjectReference Include="..\Modules\Channels\Channels.Application\Channels.Application.csproj" />
     <ProjectReference Include="..\Modules\Channels\Channels.Infrastructure\Channels.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Pricing\Pricing.Api\Pricing.Api.csproj" />
+    <ProjectReference Include="..\Modules\Pricing\Pricing.Application\Pricing.Application.csproj" />
+    <ProjectReference Include="..\Modules\Pricing\Pricing.Infrastructure\Pricing.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
