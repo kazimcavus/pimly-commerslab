@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Pricing.Domain;
 using Pricing.Domain.BasePrices;
+using Pricing.Domain.ChannelPrices;
 using Pricing.Domain.ItemPrices;
 using Pricing.Domain.PriceDefinitions;
 using Pricing.Infrastructure.Tenancy;
@@ -32,6 +33,9 @@ public sealed class PricingDbContext : DbContext, IUnitOfWork
 
     /// <summary>Gets kalem temel fiyatları kümesi.</summary>
     public DbSet<BasePrice> BasePrices => Set<BasePrice>();
+
+    /// <summary>Gets kalem kanal (pazaryeri) fiyatları kümesi.</summary>
+    public DbSet<ChannelPrice> ChannelPrices => Set<ChannelPrice>();
 
     internal Guid CurrentTenantId =>
         _tenantContext?.TenantId

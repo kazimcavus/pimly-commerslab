@@ -18,6 +18,7 @@ public static class PricingEndpoints
         group.MapPriceDefinitionEndpoints();
         group.MapItemPriceEndpoints();
         group.MapBasePriceEndpoints();
+        group.MapChannelPriceEndpoints();
         return group;
     }
 }

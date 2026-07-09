@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pricing.Domain;
 using Pricing.Domain.BasePrices;
+using Pricing.Domain.ChannelPrices;
 using Pricing.Domain.ItemPrices;
 using Pricing.Domain.PriceDefinitions;
 using Pricing.Infrastructure.Persistence;
@@ -32,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IPriceDefinitionRepository, PriceDefinitionRepository>();
         services.AddScoped<IItemPriceRepository, ItemPriceRepository>();
         services.AddScoped<IBasePriceRepository, BasePriceRepository>();
+        services.AddScoped<IChannelPriceRepository, ChannelPriceRepository>();
 
         return services;
     }

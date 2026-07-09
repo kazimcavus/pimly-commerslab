@@ -2,6 +2,9 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Pricing.Application.BasePrices.GetBasePrice;
 using Pricing.Application.BasePrices.SetBasePrice;
+using Pricing.Application.ChannelPrices.GetChannelPrice;
+using Pricing.Application.ChannelPrices.ListChannelPrices;
+using Pricing.Application.ChannelPrices.SetChannelPrice;
 using Pricing.Application.ItemPrices.DeleteItemPrice;
 using Pricing.Application.ItemPrices.DeleteItemPricesForItem;
 using Pricing.Application.ItemPrices.ListItemPrices;
@@ -33,6 +36,10 @@ public static class DependencyInjection
 
         services.AddScoped<ISetBasePriceHandler, SetBasePriceHandler>();
         services.AddScoped<IGetBasePriceHandler, GetBasePriceHandler>();
+
+        services.AddScoped<ISetChannelPriceHandler, SetChannelPriceHandler>();
+        services.AddScoped<IGetChannelPriceHandler, GetChannelPriceHandler>();
+        services.AddScoped<IListChannelPricesHandler, ListChannelPricesHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

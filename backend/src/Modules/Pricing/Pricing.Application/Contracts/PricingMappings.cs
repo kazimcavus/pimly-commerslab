@@ -1,4 +1,5 @@
 using Pricing.Domain.BasePrices;
+using Pricing.Domain.ChannelPrices;
 using Pricing.Domain.ItemPrices;
 using Pricing.Domain.PriceDefinitions;
 
@@ -7,6 +8,15 @@ namespace Pricing.Application.Contracts;
 /// <summary>Pricing domain modelleri ile DTO'lar arasında dönüşüm sağlar.</summary>
 internal static class PricingMappings
 {
+    public static ChannelPriceDto ToDto(this ChannelPrice channelPrice) =>
+        new(
+            channelPrice.ProductItemId,
+            channelPrice.Marketplace.Code,
+            channelPrice.Amount,
+            channelPrice.CompareAtAmount,
+            channelPrice.Currency,
+            channelPrice.UpdatedAt);
+
     public static PriceDefinitionDto ToDto(this PriceDefinition definition) =>
         new(definition.Id, definition.Name, definition.Code);
 

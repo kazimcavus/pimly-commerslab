@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Pricing.Domain.BasePrices;
+using Pricing.Domain.ChannelPrices;
 using Pricing.Domain.ItemPrices;
 using Pricing.Domain.PriceDefinitions;
 using SharedKernel.Tenancy;
@@ -15,6 +16,7 @@ internal static class PricingTenancyExtensions
         ConfigureTenantRoot<PriceDefinition>(modelBuilder, tenantId);
         ConfigureTenantRoot<ProductItemPrice>(modelBuilder, tenantId);
         ConfigureTenantRoot<BasePrice>(modelBuilder, tenantId);
+        ConfigureTenantRoot<ChannelPrice>(modelBuilder, tenantId);
     }
 
     public static void StampTenantId(this DbContext db, Guid tenantId)
