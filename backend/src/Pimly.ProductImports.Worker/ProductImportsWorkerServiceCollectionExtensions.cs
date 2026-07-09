@@ -9,6 +9,9 @@ using Media.Infrastructure;
 using Pimly.ProductImports.Worker.Integration;
 using Pimly.ProductImports.Worker.Options;
 using Pimly.ProductImports.Worker.ProductImports;
+using Pricing.Application;
+using Pricing.Application.ItemPrices.Catalog;
+using Pricing.Infrastructure;
 using SharedKernel.Tenancy;
 
 namespace Pimly.ProductImports.Worker;
@@ -27,11 +30,16 @@ public static class ProductImportsWorkerServiceCollectionExtensions
         services.AddChannelsApplication();
         services.AddChannelsInfrastructure(configuration);
 
-        // Ürün import'u Catalog'a yazar ve görselleri Media'ya alır.
+        // Ürün import'u Catalog'a (kimlik/tanım) ve Pricing'e (fiyat) yazar, görselleri Media'ya alır.
         services.AddCatalogApplication();
         services.AddCatalogInfrastructure(configuration);
+        services.AddPricingApplication();
+        services.AddPricingInfrastructure(configuration);
         services.AddMediaApplication();
         services.AddMediaInfrastructure(configuration);
+
+        // Pricing'in kalem fiyatı yazımı, kalemin Catalog'da var olduğunu bu ACL portuyla doğrular.
+        services.AddScoped<ICatalogProductItemGateway, CatalogProductItemGateway>();
 
         // Worker HTTP bağlamı olmadığı için tenant, iş başına elle set edilen ambient bağlamdan akar.
         services.AddScoped<AmbientTenantContext>();

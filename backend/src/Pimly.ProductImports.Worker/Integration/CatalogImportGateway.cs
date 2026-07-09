@@ -3,12 +3,10 @@ using Catalog.Application.Attributes.CreateAttribute;
 using Catalog.Application.Brands.CreateBrand;
 using Catalog.Application.Categories.AssignCategoryAttribute;
 using Catalog.Application.Categories.CreateCategory;
-using Catalog.Application.PriceDefinitions.CreatePriceDefinition;
 using Catalog.Application.Products;
 using Catalog.Application.Products.AddProductImage;
 using Catalog.Application.Products.CreateProduct;
 using Catalog.Application.Products.CreateProductsBatch;
-using Catalog.Application.Products.UpsertItemPrice;
 using Catalog.Application.Variants.AddVariantValue;
 using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Domain;
@@ -16,8 +14,12 @@ using Catalog.Domain.Products;
 using Catalog.Domain.Variants;
 using Channels.Application.ProductImports.Catalog;
 using Media.Application.UploadImage;
+using Pricing.Application.BasePrices.SetBasePrice;
+using Pricing.Application.ItemPrices.UpsertItemPrice;
+using Pricing.Application.PriceDefinitions.CreatePriceDefinition;
 using SharedKernel;
 using CatalogProductVariant = Catalog.Domain.Products.Variant;
+using IPriceDefinitionRepository = Pricing.Domain.PriceDefinitions.IPriceDefinitionRepository;
 
 namespace Pimly.ProductImports.Worker.Integration;
 
@@ -45,6 +47,7 @@ internal sealed class CatalogImportGateway(
     IAddProductImageHandler addProductImage,
     IUploadImageHandler uploadImage,
     IUpsertItemPriceHandler upsertItemPrice,
+    ISetBasePriceHandler setBasePrice,
     IHttpClientFactory httpClientFactory) : ICatalogImportGateway
 {
     private const long MaxImageBytes = 10 * 1024 * 1024;
@@ -341,8 +344,6 @@ internal sealed class CatalogImportGateway(
                     Mpn: null,
                     AxisValueEntryId: null,
                     AxisValue: null,
-                    item.Price,
-                    item.CompareAtPrice,
                     item.Stock,
                     item.AttributeValues
                         .Select(selection => new AttributeValueInput(selection.Id, selection.ValueId))
@@ -372,6 +373,29 @@ internal sealed class CatalogImportGateway(
                     item => item.Id,
                     StringComparer.OrdinalIgnoreCase)))
             .ToList();
+
+        // Temel fiyat, kalem Catalog'da oluşturulduktan sonra Pricing'e yazılır (dual-write).
+        // Catalog.product_items.price kolonu contract dilimine kadar dormant olarak da doldurulur.
+        var itemIdByBarcode = snapshots
+            .SelectMany(snapshot => snapshot.ItemIdByBarcode)
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in input.Items)
+        {
+            if (!itemIdByBarcode.TryGetValue(item.Barcode, out var itemId))
+            {
+                continue;
+            }
+
+            var basePriceResult = await setBasePrice.ExecuteAsync(
+                new SetBasePriceCommand(itemId, item.Price, item.CompareAtPrice),
+                cancellationToken);
+
+            if (basePriceResult.IsFailure)
+            {
+                return Result.Failure<IReadOnlyList<CreatedProductSnapshot>>(basePriceResult.Error);
+            }
+        }
 
         return Result.Success(snapshots);
     }
