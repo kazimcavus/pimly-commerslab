@@ -34,7 +34,6 @@ internal static class ProductItemEndpoints
                     request.Mpn,
                     request.AxisValueEntryId,
                     request.AxisValue,
-                    request.Stock,
                     ProductInputMapper.MapAttributeValues(request.AttributeValues),
                     ProductInputMapper.MapVariantValues(request.VariantValues))));
             return result.ToHttpResult();
@@ -48,7 +47,6 @@ internal static class ProductItemEndpoints
                 request.Mpn,
                 request.AxisValueEntryId,
                 request.AxisValue,
-                request.Stock,
                 ProductInputMapper.MapAttributeValues(request.AttributeValues),
                 request.Sku,
                 request.Barcode));

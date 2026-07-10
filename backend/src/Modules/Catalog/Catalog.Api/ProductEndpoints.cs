@@ -112,7 +112,6 @@ internal static class ProductEndpoints
             item.Mpn,
             item.AxisValueEntryId,
             item.AxisValue,
-            item.Stock,
             ProductInputMapper.MapAttributeValues(item.AttributeValues),
             ProductInputMapper.MapVariantValues(item.VariantValues))).ToList();
 

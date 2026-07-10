@@ -74,15 +74,6 @@ public class CreateProductCommandValidatorTests
         result.Errors.Should().Contain(e => e.PropertyName == "Items");
     }
 
-    [Fact]
-    public void Validate_NegativeItemStock_Fails()
-    {
-        var item = ValidItem() with { Stock = -1 };
-        var result = _validator.Validate(ValidCommand() with { Items = [item] });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Items[0].Stock");
-    }
-
     private static CreateProductCommand ValidCommand() =>
         new(
             Guid.NewGuid(),
@@ -96,7 +87,7 @@ public class CreateProductCommandValidatorTests
             [ValidItem()]);
 
     private static CreateProductItemInput ValidItem() =>
-        new(null, "8690000001", null, null, null, null, 5, null, null);
+        new(null, "8690000001", null, null, null, null, null, null);
 }
 
 /// <summary>CreateProductsBatchCommandValidator için smoke testleri.</summary>
@@ -123,7 +114,7 @@ public class CreateProductsBatchCommandValidatorTests
             null,
             null,
             [],
-            [new CreateProductItemInput(null, "8690000001", null, null, null, null, 5, null, null)]);
+            [new CreateProductItemInput(null, "8690000001", null, null, null, null, null, null)]);
 
         var result = _validator.Validate(new CreateProductsBatchCommand(Guid.NewGuid(), [item]));
         result.IsValid.Should().BeTrue();

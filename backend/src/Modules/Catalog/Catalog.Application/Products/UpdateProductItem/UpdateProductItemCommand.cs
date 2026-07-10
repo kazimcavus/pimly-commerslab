@@ -10,7 +10,6 @@ public sealed record UpdateProductItemCommand(
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    int Stock,
     IReadOnlyList<AttributeValueInput>? AttributeValueInputs,
     string? Sku = null,
     string? Barcode = null);

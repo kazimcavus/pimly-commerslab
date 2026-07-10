@@ -16,7 +16,5 @@ public sealed class AddProductItemCommandValidator : AbstractValidator<AddProduc
             .WithMessage("Item payload is required.");
         RuleFor(x => x.Item.Barcode).NotEmpty()
             .WithMessage("Barcode is required.");
-        RuleFor(x => x.Item.Stock).GreaterThanOrEqualTo(0)
-            .WithMessage("Stock cannot be negative.");
     }
 }

@@ -83,7 +83,6 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
 
         // --- 5. Fiyat tanımları: "TY Satış" 449.90, "TY Karşılaştırma" 599.90 ---
         var gomlekItem = products.SelectMany(p => p.Items).Single(i => i.Barcode == "8680000000011");
-        gomlekItem.Stock.Should().Be(25);
 
         var priceDefinitions = await ListAsync<PriceDefinitionResponse>(
             "/api/v1/pricing/price-definitions?page=1&page_size=100");
@@ -273,8 +272,7 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
     private sealed record ProductItemResponse(
         Guid Id,
         string? Sku,
-        string Barcode,
-        int Stock);
+        string Barcode);
 
     private sealed record VariantTypeResponse(Guid Id, string Key, string Name, string SelectionStyle, bool Slicer);
 

@@ -6,16 +6,8 @@ namespace Catalog.Domain.UnitTests;
 /// <summary>ProductItem varlığı için birim testleri.</summary>
 public class ProductItemTests
 {
-    private static ProductItemDraft BasicDraft(int stock = 5) =>
-        new(null, "BC-001", null, null, null, null, stock, null, null);
-
-    [Fact]
-    public void Create_NegativeStock_Fails()
-    {
-        var result = ProductItem.Create(BasicDraft(stock: -1));
-        result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("stock");
-    }
+    private static ProductItemDraft BasicDraft() =>
+        new(null, "BC-001", null, null, null, null, null, null);
 
     [Fact]
     public void Create_ValidDraft_Succeeds()
@@ -23,16 +15,14 @@ public class ProductItemTests
         var result = ProductItem.Create(BasicDraft());
         result.IsSuccess.Should().BeTrue();
         result.Value.Barcode.Should().Be("BC-001");
-        result.Value.Stock.Should().Be(5);
     }
 
     [Fact]
     public void Update_ValidValues_Succeeds()
     {
         var variant = ProductItem.Create(BasicDraft()).Value;
-        var result = variant.Update(new ProductItemUpdate("GTIN", "MPN", null, "Axis", 3, null));
+        var result = variant.Update(new ProductItemUpdate("GTIN", "MPN", null, "Axis", null));
         result.IsSuccess.Should().BeTrue();
-        variant.Stock.Should().Be(3);
         variant.Gtin.Should().Be("GTIN");
     }
 
@@ -42,14 +32,5 @@ public class ProductItemTests
         var result = ProductItem.Create(BasicDraft() with { Barcode = "  " });
         result.IsFailure.Should().BeTrue();
         result.Error.Message.Should().Contain("barcode");
-    }
-
-    [Fact]
-    public void Update_NegativeStock_Fails()
-    {
-        var variant = ProductItem.Create(BasicDraft()).Value;
-        var result = variant.Update(new ProductItemUpdate(null, null, null, null, -1, null));
-        result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("stock");
     }
 }

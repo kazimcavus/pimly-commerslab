@@ -198,7 +198,7 @@ internal static class HandlerTestSupport
 
     /// <summary>Geçerli tek kalem girdisi üretir.</summary>
     internal static CreateProductItemInput ValidItem() =>
-        new(null, "8690000001", null, null, null, null, 5, null, null);
+        new(null, "8690000001", null, null, null, null, null, null);
 
     /// <summary>SKU üreticisini, girdileri tek plana aynen aktaracak şekilde ayarlar.</summary>
     internal static void SetupPassthroughPlans(Mock<ISkuGeneratorService> skuGenerator) =>

@@ -65,7 +65,6 @@ public sealed class UpdateProductItemHandler(
             command.Mpn,
             command.AxisValueEntryId,
             command.AxisValue,
-            command.Stock,
             command.AttributeValueInputs is null ? null : attributeValuesResult.Value,
             command.Sku,
             command.Barcode);

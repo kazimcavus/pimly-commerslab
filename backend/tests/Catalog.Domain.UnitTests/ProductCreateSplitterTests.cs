@@ -203,7 +203,7 @@ public class ProductCreateSplitterTests
     }
 
     private static ProductItemDraft BasicVariant(string barcode) =>
-        new(null, barcode, null, null, null, null, 5, null, null);
+        new(null, barcode, null, null, null, null, null, null);
 
     private static ProductItemDraft ColorOnlyItem(string barcode, Guid valueId, string label) =>
         new(
@@ -213,7 +213,6 @@ public class ProductCreateSplitterTests
             null,
             null,
             null,
-            5,
             null,
             [
                 new ProductVariantValue(
@@ -235,7 +234,6 @@ public class ProductCreateSplitterTests
             null,
             null,
             null,
-            5,
             null,
             [
                 new ProductVariantValue(

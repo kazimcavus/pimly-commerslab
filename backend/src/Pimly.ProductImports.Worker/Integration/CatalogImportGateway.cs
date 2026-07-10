@@ -346,7 +346,6 @@ internal sealed class CatalogImportGateway(
                     Mpn: null,
                     AxisValueEntryId: null,
                     AxisValue: null,
-                    item.Stock,
                     item.AttributeValues
                         .Select(selection => new AttributeValueInput(selection.Id, selection.ValueId))
                         .ToList(),

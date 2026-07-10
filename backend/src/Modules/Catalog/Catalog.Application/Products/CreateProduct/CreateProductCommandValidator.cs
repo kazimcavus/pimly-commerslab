@@ -38,7 +38,5 @@ public sealed class CreateProductItemInputValidator : AbstractValidator<CreatePr
     {
         RuleFor(x => x.Barcode).VariantBarcode();
         RuleFor(x => x.Sku).OptionalVariantSku();
-        RuleFor(x => x.Stock).GreaterThanOrEqualTo(0)
-            .WithMessage("Stock cannot be negative.");
     }
 }

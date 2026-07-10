@@ -4,10 +4,10 @@ namespace Catalog.Domain.Products;
 
 /// <summary>
 /// Ürün altında satılabilir SKU/barkod birimini temsil eden varlık.
-/// Kimlik, stok ve eksen/özellik değerlerini taşır. Fiyat, Pricing bağlamına taşınmıştır.
+/// Kimlik ve eksen/özellik değerlerini taşır. Fiyat Pricing'e, stok Inventory'ye taşınmıştır.
 /// </summary>
 /// <example>
-/// Renk: Kırmızı, Beden: S seçimleriyle Barcode "8690000001", Stock 10.
+/// Renk: Kırmızı, Beden: S seçimleriyle Barcode "8690000001".
 /// </example>
 public sealed class ProductItem : Entity<Guid>
 {
@@ -23,7 +23,6 @@ public sealed class ProductItem : Entity<Guid>
         string? mpn,
         Guid? axisValueEntryId,
         string? axisValue,
-        int stock,
         IReadOnlyList<AttributeValue> attributeValues,
         IReadOnlyList<VariantValue> variantValues)
         : base(id)
@@ -34,7 +33,6 @@ public sealed class ProductItem : Entity<Guid>
         Mpn = mpn;
         AxisValueEntryId = axisValueEntryId;
         AxisValue = axisValue;
-        Stock = stock;
         AttributeValues = attributeValues;
         VariantValues = variantValues;
     }
@@ -63,10 +61,6 @@ public sealed class ProductItem : Entity<Guid>
     /// <example>Özel baskı metni.</example>
     public string? AxisValue { get; private set; }
 
-    /// <summary>Gets stok miktarı.</summary>
-    /// <example>10.</example>
-    public int Stock { get; private set; }
-
     /// <summary>Gets varyant düzeyinde özellik değerleri.</summary>
     /// <example>Bu kalemde "Desen" özelliğinde "Çizgili" değeri.</example>
     public IReadOnlyList<AttributeValue> AttributeValues { get; private set; } = [];
@@ -84,11 +78,6 @@ public sealed class ProductItem : Entity<Guid>
             return Result.Failure<ProductItem>(Error.Validation("Variant barcode is required."));
         }
 
-        if (draft.Stock < 0)
-        {
-            return Result.Failure<ProductItem>(Error.Validation("Variant stock cannot be negative."));
-        }
-
         return Result.Success(new ProductItem(
             Guid.NewGuid(),
             string.IsNullOrWhiteSpace(draft.Sku) ? null : draft.Sku.Trim(),
@@ -97,21 +86,15 @@ public sealed class ProductItem : Entity<Guid>
             NullIfWhiteSpace(draft.Mpn),
             draft.AxisValueEntryId,
             NullIfWhiteSpace(draft.AxisValue),
-            draft.Stock,
             draft.AttributeValues ?? [],
             draft.VariantValues ?? []));
     }
 
-    /// <summary>Kalemin fiyat, stok, tanımlayıcı ve özellik bilgilerini günceller.</summary>
+    /// <summary>Kalemin tanımlayıcı ve özellik bilgilerini günceller.</summary>
     /// <param name="update">Güncelleme girdisi.</param>
     /// <remarks>Barcode null ise mevcut barkod korunur; Sku null ise mevcut SKU korunur (boş metin SKU'yu temizler).</remarks>
     internal Result Update(ProductItemUpdate update)
     {
-        if (update.Stock < 0)
-        {
-            return Result.Failure(Error.Validation("Variant stock cannot be negative."));
-        }
-
         if (update.Barcode is not null)
         {
             if (string.IsNullOrWhiteSpace(update.Barcode))
@@ -131,7 +114,6 @@ public sealed class ProductItem : Entity<Guid>
         Mpn = NullIfWhiteSpace(update.Mpn);
         AxisValueEntryId = update.AxisValueEntryId;
         AxisValue = NullIfWhiteSpace(update.AxisValue);
-        Stock = update.Stock;
         if (update.AttributeValues is not null)
         {
             AttributeValues = update.AttributeValues;
@@ -145,7 +127,7 @@ public sealed class ProductItem : Entity<Guid>
 }
 
 /// <summary>Yeni satılabilir kalem oluşturma girdisi.</summary>
-/// <example>Barcode "8690000001", Renk/Beden seçimleri ve stok bilgisi.</example>
+/// <example>Barcode "8690000001", Renk/Beden seçimleri.</example>
 public sealed record ProductItemDraft(
     string? Sku,
     string Barcode,
@@ -153,19 +135,17 @@ public sealed record ProductItemDraft(
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    int Stock,
     IReadOnlyList<AttributeValue>? AttributeValues,
     IReadOnlyList<VariantValue>? VariantValues);
 
 /// <summary>Mevcut satılabilir kalem güncelleme girdisi.</summary>
-/// <example>Stock 8 ve güncellenmiş özellik değerleri.</example>
+/// <example>Güncellenmiş özellik değerleri.</example>
 /// <remarks>Barcode/Sku null bırakılırsa mevcut değer korunur; boş Sku metni SKU'yu temizler.</remarks>
 public sealed record ProductItemUpdate(
     string? Gtin,
     string? Mpn,
     Guid? AxisValueEntryId,
     string? AxisValue,
-    int Stock,
     IReadOnlyList<AttributeValue>? AttributeValues,
     string? Sku = null,
     string? Barcode = null);

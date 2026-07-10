@@ -254,4 +254,4 @@ internal sealed record ProductResponse(
     IReadOnlyList<ItemResponse> Items);
 
 /// <summary>API ürün kalemi yanıtını deserialize etmek için kullanılan DTO.</summary>
-internal sealed record ItemResponse(Guid Id, string Barcode, int Stock);
+internal sealed record ItemResponse(Guid Id, string Barcode);
