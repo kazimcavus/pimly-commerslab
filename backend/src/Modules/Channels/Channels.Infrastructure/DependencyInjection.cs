@@ -7,6 +7,7 @@ using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
 using Channels.Domain.ProductImports;
+using Channels.Domain.Publications;
 using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Options;
 using Channels.Infrastructure.Persistence;
@@ -41,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IMarketplaceConnectionRepository, Repositories.MarketplaceConnectionRepository>();
         services.AddScoped<ITaxonomySyncRunRepository, Repositories.TaxonomySyncRunRepository>();
         services.AddScoped<IProductImportRunRepository, Repositories.ProductImportRunRepository>();
+        services.AddScoped<IProductPublicationRunRepository, Repositories.ProductPublicationRunRepository>();
         services.AddScoped<IExternalCategoryRepository, Repositories.ExternalCategoryRepository>();
         services.AddScoped<ICategoryChannelMappingRepository, Repositories.CategoryChannelMappingRepository>();
         services.AddScoped<IExternalCategoryAttributeRepository, Repositories.ExternalCategoryAttributeRepository>();

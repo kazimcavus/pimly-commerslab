@@ -18,6 +18,8 @@ using Channels.Application.Marketplaces.ListMarketplaces;
 using Channels.Application.ProductImports.EnqueueProductImport;
 using Channels.Application.ProductImports.GetProductImportRun;
 using Channels.Application.ProductImports.ListProductImportRuns;
+using Channels.Application.Publications.EnqueuePublication;
+using Channels.Application.Publications.GetPublicationRun;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.GetTaxonomyStatus;
 using Channels.Application.TaxonomySync.GetTaxonomySyncRun;
@@ -149,6 +151,27 @@ public static class ChannelsEndpoints
                 new ListProductImportRunsQuery(code, limit ?? 20),
                 cancellationToken);
 
+            return result.ToHttpResult();
+        });
+
+        group.MapPost("/marketplaces/{code}/publications", async (
+            string code,
+            IEnqueuePublicationHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await handler.ExecuteAsync(new EnqueuePublicationCommand(code), cancellationToken);
+            return result.ToHttpResult(dto => Results.Accepted(
+                $"/api/v1/channels/marketplaces/{code}/publications/{dto.Id}",
+                dto));
+        });
+
+        group.MapGet("/marketplaces/{code}/publications/{runId:guid}", async (
+            string code,
+            Guid runId,
+            IGetPublicationRunHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await handler.ExecuteAsync(new GetPublicationRunQuery(code, runId), cancellationToken);
             return result.ToHttpResult();
         });
 

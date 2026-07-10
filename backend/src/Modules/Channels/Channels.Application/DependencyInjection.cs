@@ -20,6 +20,8 @@ using Channels.Application.Marketplaces.ListMarketplaces;
 using Channels.Application.ProductImports.EnqueueProductImport;
 using Channels.Application.ProductImports.GetProductImportRun;
 using Channels.Application.ProductImports.ListProductImportRuns;
+using Channels.Application.Publications.EnqueuePublication;
+using Channels.Application.Publications.GetPublicationRun;
 using Channels.Application.TaxonomySync.EnqueueTaxonomySync;
 using Channels.Application.TaxonomySync.GetTaxonomyStatus;
 using Channels.Application.TaxonomySync.GetTaxonomySyncRun;
@@ -63,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IResolveAttributeValueChannelMappingHandler, ResolveAttributeValueChannelMappingHandler>();
         services.AddScoped<IEnqueueProductImportHandler, EnqueueProductImportHandler>();
         services.AddScoped<IGetProductImportRunHandler, GetProductImportRunHandler>();
+        services.AddScoped<IEnqueuePublicationHandler, EnqueuePublicationHandler>();
+        services.AddScoped<IGetPublicationRunHandler, GetPublicationRunHandler>();
         services.AddScoped<IListProductImportRunsHandler, ListProductImportRunsHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);

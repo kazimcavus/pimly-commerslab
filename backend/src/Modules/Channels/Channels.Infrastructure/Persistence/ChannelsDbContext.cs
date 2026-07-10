@@ -4,6 +4,7 @@ using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
 using Channels.Domain.ProductImports;
+using Channels.Domain.Publications;
 using Channels.Domain.TaxonomySync;
 using Channels.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +51,8 @@ public sealed class ChannelsDbContext : DbContext, IUnitOfWork
 
     public DbSet<ProductImportRun> ProductImportRuns => Set<ProductImportRun>();
 
+    public DbSet<ProductPublicationRun> ProductPublicationRuns => Set<ProductPublicationRun>();
+
     public DbSet<ExternalCategory> ExternalCategories => Set<ExternalCategory>();
 
     public DbSet<CategoryChannelMapping> CategoryChannelMappings => Set<CategoryChannelMapping>();
@@ -70,6 +73,15 @@ public sealed class ChannelsDbContext : DbContext, IUnitOfWork
         // 0 satır → DbUpdateConcurrencyException. Hata kayıtları yalnızca eklenir (hiç
         // güncellenmez), bu yüzden Modified görülen her kaydı güvenle Added'e çeviririz.
         foreach (var entry in ChangeTracker.Entries<ProductImportError>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        // ProductPublicationError de append-only owned child'dır; aynı Modified→Added düzeltmesi.
+        foreach (var entry in ChangeTracker.Entries<ProductPublicationError>())
         {
             if (entry.State == EntityState.Modified)
             {
