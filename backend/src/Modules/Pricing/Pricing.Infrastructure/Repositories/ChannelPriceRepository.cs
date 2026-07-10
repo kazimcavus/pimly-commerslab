@@ -25,6 +25,14 @@ internal sealed class ChannelPriceRepository(PricingDbContext db) : IChannelPric
             .OrderBy(p => p.Marketplace)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ChannelPrice>> ListByMarketplaceAsync(
+        Marketplace marketplace,
+        CancellationToken cancellationToken = default) =>
+        await db.ChannelPrices
+            .Where(p => p.Marketplace == marketplace)
+            .OrderBy(p => p.ProductItemId)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(ChannelPrice channelPrice, CancellationToken cancellationToken = default) =>
         await db.ChannelPrices.AddAsync(channelPrice, cancellationToken);
 

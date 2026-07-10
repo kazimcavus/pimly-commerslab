@@ -4,6 +4,7 @@ using Pricing.Application.BasePrices.GetBasePrice;
 using Pricing.Application.BasePrices.SetBasePrice;
 using Pricing.Application.ChannelPrices.GetChannelPrice;
 using Pricing.Application.ChannelPrices.ListChannelPrices;
+using Pricing.Application.ChannelPrices.ListChannelPricesForMarketplace;
 using Pricing.Application.ChannelPrices.SetChannelPrice;
 using Pricing.Application.ItemPrices.DeleteItemPrice;
 using Pricing.Application.ItemPrices.DeleteItemPricesForItem;
@@ -40,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<ISetChannelPriceHandler, SetChannelPriceHandler>();
         services.AddScoped<IGetChannelPriceHandler, GetChannelPriceHandler>();
         services.AddScoped<IListChannelPricesHandler, ListChannelPricesHandler>();
+        services.AddScoped<IListChannelPricesForMarketplaceHandler, ListChannelPricesForMarketplaceHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

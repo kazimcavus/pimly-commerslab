@@ -16,6 +16,11 @@ public interface IChannelPriceRepository
         Guid productItemId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Bir pazaryerindeki tüm kanal fiyatlarını (tenant kapsamında) listeler; yayın kaynağıdır.</summary>
+    Task<IReadOnlyList<ChannelPrice>> ListByMarketplaceAsync(
+        Marketplace marketplace,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Yeni kanal fiyatı ekler.</summary>
     Task AddAsync(ChannelPrice channelPrice, CancellationToken cancellationToken = default);
 

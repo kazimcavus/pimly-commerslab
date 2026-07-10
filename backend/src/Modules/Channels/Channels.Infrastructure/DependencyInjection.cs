@@ -1,6 +1,7 @@
 using Channels.Application.ExternalCatalog;
 using Channels.Application.Options;
 using Channels.Application.ProductImports;
+using Channels.Application.Publications;
 using Channels.Domain;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
@@ -68,18 +69,21 @@ public static class DependencyInjection
         services.AddScoped<IMarketplaceTaxonomyClientResolver, MarketplaceTaxonomyClientResolver>();
         services.AddScoped<IMarketplaceCategoryAttributesClientResolver, MarketplaceCategoryAttributesClientResolver>();
         services.AddScoped<IMarketplaceProductsClientResolver, MarketplaceProductsClientResolver>();
+        services.AddScoped<IMarketplaceListingClientResolver, Publications.MarketplaceListingClientResolver>();
 
         if (options.UseStubTaxonomyClient)
         {
             RegisterKeyedClient<IMarketplaceTaxonomyClient, StubMarketplaceTaxonomyClient>(services);
             RegisterKeyedClient<IMarketplaceCategoryAttributesClient, StubMarketplaceCategoryAttributesClient>(services);
             RegisterKeyedClient<IMarketplaceProductsClient, StubMarketplaceProductsClient>(services);
+            RegisterKeyedClient<IMarketplaceListingClient, Publications.StubMarketplaceListingClient>(services);
             return;
         }
 
         RegisterKeyedClient<IMarketplaceTaxonomyClient, TrendyolMarketplaceTaxonomyClient>(services, Marketplace.Trendyol);
         RegisterKeyedClient<IMarketplaceCategoryAttributesClient, TrendyolMarketplaceCategoryAttributesClient>(services, Marketplace.Trendyol);
         RegisterKeyedClient<IMarketplaceProductsClient, TrendyolMarketplaceProductsClient>(services, Marketplace.Trendyol);
+        RegisterKeyedClient<IMarketplaceListingClient, Publications.TrendyolMarketplaceListingClient>(services, Marketplace.Trendyol);
     }
 
     private static void RegisterKeyedClient<TService, TClient>(

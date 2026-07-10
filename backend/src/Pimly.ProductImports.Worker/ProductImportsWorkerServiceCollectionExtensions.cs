@@ -3,12 +3,15 @@ using Catalog.Infrastructure;
 using Channels.Application;
 using Channels.Application.ProductImports.Catalog;
 using Channels.Application.ProductImports.ProcessProductImport;
+using Channels.Application.Publications;
+using Channels.Application.Publications.ProcessPublication;
 using Channels.Infrastructure;
 using Media.Application;
 using Media.Infrastructure;
 using Pimly.ProductImports.Worker.Integration;
 using Pimly.ProductImports.Worker.Options;
 using Pimly.ProductImports.Worker.ProductImports;
+using Pimly.ProductImports.Worker.Publications;
 using Pricing.Application;
 using Pricing.Application.ItemPrices.Catalog;
 using Pricing.Infrastructure;
@@ -63,7 +66,12 @@ public static class ProductImportsWorkerServiceCollectionExtensions
         // İşlemci, Catalog yazma kapısına ihtiyaç duyduğu için yalnızca worker kompozisyonunda kayıtlıdır.
         services.AddScoped<IProcessProductImportHandler, ProcessProductImportHandler>();
 
+        // Yayın (publish): Channels, kararlaştırılmış kanal fiyatlarını bu ACL portuyla Pricing'den okur.
+        services.AddScoped<IPricingChannelPriceGateway, PricingChannelPriceGateway>();
+        services.AddScoped<IProcessPublicationHandler, ProcessPublicationHandler>();
+
         services.AddHostedService<ProductImportBackgroundService>();
+        services.AddHostedService<ProductPublicationBackgroundService>();
 
         return services;
     }
