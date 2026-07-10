@@ -12,6 +12,9 @@ using Channels.Infrastructure;
 using Identity.Api;
 using Identity.Application;
 using Identity.Infrastructure;
+using Inventory.Api;
+using Inventory.Application;
+using Inventory.Infrastructure;
 using Media.Api;
 using Media.Application;
 using Media.Application.Options;
@@ -38,10 +41,13 @@ builder.Services.AddChannelsApplication();
 builder.Services.AddChannelsInfrastructure(builder.Configuration);
 builder.Services.AddPricingApplication();
 builder.Services.AddPricingInfrastructure(builder.Configuration);
+builder.Services.AddInventoryApplication();
+builder.Services.AddInventoryInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICatalogCategoryGateway, CatalogCategoryGateway>();
 builder.Services.AddScoped<ICatalogAttributeGateway, CatalogAttributeGateway>();
 builder.Services.AddScoped<ICatalogVariantGateway, CatalogVariantGateway>();
 builder.Services.AddScoped<ICatalogProductItemGateway, CatalogProductItemGateway>();
+builder.Services.AddScoped<Inventory.Application.StockLevels.Catalog.ICatalogProductItemGateway, InventoryCatalogProductItemGateway>();
 builder.Services.AddIdentityApplication();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddMediaApplication();
@@ -87,6 +93,7 @@ var app = builder.Build();
 
 await app.Services.ApplyCatalogMigrationsAsync(app.Configuration);
 await app.Services.ApplyPricingMigrationsAsync(app.Configuration);
+await app.Services.ApplyInventoryMigrationsAsync(app.Configuration);
 await app.Services.ApplyChannelsMigrationsAsync(app.Configuration);
 await app.Services.ApplyIdentityMigrationsAsync(app.Configuration);
 
@@ -116,6 +123,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapCatalogEndpoints();
 app.MapPricingEndpoints();
+app.MapInventoryEndpoints();
 app.MapChannelsEndpoints();
 app.MapIdentityEndpoints();
 app.MapMediaEndpoints();

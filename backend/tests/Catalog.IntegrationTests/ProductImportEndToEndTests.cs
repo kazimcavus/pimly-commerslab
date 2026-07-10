@@ -100,6 +100,11 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
         basePrice!.Amount.Should().Be(449.90m);
         basePrice.CompareAtAmount.Should().Be(599.90m);
 
+        // Stok Inventory'ye yazılmış olmalı (import kaleminin miktarı ile aynı).
+        var stock = await Client.GetFromJsonAsync<StockResponse>(
+            $"/api/v1/inventory/items/{gomlekItem.Id}/stock", CatalogJson.Options);
+        stock!.Quantity.Should().Be(25);
+
         // --- 6. Kanal eşlemeleri gönderim fazına hazır ---
         var categoryMappings = await ListAsync<CategoryMappingResponse>(
             "/api/v1/channels/marketplaces/TY/category-mappings?page=1&page_size=100");
@@ -294,6 +299,8 @@ public class ProductImportEndToEndTests(CatalogPostgresFixture fixture) : Catalo
         decimal Amount,
         decimal? CompareAtAmount,
         string Currency);
+
+    private sealed record StockResponse(Guid ProductItemId, int Quantity);
 
     private sealed record CategoryMappingResponse(Guid Id, Guid CatalogCategoryId, string ExternalId);
 

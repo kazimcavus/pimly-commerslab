@@ -37,6 +37,12 @@
     <Project Path="src/Modules/Pricing/Pricing.Api/Pricing.Api.csproj" />
     <Project Path="src/Modules/Pricing/Pricing.Infrastructure/Pricing.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Inventory/">
+    <Project Path="src/Modules/Inventory/Inventory.Domain/Inventory.Domain.csproj" />
+    <Project Path="src/Modules/Inventory/Inventory.Application/Inventory.Application.csproj" />
+    <Project Path="src/Modules/Inventory/Inventory.Api/Inventory.Api.csproj" />
+    <Project Path="src/Modules/Inventory/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Catalog.Domain.UnitTests/Catalog.Domain.UnitTests.csproj" />
     <Project Path="tests/Catalog.Application.UnitTests/Catalog.Application.UnitTests.csproj" />

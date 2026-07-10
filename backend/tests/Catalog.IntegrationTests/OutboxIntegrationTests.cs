@@ -112,6 +112,11 @@ public class OutboxIntegrationTests : CatalogIntegrationTestBase
             new { amount = 429.90m, compare_at_amount = 599.90m, currency = (string?)null });
         channelPriceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        var stockResponse = await Client.PutAsJsonAsync(
+            $"/api/v1/inventory/items/{itemId}/stock",
+            new { quantity = 7 });
+        stockResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
         // Kanal fiyatı yazma yolunu doğrula (GET geri okuma).
         var channelPriceRead = await Client.GetFromJsonAsync<ChannelPriceReadResponse>(
             $"/api/v1/pricing/items/{itemId}/channel-prices/TY", CatalogJson.Options);
@@ -121,6 +126,7 @@ public class OutboxIntegrationTests : CatalogIntegrationTestBase
         (await CountPricingItemPricesAsync(itemId)).Should().Be(1);
         (await CountPricingBasePricesAsync(itemId)).Should().Be(1);
         (await CountPricingChannelPricesAsync(itemId)).Should().Be(1);
+        (await CountInventoryStockAsync(itemId)).Should().Be(1);
 
         // 3. Ürünü sil → her kalem için ProductItemDeleted outbox'a yazılır.
         var deleteResponse = await Client.DeleteAsync($"/api/v1/catalog/products/{productId}");
@@ -129,10 +135,11 @@ public class OutboxIntegrationTests : CatalogIntegrationTestBase
         // 4. Worker kompozisyonuyla outbox'ı işle (tenant her mesaj için mesajdan akar).
         await DispatchOutboxAsync();
 
-        // 5. Pricing kalem fiyatları, temel fiyat ve kanal fiyatları temizlenmiş olmalı.
+        // 5. Pricing fiyatları, temel/kanal fiyatları ve Inventory stoğu temizlenmiş olmalı.
         (await CountPricingItemPricesAsync(itemId)).Should().Be(0);
         (await CountPricingBasePricesAsync(itemId)).Should().Be(0);
         (await CountPricingChannelPricesAsync(itemId)).Should().Be(0);
+        (await CountInventoryStockAsync(itemId)).Should().Be(0);
     }
 
     private sealed record ChannelPriceReadResponse(string Marketplace, decimal Amount);
@@ -174,6 +181,9 @@ public class OutboxIntegrationTests : CatalogIntegrationTestBase
 
     private async Task<long> CountPricingChannelPricesAsync(Guid itemId) =>
         await CountAsync("select count(*) from pricing.channel_prices where product_item_id = @itemId", itemId);
+
+    private async Task<long> CountInventoryStockAsync(Guid itemId) =>
+        await CountAsync("select count(*) from inventory.stock_levels where product_item_id = @itemId", itemId);
 
     private async Task<long> CountAsync(string sql, Guid itemId)
     {

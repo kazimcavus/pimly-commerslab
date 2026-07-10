@@ -13,6 +13,7 @@ using Catalog.Domain;
 using Catalog.Domain.Products;
 using Catalog.Domain.Variants;
 using Channels.Application.ProductImports.Catalog;
+using Inventory.Application.StockLevels.SetStock;
 using Media.Application.UploadImage;
 using Pricing.Application.BasePrices.SetBasePrice;
 using Pricing.Application.ItemPrices.UpsertItemPrice;
@@ -48,6 +49,7 @@ internal sealed class CatalogImportGateway(
     IUploadImageHandler uploadImage,
     IUpsertItemPriceHandler upsertItemPrice,
     ISetBasePriceHandler setBasePrice,
+    ISetStockHandler setStock,
     IHttpClientFactory httpClientFactory) : ICatalogImportGateway
 {
     private const long MaxImageBytes = 10 * 1024 * 1024;
@@ -394,6 +396,16 @@ internal sealed class CatalogImportGateway(
             if (basePriceResult.IsFailure)
             {
                 return Result.Failure<IReadOnlyList<CreatedProductSnapshot>>(basePriceResult.Error);
+            }
+
+            // Stok da kalem oluşturulduktan sonra Inventory'ye yazılır (dual-write; Catalog.stock dormant).
+            var stockResult = await setStock.ExecuteAsync(
+                new SetStockCommand(itemId, item.Stock),
+                cancellationToken);
+
+            if (stockResult.IsFailure)
+            {
+                return Result.Failure<IReadOnlyList<CreatedProductSnapshot>>(stockResult.Error);
             }
         }
 

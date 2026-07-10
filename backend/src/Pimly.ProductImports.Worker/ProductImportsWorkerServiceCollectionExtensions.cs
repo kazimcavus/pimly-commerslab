@@ -6,6 +6,8 @@ using Channels.Application.ProductImports.ProcessProductImport;
 using Channels.Application.Publications;
 using Channels.Application.Publications.ProcessPublication;
 using Channels.Infrastructure;
+using Inventory.Application;
+using Inventory.Infrastructure;
 using Media.Application;
 using Media.Infrastructure;
 using Pimly.ProductImports.Worker.Integration;
@@ -38,11 +40,16 @@ public static class ProductImportsWorkerServiceCollectionExtensions
         services.AddCatalogInfrastructure(configuration);
         services.AddPricingApplication();
         services.AddPricingInfrastructure(configuration);
+        services.AddInventoryApplication();
+        services.AddInventoryInfrastructure(configuration);
         services.AddMediaApplication();
         services.AddMediaInfrastructure(configuration);
 
         // Pricing'in kalem fiyatı yazımı, kalemin Catalog'da var olduğunu bu ACL portuyla doğrular.
         services.AddScoped<ICatalogProductItemGateway, CatalogProductItemGateway>();
+
+        // Inventory'nin stok yazımı için aynı doğrulama portu (ayrı arayüz, tam-nitelikli).
+        services.AddScoped<Inventory.Application.StockLevels.Catalog.ICatalogProductItemGateway, InventoryCatalogProductItemGateway>();
 
         // Worker HTTP bağlamı olmadığı için tenant, iş başına elle set edilen ambient bağlamdan akar.
         services.AddScoped<AmbientTenantContext>();
