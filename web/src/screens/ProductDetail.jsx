@@ -39,6 +39,14 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   const [itemPrices, setItemPrices] = useState({})
   const [dpEdits, setDpEdits] = useState({})          // `${itemId}:${defId}` -> tutar metni
 
+  // Fiyat/stok artık ayrı modüllerde (Catalog saf PIM). Kalem başına Pricing'den
+  // temel fiyat + kanal fiyatları, Inventory'den stok çekilir.
+  const [basePrices, setBasePrices] = useState({})    // itemId -> { amount, compare_at_amount } | null
+  const [stocks, setStocks] = useState({})            // itemId -> quantity (number)
+  const [marketplaces, setMarketplaces] = useState([])   // kanal fiyat sütunları (bağlı pazaryerleri)
+  const [channelPrices, setChannelPrices] = useState({}) // itemId -> { [mpCode]: ChannelPriceDto }
+  const [cpEdits, setCpEdits] = useState({})          // `${itemId}:${mpCode}` -> tutar metni
+
   // Düzenlenebilir ürün alanları: marka, kategori, özellik seçimleri.
   const [brandId, setBrandId] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -74,16 +82,34 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   // Fiyat tanımlarını bir kez yükle (panel satırları + builder ile aynı kaynak).
   useEffect(() => { api.listPriceDefinitions().then(setPriceDefs).catch(() => {}) }, [])
 
-  // Tüm kalemlerin tanımlı fiyatlarını yükle (satırlardaki fiyat rozetleri için).
+  // Kanal fiyat sütunları için pazaryerlerini bir kez yükle (yalnızca bağlı olanlar).
+  useEffect(() => {
+    api.listMarketplaces()
+      .then((mps) => setMarketplaces((mps || []).filter((m) => m.is_configured)))
+      .catch(() => {})
+  }, [])
+
+  // Kalem başına fiyat/stok yükle: tanımlı fiyatlar + temel fiyat + kanal fiyatları (Pricing),
+  // stok (Inventory). Temel fiyat/stok kaydı yoksa uçlar 404 döner → boş/0 kabul edilir.
   useEffect(() => {
     const its = product?.items || []
-    if (its.length === 0) { setItemPrices({}); return }
+    if (its.length === 0) { setItemPrices({}); setBasePrices({}); setStocks({}); setChannelPrices({}); return }
     let alive = true
-    Promise.all(its.map((it) =>
-      api.listItemPrices(it.id)
-        .then((rows) => [it.id, Array.isArray(rows) ? rows : rows?.items || []])
-        .catch(() => [it.id, []])))
-      .then((pairs) => { if (alive) setItemPrices(Object.fromEntries(pairs)) })
+    Promise.all(its.map(async (it) => {
+      const [ip, bp, st, cp] = await Promise.all([
+        api.listItemPrices(it.id).then((rows) => Array.isArray(rows) ? rows : rows?.items || []).catch(() => []),
+        api.getBasePrice(it.id).catch(() => null),
+        api.getStock(it.id).then((s) => s?.quantity ?? 0).catch(() => 0),
+        api.listChannelPrices(it.id).then((rows) => Array.isArray(rows) ? rows : rows?.items || []).catch(() => []),
+      ])
+      return { id: it.id, ip, bp, st, cp }
+    })).then((rows) => {
+      if (!alive) return
+      setItemPrices(Object.fromEntries(rows.map((r) => [r.id, r.ip])))
+      setBasePrices(Object.fromEntries(rows.map((r) => [r.id, r.bp])))
+      setStocks(Object.fromEntries(rows.map((r) => [r.id, r.st])))
+      setChannelPrices(Object.fromEntries(rows.map((r) => [r.id, Object.fromEntries((r.cp || []).map((c) => [c.marketplace, c]))])))
+    })
     return () => { alive = false }
   }, [product])
 
@@ -100,6 +126,29 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
     if (!e.trim()) return !!stored // boş bırakıldı: değer varsa "kirli" (kaydet → sil)
     return !stored || parseMoney(e) !== Number(stored.amount)
   }
+
+  // Kanal (pazaryeri) fiyat hücresi — tanım hücresiyle aynı desen; stored = ChannelPriceDto | undefined.
+  // Not: kanal fiyatının silme ucu yok; boş bırakılan hücre yok sayılır (mevcut değer korunur).
+  const cpValOf = (itemId, mpCode, stored) => {
+    const e = cpEdits[`${itemId}:${mpCode}`]
+    return e !== undefined ? e : fmtMoney(stored?.amount ?? null)
+  }
+  const setCpEdit = (itemId, mpCode, text) =>
+    setCpEdits((cur) => ({ ...cur, [`${itemId}:${mpCode}`]: text }))
+  const cpDirty = (itemId, mpCode, stored) => {
+    const e = cpEdits[`${itemId}:${mpCode}`]
+    if (e === undefined || !e.trim()) return false
+    return !stored || parseMoney(e) !== Number(stored.amount)
+  }
+
+  // Gösterilecek kanal sütunları: bağlı pazaryerleri + herhangi bir kalemde kanal fiyatı olan kodlar.
+  const mpColumns = useMemo(() => {
+    const byCode = new Map(marketplaces.map((m) => [m.code, m.name]))
+    for (const perItem of Object.values(channelPrices)) {
+      for (const code of Object.keys(perItem || {})) if (!byCode.has(code)) byCode.set(code, code)
+    }
+    return [...byCode.entries()].map(([code, name]) => ({ code, name }))
+  }, [marketplaces, channelPrices])
 
   if (error) {
     return (
@@ -149,24 +198,30 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
 
   const editOf = (it) => itemEdits[it.id] || {
     sku: it.sku || '', barcode: it.barcode || '',
-    price: fmtMoney(it.price), compareAt: fmtMoney(it.compare_at_price), stock: String(it.stock ?? 0),
+    price: fmtMoney(basePrices[it.id]?.amount ?? null),
+    compareAt: fmtMoney(basePrices[it.id]?.compare_at_amount ?? null),
+    stock: String(stocks[it.id] ?? 0),
   }
   const setEdit = (it, patch) => setItemEdits((cur) => ({ ...cur, [it.id]: { ...editOf(it), ...patch } }))
   const anyDefDirty = (it) => priceDefs.some((def) =>
     dpDirty(it.id, def, (itemPrices[it.id] || []).find((p) => p.price_definition_id === def.id)))
+  const anyChannelDirty = (it) => mpColumns.some((mp) =>
+    cpDirty(it.id, mp.code, channelPrices[it.id]?.[mp.code]))
   const itemDirty = (it) => {
     const e = itemEdits[it.id]
-    if (!e) return anyDefDirty(it)
-    return parseMoney(e.price) !== Number(it.price)
-      || (e.compareAt.trim() ? parseMoney(e.compareAt) : null) !== (it.compare_at_price ?? null)
-      || Math.trunc(Number(e.stock)) !== Number(it.stock)
+    const bp = basePrices[it.id]
+    if (!e) return anyDefDirty(it) || anyChannelDirty(it)
+    return parseMoney(e.price) !== Number(bp?.amount ?? 0)
+      || (e.compareAt.trim() ? parseMoney(e.compareAt) : null) !== (bp?.compare_at_amount ?? null)
+      || Math.trunc(Number(e.stock)) !== Number(stocks[it.id] ?? 0)
       || e.sku !== (it.sku || '')
       || e.barcode !== (it.barcode || '')
-      || anyDefDirty(it)
+      || anyDefDirty(it) || anyChannelDirty(it)
   }
 
-  // Satırın tüm değişikliklerini tek seferde kaydeder: genel fiyat/karş/stok/sku/barkod
-  // (updateItem) + değişen tanımlı fiyatlar (putItemPrice / boşsa deleteItemPrice).
+  // Satırın tüm değişikliklerini kaydeder. Catalog saf PIM olduğundan yazımlar bölünür:
+  // sku/barkod → Catalog (updateItem); genel fiyat → Pricing (base-price); stok → Inventory;
+  // tanımlı fiyatlar → Pricing (item-price); kanal fiyatları → Pricing (channel-price).
   const saveItemRow = async (it) => {
     const e = editOf(it)
     const price = parseMoney(e.price)
@@ -178,12 +233,26 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
     if (!e.barcode.trim()) { onToast?.({ tone: 'danger', title: 'Barkod boş olamaz' }); return }
     setSavingItem(it.id)
     try {
-      await api.updateItem(it.id, {
-        gtin: it.gtin, mpn: it.mpn, axis_value_entry_id: it.axis_value_entry_id, axis_value: it.axis_value,
-        price, compare_at_price: compareAt, stock,
-        sku: e.sku !== (it.sku || '') ? e.sku : null,
-        barcode: e.barcode !== (it.barcode || '') ? e.barcode.trim() : null,
-      })
+      // Katalog: yalnızca sku/barkod değiştiyse güncelle (fiyat/stok artık kaleme yazılmaz).
+      const skuChanged = e.sku !== (it.sku || '')
+      const bcChanged = e.barcode.trim() !== (it.barcode || '')
+      if (skuChanged || bcChanged) {
+        await api.updateItem(it.id, {
+          gtin: it.gtin, mpn: it.mpn, axis_value_entry_id: it.axis_value_entry_id, axis_value: it.axis_value,
+          sku: skuChanged ? e.sku : null,
+          barcode: bcChanged ? e.barcode.trim() : null,
+        })
+      }
+      // Genel (temel) fiyat — değiştiyse Pricing'e yaz.
+      const bp = basePrices[it.id]
+      if (price !== Number(bp?.amount ?? 0) || compareAt !== (bp?.compare_at_amount ?? null)) {
+        await api.putBasePrice(it.id, { amount: price, compare_at_amount: compareAt, currency: 'TRY' })
+      }
+      // Stok — değiştiyse Inventory'ye yaz.
+      if (stock !== Number(stocks[it.id] ?? 0)) {
+        await api.putStock(it.id, { quantity: stock })
+      }
+      // Tanımlı fiyatlar — düzenlenenleri yaz (boşsa sil).
       const ips = itemPrices[it.id] || []
       for (const def of priceDefs) {
         const key = `${it.id}:${def.id}`
@@ -193,7 +262,22 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
         if (!txt.trim()) { if (stored) await api.deleteItemPrice(it.id, def.id) }
         else await api.putItemPrice(it.id, def.id, { amount: parseMoney(txt), currency: 'TRY' })
       }
+      // Kanal (pazaryeri) fiyatları — düzenlenen ve dolu olanları yaz (mevcut karş. fiyat korunur).
+      const cps = channelPrices[it.id] || {}
+      for (const mp of mpColumns) {
+        const key = `${it.id}:${mp.code}`
+        if (!(key in cpEdits)) continue
+        const txt = cpEdits[key]
+        if (!txt.trim()) continue // kanal fiyatının silme ucu yok
+        await api.putChannelPrice(it.id, mp.code, {
+          amount: parseMoney(txt),
+          compare_at_amount: cps[mp.code]?.compare_at_amount ?? null,
+          currency: cps[mp.code]?.currency || 'TRY',
+        })
+      }
       setDpEdits((cur) => { const n = { ...cur }; priceDefs.forEach((def) => delete n[`${it.id}:${def.id}`]); return n })
+      setCpEdits((cur) => { const n = { ...cur }; mpColumns.forEach((mp) => delete n[`${it.id}:${mp.code}`]); return n })
+      setItemEdits((cur) => { const n = { ...cur }; delete n[it.id]; return n })
       onToast?.({ tone: 'success', title: 'Varyant güncellendi' })
       load()
     } catch (e2) {
@@ -225,13 +309,16 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
     if (!Number.isFinite(price) || price < 0) { onToast?.({ tone: 'danger', title: 'Geçersiz fiyat' }); return }
     setSavingNew(true)
     try {
-      await api.createItem(product.id, {
+      // Katalog kalemini oluştur (fiyat/stok kabul etmez), ardından temel fiyat + stok yaz.
+      const created = await api.createItem(product.id, {
         sku: newItem.sku.trim() || null,
         barcode: newItem.barcode.trim(),
-        price,
-        stock,
         variant_values: selections,
       })
+      if (created?.id) {
+        await api.putBasePrice(created.id, { amount: price, compare_at_amount: null, currency: 'TRY' })
+        await api.putStock(created.id, { quantity: stock })
+      }
       onToast?.({ tone: 'success', title: 'Varyant eklendi' })
       setAdding(false)
       load()
@@ -339,7 +426,7 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
         <div className="bnode__head">
           <span className="ic">{I('layers')}</span>
           <div><div className="bnode__title">Varyantlar</div>
-            <div className="list-meta">{items.length} kalem · <b>Fiyatlar</b> ve <b>Stok & Kodlar</b> sekmelerinden düzenlenir; her fiyat tanımı bir sütundur.</div></div>
+            <div className="list-meta">{items.length} kalem · stok, kodlar ve fiyatlar tek tabloda; her fiyat tanımı ve bağlı pazaryeri bir sütundur.</div></div>
           <div className="hstack" style={{ marginLeft: 'auto' }}>
             <Button variant="secondary" size="sm" iconLeft={I('plus')} onClick={openAdd} disabled={adding}>Varyant Ekle</Button>
           </div>
@@ -388,7 +475,7 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
                 <button className="tb__icon" title="Varyantı sil" style={{ width: 28, height: 28 }} onClick={() => removeItem(it)}>{I('trash-2')}</button>
               </span>
             )
-            const priceCount = 2 + priceDefs.length
+            const priceCount = 2 + priceDefs.length + mpColumns.length
             const cols = `minmax(150px,1.3fr) 0.7fr 1.05fr 1.05fr 2px repeat(${priceCount}, minmax(120px,1fr)) 64px`
             const minW = 150 + 76 + 150 + 150 + 2 + priceCount * 128 + 64
             return (
@@ -398,10 +485,11 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
                   <span className="pmatrix__vrule" />
                   <span className="pmatrix__pcol">Genel Satış ₺</span><span className="pmatrix__pcol">Genel Karş. ₺</span>
                   {priceDefs.map((d) => <span key={d.id} className="pmatrix__pcol">{d.name}</span>)}
+                  {mpColumns.map((mp) => <span key={mp.code} className="pmatrix__pcol" title={`${mp.name} yayın fiyatı`}>{mp.name} ₺</span>)}
                   <span />
                 </div>
                 {items.map((it) => {
-                  const e = editOf(it); const ips = itemPrices[it.id] || []
+                  const e = editOf(it); const ips = itemPrices[it.id] || []; const cps = channelPrices[it.id] || {}
                   return (
                     <div className="pmatrix__row" key={it.id} style={{ gridTemplateColumns: cols, minWidth: minW }}>
                       <span className="pim-td-strong">{label(it)}</span>
@@ -416,11 +504,15 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
                         return <Input key={def.id} size="sm" mono suffix="₺" value={dpValOf(it.id, def, stored)} placeholder="—"
                           onChange={(ev) => setDpEdit(it.id, def, ev.target.value)} />
                       })}
+                      {mpColumns.map((mp) => (
+                        <Input key={mp.code} size="sm" mono suffix="₺" value={cpValOf(it.id, mp.code, cps[mp.code])} placeholder="—"
+                          onChange={(ev) => setCpEdit(it.id, mp.code, ev.target.value)} />
+                      ))}
                       {rowActions(it)}
                     </div>
                   )
                 })}
-                <div className="list-meta" style={{ marginTop: 10 }}>{I('info', { size: 13 })} Önde ürün bilgisi, ayraçtan sonra fiyatlar. Genel fiyat kendi siteniz içindir; Trendyol import'unda TY sütunları otomatik dolar. Değişiklikleri satır sonundaki ✓ ile kaydedin.</div>
+                <div className="list-meta" style={{ marginTop: 10 }}>{I('info', { size: 13 })} Önde ürün bilgisi, ayraçtan sonra fiyatlar. Genel fiyat kendi siteniz içindir ve Trendyol import'unda otomatik dolar; pazaryeri sütunları o kanalın yayın (publication) fiyatını belirler. Değişiklikleri satır sonundaki ✓ ile kaydedin.</div>
               </div>
             )
           })()}

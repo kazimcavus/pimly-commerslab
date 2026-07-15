@@ -210,13 +210,13 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
     await assignAttribute(a.id)
   }
 
-  // Tanımlı fiyat alanları: dolu girilenleri oluşturulan TÜM kalemlere yaz
-  // (ayraç birden çok ürün üretebilir). Yanıt kalem id'si içermiyorsa üründen
-  // çekilir. Kısmi hata ürünü geri almaz — true dönerse çağıran uyarı gösterir.
-  // itemDefPrices/defPrices (varyant başına ya da basit ürün) yalnızca create sonrası
-  // yazılabilir (kalem id'si gerekir). Oluşan kalemleri BARKOD ile eşleyip her tanım
-  // için putItemPrice çağırır. Kısmi hata ürünü geri almaz; true dönerse uyarı gösterilir.
-  const writeItemDefPrices = async (created, byBarcode) => {
+  // Catalog artık saf PIM: fiyat/stok kaleme inline yazılmaz. Kalemler
+  // products:batch ile oluşturulduktan SONRA temel fiyat → Pricing (base-price),
+  // stok → Inventory, tanımlı fiyatlar → Pricing (item-price) uçlarına yazılır.
+  // Kalemler BARKOD ile eşlenir (ayraç birden çok ürün üretebilir; yanıt kalem
+  // id'si içermiyorsa üründen çekilir). Kısmi hata ürünü geri almaz — true dönerse
+  // çağıran uyarı gösterir.
+  const writeItemPricingAndStock = async (created, byBarcode) => {
     if (!byBarcode || Object.keys(byBarcode).length === 0) return false
     let warn = false
     const calls = []
@@ -227,34 +227,49 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
         if (its.length === 0) warn = true
       }
       for (const it of its) {
-        const defs = byBarcode[(it.barcode || '').trim()]
-        if (!defs || !it?.id) continue
-        for (const d of defs) calls.push(api.putItemPrice(it.id, d.id, { amount: d.amount, currency: 'TRY' }))
+        const data = byBarcode[(it.barcode || '').trim()]
+        if (!data || !it?.id) continue
+        calls.push(api.putBasePrice(it.id, { amount: data.price, compare_at_amount: data.compareAt, currency: 'TRY' }))
+        calls.push(api.putStock(it.id, { quantity: data.stock }))
+        for (const d of data.defs) calls.push(api.putItemPrice(it.id, d.id, { amount: d.amount, currency: 'TRY' }))
       }
     }
     const results = await Promise.allSettled(calls)
     return warn || results.some((r) => r.status === 'rejected')
   }
 
-  // Barkod → [{id, amount}] tanımlı fiyat haritası (create sonrası yazım için).
-  const buildDefPriceByBarcode = () => {
+  // Barkod → { price, compareAt, stock, defs:[{id,amount}] } haritası (create sonrası yazım için).
+  const buildItemDataByBarcode = () => {
     const map = {}
     if (mode === 'variant') {
       for (const combo of combos) {
         const key = comboKey(combo)
-        const bc = (rowOf(key).barcode || '').trim()
+        const r = rowOf(key)
+        const bc = (r.barcode || '').trim()
         if (!bc) continue
         const defs = priceDefs
           .filter((d) => (itemDefPrices[key]?.[d.id] || '').trim())
           .map((d) => ({ id: d.id, amount: parseTrMoney(itemDefPrices[key][d.id]) }))
-        if (defs.length) map[bc] = defs
+        map[bc] = {
+          price: parseTrMoney(r.price || '0'),
+          compareAt: r.compareAt ? parseTrMoney(r.compareAt) : null,
+          stock: parseInt(r.stock, 10) || 0,
+          defs,
+        }
       }
     } else {
       const bc = (simple.barcode || '').trim()
-      const defs = priceDefs
-        .filter((d) => (defPrices[d.id] || '').trim())
-        .map((d) => ({ id: d.id, amount: parseTrMoney(defPrices[d.id]) }))
-      if (bc && defs.length) map[bc] = defs
+      if (bc) {
+        const defs = priceDefs
+          .filter((d) => (defPrices[d.id] || '').trim())
+          .map((d) => ({ id: d.id, amount: parseTrMoney(defPrices[d.id]) }))
+        map[bc] = {
+          price: parseTrMoney(simple.price || '0'),
+          compareAt: simple.compareAt ? parseTrMoney(simple.compareAt) : null,
+          stock: parseInt(simple.stock, 10) || 0,
+          defs,
+        }
+      }
     }
     return map
   }
@@ -389,12 +404,11 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       status,
       attribute_values: (product.attribute_values || []).map((a) => ({ attribute_id: a.attribute_id, attribute_value_id: a.attribute_value_id })),
       variants: (product.variant_types || []).map((t) => ({ id: t.id, name: t.name, selection_style: t.selection_style })),
+      // Catalog kalemi saf PIM: fiyat/stok göndermeyiz (backend yok sayar).
+      // Temel fiyat + stok + tanımlı fiyatlar create sonrası ayrı uçlara yazılır.
       items: product.variants.map((v) => ({
         sku: skuOn ? null : (v.sku || null),
         barcode: v.barcode,
-        price: v.price,
-        compare_at_price: v.compare_at_price,
-        stock: v.stock,
         variant_values: (v.options || []).map((o) => ({ variant_id: o.type_id, variant_value_id: o.value_id })),
       })),
     }
@@ -415,10 +429,10 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       const res = await api.productsBatch(payload)
       const created = res.products || []
       const itemCount = created.reduce((a, p) => a + (p.items?.length || p.variants?.length || 0), 0)
-      // Tanımlı fiyat alanlarını navigasyondan ÖNCE yaz (onSaved ürün listesine götürür).
-      const priceWarn = await writeItemDefPrices(created, buildDefPriceByBarcode())
+      // Fiyat + stok yazımını navigasyondan ÖNCE yap (onSaved ürün listesine götürür).
+      const priceWarn = await writeItemPricingAndStock(created, buildItemDataByBarcode())
       onSaved?.(`${created.length} ürün · ${itemCount} varyant oluşturuldu.`)
-      if (priceWarn) onToast?.({ tone: 'danger', title: 'Bazı fiyat alanları kaydedilemedi', body: 'Ürün oluşturuldu; eksik fiyatları ürün detayından girebilirsiniz.' })
+      if (priceWarn) onToast?.({ tone: 'danger', title: 'Bazı fiyat/stok alanları kaydedilemedi', body: 'Ürün oluşturuldu; eksik değerleri ürün detayından girebilirsiniz.' })
     } catch (e) {
       setError(e.message || 'Kaydedilemedi')
     } finally {

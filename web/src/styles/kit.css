@@ -102,6 +102,23 @@
 .mono { font-family: var(--font-mono); font-feature-settings: "tnum"; }
 .rowact { display: flex; gap: 2px; justify-content: flex-end; opacity: 0; transition: opacity var(--dur-fast); }
 .pim-table tbody tr:hover .rowact { opacity: 1; }
+/* keep row actions visible while a row is expanded so Edit/Delete stay reachable */
+.pim-table tbody tr[data-open="true"] .rowact { opacity: 1; }
+
+/* Varyant sayısı → genişletme tetikleyicisi (Ürünler tablosu) */
+.pvar-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 8px 3px 6px; border-radius: var(--radius-pill); border: 1px solid transparent; background: transparent; color: var(--text-default); font: inherit; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+.pvar-toggle:hover { background: var(--surface-hover); border-color: var(--border-subtle); }
+.pvar-toggle .pvar-chev { color: var(--text-subtle); transition: transform var(--dur-fast) var(--ease-out); }
+.pvar-toggle[data-open="true"] .pvar-chev { transform: rotate(90deg); }
+
+/* Varyant kırılımı (alt satır paneli) */
+.pvar { padding: 4px 16px 14px 56px; background: var(--surface-subtle); }
+.pvar__tbl { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+.pvar__row { display: grid; grid-template-columns: minmax(150px, 1.6fr) 1.2fr 1.2fr 74px 110px; gap: 12px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--border-subtle); }
+.pvar__row:last-child { border-bottom: none; }
+.pvar__row--head { background: var(--surface-subtle); font-size: var(--text-xs); font-weight: var(--fw-semibold); color: var(--text-muted); }
+.pvar__strong { color: var(--text-strong); font-weight: var(--fw-medium); }
+.pvar__num { font-variant-numeric: tabular-nums; text-align: right; }
 .typechip { font-size: 11px; font-family: var(--font-mono); background: var(--surface-sunken); color: var(--text-muted); padding: 2px 7px; border-radius: var(--radius-sm); }
 .lvlchip { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
 .lvl-group { background: #eef0fc; color: #3a4fa0; } .lvl-product { background: var(--accent-soft); color: var(--accent-text); } .lvl-variant { background: #f3ecfb; color: #6b3fa6; }

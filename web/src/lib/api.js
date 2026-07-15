@@ -7,6 +7,10 @@ const IDENTITY = '/api/v1/identity'
 const CATALOG = '/api/v1/catalog'
 const CHANNELS = '/api/v1/channels'
 const MEDIA = '/api/v1/media'
+// Fiyat ve stok artık ayrı modüllerde: Catalog saf PIM'dir (ürün/kalemde fiyat/stok yok).
+// Fiyat tanımları, kalem/temel/kanal fiyatları → Pricing; stok → Inventory.
+const PRICING = '/api/v1/pricing'
+const INVENTORY = '/api/v1/inventory'
 
 let token = localStorage.getItem('pimly_token') || ''
 
@@ -115,16 +119,35 @@ export const api = {
   getImportRun: (code, runId) => req('GET', `${CHANNELS}/marketplaces/${code}/imports/${runId}`),
   listImportRuns: (code, limit = 20) => req('GET', `${CHANNELS}/marketplaces/${code}/imports?limit=${limit}`),
 
-  // --- fiyat tanımları & kalem fiyatları (Catalog modülü) ---
+  // --- fiyat tanımları & kalem fiyatları (Pricing modülü) ---
   // Kullanıcı tanımlı fiyat alanları (örn. "TY Satış"); her kaleme tanım başına bir tutar girilir.
-  listPriceDefinitions: () => reqList(`${CATALOG}/price-definitions`),
-  createPriceDefinition: (b) => req('POST', `${CATALOG}/price-definitions`, { body: b }),
-  updatePriceDefinition: (id, b) => req('PATCH', `${CATALOG}/price-definitions/${id}`, { body: b }),
-  deletePriceDefinition: (id) => req('DELETE', `${CATALOG}/price-definitions/${id}`),
+  listPriceDefinitions: () => reqList(`${PRICING}/price-definitions`),
+  createPriceDefinition: (b) => req('POST', `${PRICING}/price-definitions`, { body: b }),
+  updatePriceDefinition: (id, b) => req('PATCH', `${PRICING}/price-definitions/${id}`, { body: b }),
+  deletePriceDefinition: (id) => req('DELETE', `${PRICING}/price-definitions/${id}`),
   // ItemPriceDto[]: { id, product_item_id, price_definition_id, definition_name, amount, currency, updated_at }
-  listItemPrices: (itemId) => req('GET', `${CATALOG}/items/${itemId}/prices`),
-  putItemPrice: (itemId, defId, b) => req('PUT', `${CATALOG}/items/${itemId}/prices/${defId}`, { body: b }),
-  deleteItemPrice: (itemId, defId) => req('DELETE', `${CATALOG}/items/${itemId}/prices/${defId}`),
+  listItemPrices: (itemId) => req('GET', `${PRICING}/items/${itemId}/prices`),
+  putItemPrice: (itemId, defId, b) => req('PUT', `${PRICING}/items/${itemId}/prices/${defId}`, { body: b }),
+  deleteItemPrice: (itemId, defId) => req('DELETE', `${PRICING}/items/${itemId}/prices/${defId}`),
+
+  // --- temel (genel/site) fiyat (Pricing modülü) ---
+  // Eskiden kalem üzerinde inline duran price/compare_at_price; artık ayrı uçta.
+  // BasePriceDto: { product_item_id, amount, compare_at_amount, currency, updated_at }; kayıt yoksa GET 404.
+  getBasePrice: (itemId) => req('GET', `${PRICING}/items/${itemId}/base-price`),
+  putBasePrice: (itemId, b) => req('PUT', `${PRICING}/items/${itemId}/base-price`, { body: b }),
+
+  // --- kanal (pazaryeri) fiyatları (Pricing modülü) ---
+  // Publications bu fiyatları okuyup pazaryerine yayınlar. marketplace = kod (örn. "TY").
+  // ChannelPriceDto[]: { product_item_id, marketplace, amount, compare_at_amount, currency, updated_at }.
+  listChannelPrices: (itemId) => req('GET', `${PRICING}/items/${itemId}/channel-prices`),
+  getChannelPrice: (itemId, marketplace) => req('GET', `${PRICING}/items/${itemId}/channel-prices/${marketplace}`),
+  putChannelPrice: (itemId, marketplace, b) => req('PUT', `${PRICING}/items/${itemId}/channel-prices/${marketplace}`, { body: b }),
+
+  // --- stok (Inventory modülü) ---
+  // Eskiden kalem üzerinde inline duran stock; artık ayrı modülde.
+  // StockLevelDto: { product_item_id, quantity, updated_at }; kayıt yoksa GET 404.
+  getStock: (itemId) => req('GET', `${INVENTORY}/items/${itemId}/stock`),
+  putStock: (itemId, b) => req('PUT', `${INVENTORY}/items/${itemId}/stock`, { body: b }),
 
   // --- categories (Catalog modülü) ---
   listCategories: () => reqList(`${CATALOG}/categories`),
