@@ -1,3 +1,4 @@
+using Inventory.Domain.StockLevels.Events;
 using SharedKernel;
 
 namespace Inventory.Domain.StockLevels;
@@ -46,7 +47,9 @@ public sealed class StockLevel : AggregateRoot<Guid>
             return Result.Failure<StockLevel>(quantityResult.Error);
         }
 
-        return Result.Success(new StockLevel(Guid.NewGuid(), productItemId, quantity, DateTimeOffset.UtcNow));
+        var stockLevel = new StockLevel(Guid.NewGuid(), productItemId, quantity, DateTimeOffset.UtcNow);
+        stockLevel.RaiseDomainEvent(new StockLevelChanged(productItemId));
+        return Result.Success(stockLevel);
     }
 
     /// <summary>Stok miktarını günceller.</summary>
@@ -58,8 +61,15 @@ public sealed class StockLevel : AggregateRoot<Guid>
             return quantityResult;
         }
 
+        // Değer aynıysa olay yayımlanmaz: aksi halde her kaydetme gereksiz kanal senkronu tetikler.
+        if (Quantity == quantity)
+        {
+            return Result.Success();
+        }
+
         Quantity = quantity;
         UpdatedAt = DateTimeOffset.UtcNow;
+        RaiseDomainEvent(new StockLevelChanged(ProductItemId));
         return Result.Success();
     }
 

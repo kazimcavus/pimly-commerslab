@@ -3,6 +3,7 @@ using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
+using Channels.Domain.Listings;
 using Channels.Domain.ProductImports;
 using Channels.Domain.Publications;
 using Channels.Domain.TaxonomySync;
@@ -52,6 +53,8 @@ public sealed class ChannelsDbContext : DbContext, IUnitOfWork
     public DbSet<ProductImportRun> ProductImportRuns => Set<ProductImportRun>();
 
     public DbSet<ProductPublicationRun> ProductPublicationRuns => Set<ProductPublicationRun>();
+
+    public DbSet<ProductListing> ProductListings => Set<ProductListing>();
 
     public DbSet<ExternalCategory> ExternalCategories => Set<ExternalCategory>();
 

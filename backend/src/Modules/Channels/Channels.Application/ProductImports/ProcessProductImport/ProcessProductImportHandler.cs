@@ -8,6 +8,7 @@ using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
+using Channels.Domain.Listings;
 using Channels.Domain.ProductImports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -45,6 +46,7 @@ public sealed class ProcessProductImportHandler(
     IMarketplaceProductsClientResolver productsClientResolver,
     IMarketplaceCategoryAttributesClientResolver attributesClientResolver,
     ICatalogImportGateway catalog,
+    IProductListingRepository listings,
     ITenantContext tenantContext,
     IUnitOfWork unitOfWork,
     IOptions<ProductImportOptions> options,
@@ -190,6 +192,10 @@ public sealed class ProcessProductImportHandler(
             var barcodes = group.Items.Select(item => item.Barcode).ToList();
             if (await catalog.ProductGroupExistsAsync(group.ModelCode, barcodes, cancellationToken))
             {
+                // Grup zaten kataloğa alınmış; ürünü yeniden oluşturmayız ama listeleme kaydı eksik
+                // olabilir (bu özellikten önce import edilmiş kalemler). Import'un yeniden çalıştırılması
+                // böylece listing backfill'i olarak da işe yarar.
+                await SeedListingsForExistingGroupAsync(context, barcodes, run, group, cancellationToken);
                 progress.Skipped++;
                 return;
             }
@@ -212,6 +218,7 @@ public sealed class ProcessProductImportHandler(
 
             await WriteItemPricesAsync(context, group, createResult.Value, run, cancellationToken);
             await AttachImagesAsync(group, createResult.Value, run, cancellationToken);
+            await SeedListingsForCreatedGroupAsync(context, createResult.Value, run, group, cancellationToken);
 
             progress.Imported++;
         }
@@ -737,6 +744,100 @@ public sealed class ProcessProductImportHandler(
             await valueMappings.AddAsync(createResult.Value, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Bu turda oluşturulan kalemler için listeleme kaydı açar. Kalem kimlikleri yeni üretildiği için
+    /// mevcut kayıt araması yapılmaz.
+    /// </summary>
+    private async Task SeedListingsForCreatedGroupAsync(
+        ImportContext context,
+        IReadOnlyList<CreatedProductSnapshot> createdProducts,
+        ProductImportRun run,
+        ProductGroupPlan group,
+        CancellationToken cancellationToken)
+    {
+        var itemIdByBarcode = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var product in createdProducts)
+        {
+            foreach (var (barcode, itemId) in product.ItemIdByBarcode)
+            {
+                itemIdByBarcode[barcode] = itemId;
+            }
+        }
+
+        await SeedListingsAsync(context, itemIdByBarcode, lookUpExisting: false, run, group, cancellationToken);
+    }
+
+    /// <summary>
+    /// Zaten kataloğa alınmış bir grup için eksik listeleme kayıtlarını tamamlar (backfill); mevcut
+    /// kayıtlara dokunulmaz.
+    /// </summary>
+    private async Task SeedListingsForExistingGroupAsync(
+        ImportContext context,
+        IReadOnlyList<string> barcodes,
+        ProductImportRun run,
+        ProductGroupPlan group,
+        CancellationToken cancellationToken)
+    {
+        var itemIdByBarcode = await catalog.ResolveItemIdsByBarcodeAsync(barcodes, cancellationToken);
+
+        await SeedListingsAsync(context, itemIdByBarcode, lookUpExisting: true, run, group, cancellationToken);
+    }
+
+    private async Task SeedListingsAsync(
+        ImportContext context,
+        IReadOnlyDictionary<string, Guid> itemIdByBarcode,
+        bool lookUpExisting,
+        ProductImportRun run,
+        ProductGroupPlan group,
+        CancellationToken cancellationToken)
+    {
+        if (itemIdByBarcode.Count == 0)
+        {
+            return;
+        }
+
+        var alreadyListed = new HashSet<Guid>();
+        if (lookUpExisting)
+        {
+            var existing = await listings.ListByProductItemsAsync(
+                context.Marketplace,
+                [.. itemIdByBarcode.Values],
+                cancellationToken);
+
+            alreadyListed = [.. existing.Select(listing => listing.ProductItemId)];
+        }
+
+        var now = timeProvider.GetUtcNow();
+        var seeded = new List<ProductListing>();
+
+        foreach (var (barcode, itemId) in itemIdByBarcode)
+        {
+            if (alreadyListed.Contains(itemId))
+            {
+                continue;
+            }
+
+            // Barkod, kalemin pazaryerindeki listeleme kimliğidir (Trendyol fiyat/stok uçları barkodla
+            // çalışır): import edilen kalem pazaryerinde hâlihazırda canlıdır.
+            var seedResult = ProductListing.Seed(context.TenantId, context.Marketplace, itemId, barcode, now);
+            if (seedResult.IsFailure)
+            {
+                run.AddError(group.ProductMainId, barcode, $"Listeleme kaydı oluşturulamadı: {seedResult.Error.Message}");
+                continue;
+            }
+
+            seeded.Add(seedResult.Value);
+        }
+
+        if (seeded.Count == 0)
+        {
+            return;
+        }
+
+        await listings.AddRangeAsync(seeded, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     private async Task WriteItemPricesAsync(

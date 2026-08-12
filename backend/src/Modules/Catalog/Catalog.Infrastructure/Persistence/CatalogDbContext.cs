@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Catalog.Domain;
 using Catalog.Domain.Barcodes;
 using Catalog.Domain.Brands;
@@ -7,10 +6,9 @@ using Catalog.Domain.Products;
 using Catalog.Domain.Settings;
 using Catalog.Domain.SkuGenerator;
 using Catalog.Domain.Variants;
-using Catalog.Infrastructure.Outbox;
 using Catalog.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
-using SharedKernel;
+using Pimly.Outbox;
 using SharedKernel.Tenancy;
 using CatalogVariant = Catalog.Domain.Variants.Variant;
 using DomainAttribute = Catalog.Domain.Attributes.Attribute;
@@ -18,7 +16,7 @@ using DomainAttribute = Catalog.Domain.Attributes.Attribute;
 namespace Catalog.Infrastructure.Persistence;
 
 /// <summary>Catalog modülü için Entity Framework veritabanı bağlamı.</summary>
-public sealed class CatalogDbContext : DbContext, IUnitOfWork
+public sealed class CatalogDbContext : DbContext, IUnitOfWork, IOutboxDbContext
 {
     private readonly ITenantContext? _tenantContext;
 
@@ -86,54 +84,10 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
             // geçer; StampTenantId ve WriteOutboxMessages boş tenant'ta ekleme/olay bulursa hata verir.
             var tenantId = ModelCacheTenantId;
             this.StampTenantId(tenantId);
-            WriteOutboxMessages(tenantId);
+            this.WriteOutboxMessages(tenantId);
         }
 
         return await base.SaveChangesAsync(cancellationToken);
-    }
-
-    // Integration olaylarını aggregate değişiklikleriyle aynı transaction'da outbox'a yazar.
-    private void WriteOutboxMessages(Guid tenantId)
-    {
-        var holders = ChangeTracker.Entries()
-            .Select(entry => entry.Entity)
-            .OfType<IHasDomainEvents>()
-            .Where(holder => holder.DomainEvents.Count > 0)
-            .ToList();
-
-        if (holders.Count == 0)
-        {
-            return;
-        }
-
-        var messages = new List<OutboxMessage>();
-        foreach (var holder in holders)
-        {
-            foreach (var integrationEvent in holder.DomainEvents.OfType<IntegrationEvent>())
-            {
-                var eventType = integrationEvent.GetType();
-                messages.Add(new OutboxMessage
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenantId,
-                    Type = eventType.FullName!,
-                    Payload = JsonSerializer.Serialize(integrationEvent, eventType, OutboxSerialization.JsonOptions),
-                    OccurredOnUtc = integrationEvent.OccurredOnUtc,
-                });
-            }
-
-            holder.ClearDomainEvents();
-        }
-
-        if (messages.Count > 0)
-        {
-            if (tenantId == Guid.Empty)
-            {
-                throw new InvalidOperationException("Tenant id is required to persist integration events.");
-            }
-
-            OutboxMessages.AddRange(messages);
-        }
     }
 
     /// <inheritdoc/>
@@ -144,5 +98,7 @@ public sealed class CatalogDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyCatalogTenancy(ModelCacheTenantId);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
+
+        modelBuilder.AddOutbox();
     }
 }

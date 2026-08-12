@@ -10,6 +10,22 @@ internal sealed class StockLevelRepository(InventoryDbContext db) : IStockLevelR
     public async Task<StockLevel?> GetByItemAsync(Guid productItemId, CancellationToken cancellationToken = default) =>
         await db.StockLevels.FirstOrDefaultAsync(s => s.ProductItemId == productItemId, cancellationToken);
 
+    public async Task<IReadOnlyList<StockLevel>> ListByItemsAsync(
+        IReadOnlyCollection<Guid> productItemIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (productItemIds.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = productItemIds as Guid[] ?? [.. productItemIds];
+
+        return await db.StockLevels
+            .Where(stockLevel => ids.Contains(stockLevel.ProductItemId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(StockLevel stockLevel, CancellationToken cancellationToken = default) =>
         await db.StockLevels.AddAsync(stockLevel, cancellationToken);
 

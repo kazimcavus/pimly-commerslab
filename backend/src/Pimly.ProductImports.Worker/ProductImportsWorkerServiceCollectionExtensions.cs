@@ -1,21 +1,16 @@
 using Catalog.Application;
 using Catalog.Infrastructure;
 using Channels.Application;
-using Channels.Application.ProductImports.Catalog;
 using Channels.Application.ProductImports.ProcessProductImport;
-using Channels.Application.Publications;
-using Channels.Application.Publications.ProcessPublication;
 using Channels.Infrastructure;
 using Inventory.Application;
 using Inventory.Infrastructure;
 using Media.Application;
 using Media.Infrastructure;
-using Pimly.ProductImports.Worker.Integration;
+using Pimly.Integration;
 using Pimly.ProductImports.Worker.Options;
 using Pimly.ProductImports.Worker.ProductImports;
-using Pimly.ProductImports.Worker.Publications;
 using Pricing.Application;
-using Pricing.Application.ItemPrices.Catalog;
 using Pricing.Infrastructure;
 using SharedKernel.Tenancy;
 
@@ -25,9 +20,17 @@ namespace Pimly.ProductImports.Worker;
 /// Ürün import worker'ının servis kompozisyonu. Program.cs dışında tutulur ki entegrasyon
 /// testleri aynı kompozisyonu kendi host'larında kurabilsin.
 /// </summary>
+/// <remarks>
+/// Kapsam: pazaryerinden ürünleri çekip kataloğa yazmak. Bu yüzden modül ayak izi worker'lar
+/// arasında en geniş olanıdır (Catalog + Pricing + Inventory + Media yazma kapıları). Yayın ve
+/// listeleme senkronu ayrı host'larda çalışır (Pimly.ProductPublications.Worker, Pimly.ListingSync.Worker).
+/// </remarks>
 public static class ProductImportsWorkerServiceCollectionExtensions
 {
     /// <summary>Worker'ın tüm modül ve servis kayıtlarını yapar.</summary>
+    /// <param name="services">Servis koleksiyonu.</param>
+    /// <param name="configuration">Uygulama konfigürasyonu.</param>
+    /// <returns>Zincirleme için aynı servis koleksiyonu.</returns>
     public static IServiceCollection AddPimlyProductImportsWorker(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -45,11 +48,8 @@ public static class ProductImportsWorkerServiceCollectionExtensions
         services.AddMediaApplication();
         services.AddMediaInfrastructure(configuration);
 
-        // Pricing'in kalem fiyatı yazımı, kalemin Catalog'da var olduğunu bu ACL portuyla doğrular.
-        services.AddScoped<ICatalogProductItemGateway, CatalogProductItemGateway>();
-
-        // Inventory'nin stok yazımı için aynı doğrulama portu (ayrı arayüz, tam-nitelikli).
-        services.AddScoped<Inventory.Application.StockLevels.Catalog.ICatalogProductItemGateway, InventoryCatalogProductItemGateway>();
+        // Pricing ve Inventory, yazmadan önce kalemin Catalog'da var olduğunu bu ACL portlarıyla doğrular.
+        services.AddProductItemExistenceGateways();
 
         // Worker HTTP bağlamı olmadığı için tenant, iş başına elle set edilen ambient bağlamdan akar.
         services.AddScoped<AmbientTenantContext>();
@@ -68,17 +68,12 @@ public static class ProductImportsWorkerServiceCollectionExtensions
 
         // Görsel indirme tek iş parçacığında; yavaş bir CDN yanıtı tüm import'u bloklamasın.
         services.AddHttpClient(nameof(CatalogImportGateway), client => client.Timeout = TimeSpan.FromSeconds(20));
-        services.AddScoped<ICatalogImportGateway, CatalogImportGateway>();
+        services.AddCatalogImportGateway();
 
         // İşlemci, Catalog yazma kapısına ihtiyaç duyduğu için yalnızca worker kompozisyonunda kayıtlıdır.
         services.AddScoped<IProcessProductImportHandler, ProcessProductImportHandler>();
 
-        // Yayın (publish): Channels, kararlaştırılmış kanal fiyatlarını bu ACL portuyla Pricing'den okur.
-        services.AddScoped<IPricingChannelPriceGateway, PricingChannelPriceGateway>();
-        services.AddScoped<IProcessPublicationHandler, ProcessPublicationHandler>();
-
         services.AddHostedService<ProductImportBackgroundService>();
-        services.AddHostedService<ProductPublicationBackgroundService>();
 
         return services;
     }

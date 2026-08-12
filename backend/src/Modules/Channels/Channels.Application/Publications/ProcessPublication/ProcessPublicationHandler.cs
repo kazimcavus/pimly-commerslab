@@ -1,6 +1,8 @@
-using Channels.Application.Connections;
+using Channels.Application.Listings.ContentSync;
 using Channels.Domain;
+using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
+using Channels.Domain.Listings;
 using Channels.Domain.Publications;
 using Microsoft.Extensions.Logging;
 using SharedKernel;
@@ -9,23 +11,33 @@ using SharedKernel.Tenancy;
 namespace Channels.Application.Publications.ProcessPublication;
 
 /// <summary>
-/// Claim edilmiş yayın run'ını işler: Pricing'de kararlaştırılmış kanal fiyatlarını okur ve her kalemi
-/// pazaryerinde listeler (publish). ProcessProductImport'un outbound aynasıdır.
+/// Claim edilmiş yayın run'ını işler: pazaryeri kategorisine eşlenmiş kategorilerdeki henüz
+/// listelenmemiş kalemler için listeleme kaydı açar, ardından içerik senkronunu çalıştırarak
+/// kartları pazaryerine gönderir.
 /// </summary>
 /// <remarks>
-/// Ön koşullar: run kuyruktan claim edilip Running yapılmış, ambient tenant run'ın tenant'ına set edilmiş
-/// olmalı. Altyapı hatası run'ı Failed yapar; kalem düzeyi hata kaydedilip diğer kalemlerle devam edilir.
+/// <para><b>Neden iki adım:</b> Yeni ürün gönderimi ile içerik güncellemesi aynı payload ve aynı
+/// pazaryeri ucunu kullanır. Run yalnızca <em>kaydı açar</em>; teslimatı tek bir yol
+/// (<see cref="ISyncListingContentHandler"/>) üstlenir, böylece delta ve backoff mantığı tek yerde kalır.</para>
+/// <para><b>Ön koşullar:</b> Run claim edilip Running yapılmış, ambient tenant run'ın tenant'ına set
+/// edilmiş olmalı.</para>
+/// <para><b>Kapsam:</b> Kategorisi eşlenmemiş kalemler hiç kaydedilmez — pazaryerinde nereye
+/// listeleneceği bilinmediği için gönderilemezler.</para>
 /// </remarks>
 public sealed class ProcessPublicationHandler(
     IProductPublicationRunRepository publicationRuns,
     IMarketplaceConnectionRepository connections,
-    IPricingChannelPriceGateway channelPrices,
-    IMarketplaceListingClientResolver clientResolver,
+    ICategoryChannelMappingRepository categoryMappings,
+    ICatalogListingSourceGateway catalogSources,
+    IProductListingRepository listings,
+    ISyncListingContentHandler contentSync,
     ITenantContext tenantContext,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<ProcessPublicationHandler> logger) : IProcessPublicationHandler
 {
+    private const int MappingPageSize = 100;
+
     /// <inheritdoc/>
     public async Task<Result> ExecuteAsync(Guid runId, CancellationToken cancellationToken = default)
     {
@@ -47,13 +59,6 @@ public sealed class ProcessPublicationHandler(
 
         var marketplace = run.Marketplace;
 
-        var clientResult = clientResolver.Resolve(marketplace);
-        if (clientResult.IsFailure)
-        {
-            await FailRunAsync(run, "Marketplace listing client is not configured.", cancellationToken);
-            return Result.Success();
-        }
-
         var connection = await connections.GetByMarketplaceAsync(marketplace, cancellationToken);
         if (connection is null || !connection.IsEnabled)
         {
@@ -61,44 +66,25 @@ public sealed class ProcessPublicationHandler(
             return Result.Success();
         }
 
-        var credentials = new MarketplaceCredentials(connection.SellerId, connection.ApiKey, connection.ApiSecret);
-
         try
         {
-            var decidedPrices = await channelPrices.ListForMarketplaceAsync(marketplace, cancellationToken);
+            var enrolled = await EnrollListingsAsync(marketplace, run, cancellationToken);
 
-            var total = decidedPrices.Count;
-            var processed = 0;
-            var published = 0;
-            var failed = 0;
-
-            run.UpdateProgress(0, 0, 0, total);
+            run.UpdateProgress(0, 0, 0, enrolled.Total);
             await SaveRunAsync(run, cancellationToken);
 
-            foreach (var price in decidedPrices)
+            // Teslimat tek yoldan: içerik senkronu kirli (yeni açılan dahil) listelemeleri gönderir.
+            var syncResult = await contentSync.ExecuteAsync(marketplace.Code, cancellationToken);
+            if (syncResult.IsFailure)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var publishResult = await clientResult.Value.PublishAsync(
-                    marketplace,
-                    credentials,
-                    new MarketplaceListingRequest(price.ProductItemId, price.Amount, price.CompareAtAmount, price.Currency),
-                    cancellationToken);
-
-                if (publishResult.IsSuccess)
-                {
-                    published++;
-                }
-                else
-                {
-                    failed++;
-                    run.AddError(price.ProductItemId, publishResult.Error.Message);
-                }
-
-                processed++;
+                await FailRunAsync(run, syncResult.Error.Message, cancellationToken);
+                return Result.Success();
             }
 
-            run.UpdateProgress(processed, published, failed, total);
+            var summary = syncResult.Value;
+            var published = summary.Created + summary.Updated;
+
+            run.UpdateProgress(summary.Examined, published, summary.Failed, enrolled.Total);
             var completeResult = run.MarkCompleted(timeProvider.GetUtcNow());
             if (completeResult.IsFailure)
             {
@@ -110,11 +96,13 @@ public sealed class ProcessPublicationHandler(
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation(
-                    "Publication {RunId} finished for tenant {TenantId}: {Published} published, {Failed} failed.",
+                    "Publication {RunId} finished for tenant {TenantId}: {Enrolled} yeni kayıt, {Created} oluşturuldu, {Updated} güncellendi, {Failed} hata.",
                     run.Id,
                     run.TenantId,
-                    published,
-                    failed);
+                    enrolled.Created,
+                    summary.Created,
+                    summary.Updated,
+                    summary.Failed);
             }
 
             return Result.Success();
@@ -129,6 +117,91 @@ public sealed class ProcessPublicationHandler(
             await FailRunAsync(run, ex.Message, cancellationToken);
             return Result.Success();
         }
+    }
+
+    /// <summary>
+    /// Eşlenmiş kategorilerdeki kalemler için eksik listeleme kayıtlarını açar. Var olan kayıtlara
+    /// dokunulmaz; yeni kayıtlar baştan kirli olduğu için senkron turunda gönderilirler.
+    /// </summary>
+    private async Task<EnrollmentResult> EnrollListingsAsync(
+        Marketplace marketplace,
+        ProductPublicationRun run,
+        CancellationToken cancellationToken)
+    {
+        var categoryIds = await ListMappedCategoryIdsAsync(marketplace, cancellationToken);
+        if (categoryIds.Count == 0)
+        {
+            run.AddError(Guid.Empty, "Bu pazaryeri için eşlenmiş kategori yok; yayınlanacak kalem bulunamadı.");
+            return new EnrollmentResult(0, 0);
+        }
+
+        var itemIds = await catalogSources.ListItemIdsByCategoriesAsync(categoryIds, cancellationToken);
+        if (itemIds.Count == 0)
+        {
+            return new EnrollmentResult(0, 0);
+        }
+
+        var existing = await listings.ListByProductItemsAsync(marketplace, itemIds, cancellationToken);
+        var alreadyListed = existing.Select(listing => listing.ProductItemId).ToHashSet();
+
+        var now = timeProvider.GetUtcNow();
+        var created = new List<ProductListing>();
+
+        foreach (var itemId in itemIds.Where(itemId => !alreadyListed.Contains(itemId)))
+        {
+            var createResult = ProductListing.Create(run.TenantId, marketplace, itemId, now);
+            if (createResult.IsFailure)
+            {
+                run.AddError(itemId, createResult.Error.Message);
+                continue;
+            }
+
+            created.Add(createResult.Value);
+        }
+
+        if (created.Count > 0)
+        {
+            await listings.AddRangeAsync(created, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return new EnrollmentResult(itemIds.Count, created.Count);
+    }
+
+    private async Task<IReadOnlyList<Guid>> ListMappedCategoryIdsAsync(
+        Marketplace marketplace,
+        CancellationToken cancellationToken)
+    {
+        var categoryIds = new List<Guid>();
+
+        for (var page = 1; ; page++)
+        {
+            var paginationResult = Pagination.Create(page, MappingPageSize);
+            if (paginationResult.IsFailure)
+            {
+                break;
+            }
+
+            var mappings = await categoryMappings.ListAsync(
+                marketplace,
+                catalogCategoryId: null,
+                paginationResult.Value,
+                cancellationToken);
+
+            if (mappings.Count == 0)
+            {
+                break;
+            }
+
+            categoryIds.AddRange(mappings.Select(mapping => mapping.CatalogCategoryId));
+
+            if (mappings.Count < MappingPageSize)
+            {
+                break;
+            }
+        }
+
+        return categoryIds;
     }
 
     private async Task SaveRunAsync(ProductPublicationRun run, CancellationToken cancellationToken)
@@ -147,4 +220,6 @@ public sealed class ProcessPublicationHandler(
 
         await SaveRunAsync(run, cancellationToken);
     }
+
+    private sealed record EnrollmentResult(int Total, int Created);
 }

@@ -68,6 +68,14 @@ public interface ICatalogImportGateway
         IReadOnlyList<string> barcodes,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Barkodlara karşılık gelen mevcut kalem kimliklerini çözer. Atlanan (zaten var olan) gruplar için
+    /// listeleme kaydı geriye dönük doldurulurken kullanılır; bulunamayan barkodlar sonuçta yer almaz.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, Guid>> ResolveItemIdsByBarcodeAsync(
+        IReadOnlyCollection<string> barcodes,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Ürün grubunu oluşturur (slicer ekseni Catalog tarafında ürünleri böler).</summary>
     Task<Result<IReadOnlyList<CreatedProductSnapshot>>> CreateProductsBatchAsync(
         CatalogProductBatchInput input,

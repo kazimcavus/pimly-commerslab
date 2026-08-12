@@ -2,12 +2,13 @@ using Inventory.Domain;
 using Inventory.Domain.StockLevels;
 using Inventory.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Pimly.Outbox;
 using SharedKernel.Tenancy;
 
 namespace Inventory.Infrastructure.Persistence;
 
 /// <summary>Inventory modülü için Entity Framework veritabanı bağlamı.</summary>
-public sealed class InventoryDbContext : DbContext, IUnitOfWork
+public sealed class InventoryDbContext : DbContext, IUnitOfWork, IOutboxDbContext
 {
     private readonly ITenantContext? _tenantContext;
 
@@ -24,6 +25,9 @@ public sealed class InventoryDbContext : DbContext, IUnitOfWork
 
     /// <summary>Gets kalem stok kayıtları kümesi.</summary>
     public DbSet<StockLevel> StockLevels => Set<StockLevel>();
+
+    /// <summary>Gets modülün outbox kayıtları kümesi.</summary>
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     internal Guid CurrentTenantId =>
         _tenantContext?.TenantId
@@ -51,7 +55,12 @@ public sealed class InventoryDbContext : DbContext, IUnitOfWork
     {
         if (_tenantContext is not null)
         {
-            this.StampTenantId(CurrentTenantId);
+            // Tenant yalnızca tenant-kapsamlı EKLEME veya integration olay varsa zorunludur.
+            // Outbox'ı "işlendi" işaretleyen tenant'sız kaydetmeler (dispatcher üst scope'u) serbest
+            // geçer; StampTenantId ve WriteOutboxMessages boş tenant'ta ekleme/olay bulursa hata verir.
+            var tenantId = ModelCacheTenantId;
+            this.StampTenantId(tenantId);
+            this.WriteOutboxMessages(tenantId);
         }
 
         return await base.SaveChangesAsync(cancellationToken);
@@ -65,5 +74,7 @@ public sealed class InventoryDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyInventoryTenancy(ModelCacheTenantId);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(InventoryDbContext).Assembly);
+
+        modelBuilder.AddOutbox();
     }
 }

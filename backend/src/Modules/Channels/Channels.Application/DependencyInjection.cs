@@ -16,6 +16,9 @@ using Channels.Application.Connections.GetMarketplaceConnection;
 using Channels.Application.Connections.UpsertMarketplaceConnection;
 using Channels.Application.ExternalCatalog.ListExternalCategoryAttributes;
 using Channels.Application.ExternalCatalog.SearchExternalCategories;
+using Channels.Application.Listings.ContentSync;
+using Channels.Application.Listings.MarkListingsDirty;
+using Channels.Application.Listings.OfferSync;
 using Channels.Application.Marketplaces.ListMarketplaces;
 using Channels.Application.ProductImports.EnqueueProductImport;
 using Channels.Application.ProductImports.GetProductImportRun;
@@ -67,6 +70,10 @@ public static class DependencyInjection
         services.AddScoped<IGetProductImportRunHandler, GetProductImportRunHandler>();
         services.AddScoped<IEnqueuePublicationHandler, EnqueuePublicationHandler>();
         services.AddScoped<IGetPublicationRunHandler, GetPublicationRunHandler>();
+        services.AddScoped<IMarkListingsDirtyHandler, MarkListingsDirtyHandler>();
+        services.AddScoped<ISyncListingOffersHandler, SyncListingOffersHandler>();
+        services.AddScoped<ListingAssembler>();
+        services.AddScoped<ISyncListingContentHandler, SyncListingContentHandler>();
         services.AddScoped<IListProductImportRunsHandler, ListProductImportRunsHandler>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);

@@ -130,6 +130,112 @@ internal static class TrendyolHttpSupport
         return Result.Failure<T>(Error.Failure("Trendyol request exhausted retry attempts."));
     }
 
+    /// <summary>JSON gövdeli POST isteği yapar, geçici hatalarda backoff ile tekrar dener.</summary>
+    /// <typeparam name="TRequest">İstek gövdesi tipi.</typeparam>
+    /// <typeparam name="TResponse">Yanıt gövdesi tipi.</typeparam>
+    public static Task<Result<TResponse>> PostJsonAsync<TRequest, TResponse>(
+        HttpClient httpClient,
+        string requestUri,
+        TRequest body,
+        MarketplaceCredentials? credentials,
+        ILogger logger,
+        CancellationToken cancellationToken) =>
+        SendJsonAsync<TRequest, TResponse>(
+            httpClient, HttpMethod.Post, requestUri, body, credentials, logger, cancellationToken);
+
+    /// <summary>JSON gövdeli PUT isteği yapar, geçici hatalarda backoff ile tekrar dener.</summary>
+    /// <typeparam name="TRequest">İstek gövdesi tipi.</typeparam>
+    /// <typeparam name="TResponse">Yanıt gövdesi tipi.</typeparam>
+    public static Task<Result<TResponse>> PutJsonAsync<TRequest, TResponse>(
+        HttpClient httpClient,
+        string requestUri,
+        TRequest body,
+        MarketplaceCredentials? credentials,
+        ILogger logger,
+        CancellationToken cancellationToken) =>
+        SendJsonAsync<TRequest, TResponse>(
+            httpClient, HttpMethod.Put, requestUri, body, credentials, logger, cancellationToken);
+
+    private static async Task<Result<TResponse>> SendJsonAsync<TRequest, TResponse>(
+        HttpClient httpClient,
+        HttpMethod method,
+        string requestUri,
+        TRequest body,
+        MarketplaceCredentials? credentials,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var payload = JsonSerializer.Serialize(body, JsonOptions);
+
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        {
+            using var request = new HttpRequestMessage(method, requestUri)
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json"),
+            };
+            ApplyHeaders(request, credentials);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await httpClient.SendAsync(request, cancellationToken);
+            }
+            catch (HttpRequestException ex) when (attempt < MaxAttempts)
+            {
+                logger.LogWarning(ex, "Trendyol request failed (attempt {Attempt}/{Max}): {Uri}", attempt, MaxAttempts, requestUri);
+                await Task.Delay(ComputeDelay(attempt, null), cancellationToken);
+                continue;
+            }
+            catch (HttpRequestException ex)
+            {
+                return Result.Failure<TResponse>(Error.Failure($"Trendyol request failed: {ex.Message}"));
+            }
+
+            using (response)
+            {
+                if (IsTransient(response.StatusCode) && attempt < MaxAttempts)
+                {
+                    var delay = ComputeDelay(attempt, response.Headers.RetryAfter?.Delta);
+                    logger.LogWarning(
+                        "Trendyol responded {Status}; retrying in {Delay} (attempt {Attempt}/{Max}): {Uri}",
+                        (int)response.StatusCode,
+                        delay,
+                        attempt,
+                        MaxAttempts,
+                        requestUri);
+                    await Task.Delay(delay, cancellationToken);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var snippet = errorBody.Length > 300 ? errorBody[..300] : errorBody;
+                    return Result.Failure<TResponse>(Error.Failure(
+                        $"Trendyol responded {(int)response.StatusCode} for {requestUri}: {snippet}"));
+                }
+
+                try
+                {
+                    var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    var parsed = await JsonSerializer.DeserializeAsync<TResponse>(stream, JsonOptions, cancellationToken);
+                    if (parsed is null)
+                    {
+                        return Result.Failure<TResponse>(Error.Failure("Trendyol response body was empty."));
+                    }
+
+                    return Result.Success(parsed);
+                }
+                catch (JsonException ex)
+                {
+                    return Result.Failure<TResponse>(Error.Failure($"Trendyol response could not be parsed: {ex.Message}"));
+                }
+            }
+        }
+
+        return Result.Failure<TResponse>(Error.Failure("Trendyol request exhausted retry attempts."));
+    }
+
     private static bool IsTransient(HttpStatusCode statusCode) =>
         statusCode == HttpStatusCode.TooManyRequests || (int)statusCode >= 500;
 

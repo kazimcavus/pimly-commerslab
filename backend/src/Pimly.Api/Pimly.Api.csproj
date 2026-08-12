@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pimly.AspNetCore\Pimly.AspNetCore.csproj" />
+    <ProjectReference Include="..\Pimly.Integration\Pimly.Integration.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Api\Catalog.Api.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Application\Catalog.Application.csproj" />
     <ProjectReference Include="..\Modules\Catalog\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />

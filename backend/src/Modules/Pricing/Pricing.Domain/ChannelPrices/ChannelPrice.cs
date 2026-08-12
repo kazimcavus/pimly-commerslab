@@ -1,3 +1,4 @@
+using Pricing.Domain.ChannelPrices.Events;
 using SharedKernel;
 
 namespace Pricing.Domain.ChannelPrices;
@@ -78,14 +79,17 @@ public sealed class ChannelPrice : AggregateRoot<Guid>
             return Result.Failure<ChannelPrice>(amountResult.Error);
         }
 
-        return Result.Success(new ChannelPrice(
+        var channelPrice = new ChannelPrice(
             Guid.NewGuid(),
             productItemId,
             marketplace,
             amount,
             compareAtAmount,
             NormalizeCurrency(currency),
-            DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow);
+
+        channelPrice.RaiseDomainEvent(new ChannelPriceChanged(productItemId, marketplace.Code));
+        return Result.Success(channelPrice);
     }
 
     /// <summary>Kanal fiyatını, karşılaştırma fiyatını ve opsiyonel para birimini günceller.</summary>
@@ -97,10 +101,21 @@ public sealed class ChannelPrice : AggregateRoot<Guid>
             return amountResult;
         }
 
+        var normalizedCurrency = NormalizeCurrency(currency);
+
+        // Değerler aynıysa olay yayımlanmaz: gereksiz kanal senkronu tetiklenmesin.
+        if (Amount == amount
+            && CompareAtAmount == compareAtAmount
+            && string.Equals(Currency, normalizedCurrency, StringComparison.Ordinal))
+        {
+            return Result.Success();
+        }
+
         Amount = amount;
         CompareAtAmount = compareAtAmount;
-        Currency = NormalizeCurrency(currency);
+        Currency = normalizedCurrency;
         UpdatedAt = DateTimeOffset.UtcNow;
+        RaiseDomainEvent(new ChannelPriceChanged(ProductItemId, Marketplace.Code));
         return Result.Success();
     }
 

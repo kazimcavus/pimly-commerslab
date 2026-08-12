@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\SharedKernel\SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Pimly.Outbox\Pimly.Outbox.csproj" />
     <ProjectReference Include="..\Pricing.Application\Pricing.Application.csproj" />
     <ProjectReference Include="..\Pricing.Domain\Pricing.Domain.csproj" />
   </ItemGroup>

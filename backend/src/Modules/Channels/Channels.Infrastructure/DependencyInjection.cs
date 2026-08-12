@@ -1,12 +1,14 @@
 using Channels.Application.ExternalCatalog;
+using Channels.Application.Listings.ContentSync;
+using Channels.Application.Listings.OfferSync;
 using Channels.Application.Options;
 using Channels.Application.ProductImports;
-using Channels.Application.Publications;
 using Channels.Domain;
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
 using Channels.Domain.ExternalCatalog;
+using Channels.Domain.Listings;
 using Channels.Domain.ProductImports;
 using Channels.Domain.Publications;
 using Channels.Domain.TaxonomySync;
@@ -44,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<ITaxonomySyncRunRepository, Repositories.TaxonomySyncRunRepository>();
         services.AddScoped<IProductImportRunRepository, Repositories.ProductImportRunRepository>();
         services.AddScoped<IProductPublicationRunRepository, Repositories.ProductPublicationRunRepository>();
+        services.AddScoped<IProductListingRepository, Repositories.ProductListingRepository>();
         services.AddScoped<IExternalCategoryRepository, Repositories.ExternalCategoryRepository>();
         services.AddScoped<ICategoryChannelMappingRepository, Repositories.CategoryChannelMappingRepository>();
         services.AddScoped<IExternalCategoryAttributeRepository, Repositories.ExternalCategoryAttributeRepository>();
@@ -69,21 +72,24 @@ public static class DependencyInjection
         services.AddScoped<IMarketplaceTaxonomyClientResolver, MarketplaceTaxonomyClientResolver>();
         services.AddScoped<IMarketplaceCategoryAttributesClientResolver, MarketplaceCategoryAttributesClientResolver>();
         services.AddScoped<IMarketplaceProductsClientResolver, MarketplaceProductsClientResolver>();
-        services.AddScoped<IMarketplaceListingClientResolver, Publications.MarketplaceListingClientResolver>();
+        services.AddScoped<IMarketplaceListingClientResolver, Listings.MarketplaceListingClientResolver>();
+        services.AddScoped<IMarketplaceOfferClientResolver, Listings.MarketplaceOfferClientResolver>();
 
         if (options.UseStubTaxonomyClient)
         {
             RegisterKeyedClient<IMarketplaceTaxonomyClient, StubMarketplaceTaxonomyClient>(services);
             RegisterKeyedClient<IMarketplaceCategoryAttributesClient, StubMarketplaceCategoryAttributesClient>(services);
             RegisterKeyedClient<IMarketplaceProductsClient, StubMarketplaceProductsClient>(services);
-            RegisterKeyedClient<IMarketplaceListingClient, Publications.StubMarketplaceListingClient>(services);
+            RegisterKeyedClient<IMarketplaceListingClient, Listings.StubMarketplaceListingClient>(services);
+            RegisterKeyedClient<IMarketplaceOfferClient, Listings.StubMarketplaceOfferClient>(services);
             return;
         }
 
         RegisterKeyedClient<IMarketplaceTaxonomyClient, TrendyolMarketplaceTaxonomyClient>(services, Marketplace.Trendyol);
         RegisterKeyedClient<IMarketplaceCategoryAttributesClient, TrendyolMarketplaceCategoryAttributesClient>(services, Marketplace.Trendyol);
         RegisterKeyedClient<IMarketplaceProductsClient, TrendyolMarketplaceProductsClient>(services, Marketplace.Trendyol);
-        RegisterKeyedClient<IMarketplaceListingClient, Publications.TrendyolMarketplaceListingClient>(services, Marketplace.Trendyol);
+        RegisterKeyedClient<IMarketplaceListingClient, Listings.TrendyolMarketplaceListingClient>(services, Marketplace.Trendyol);
+        RegisterKeyedClient<IMarketplaceOfferClient, Listings.TrendyolMarketplaceOfferClient>(services, Marketplace.Trendyol);
     }
 
     private static void RegisterKeyedClient<TService, TClient>(

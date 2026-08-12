@@ -8,7 +8,7 @@ using Channels.Domain.Publications;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Pimly.ProductImports.Worker;
+using Pimly.ProductPublications.Worker;
 using SharedKernel.Tenancy;
 
 namespace Catalog.IntegrationTests;
@@ -118,7 +118,7 @@ public class ChannelsPublicationApiTests(CatalogPostgresFixture fixture) : Catal
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
-        services.AddPimlyProductImportsWorker(configuration);
+        services.AddPimlyProductPublicationsWorker(configuration);
 
         await using var provider = services.BuildServiceProvider();
 

@@ -1,6 +1,7 @@
 using Catalog.Domain.Products.Events;
+using Catalog.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
-using SharedKernel;
+using Pimly.Outbox;
 
 namespace Catalog.Infrastructure.Outbox;
 
@@ -8,21 +9,11 @@ namespace Catalog.Infrastructure.Outbox;
 public static class OutboxDispatchingServiceCollectionExtensions
 {
     /// <summary>
-    /// Tip registry'sini, dispatcher'ı ve outbox processor'ı kaydeder. Integration olay
-    /// tipleri Catalog.Domain assembly'sinden taranarak toplanır. Handler'lar çağıran
-    /// tarafça ayrıca kaydedilir.
+    /// Ortak outbox mekanizmasını Catalog DbContext'i için kaydeder. Integration olay tipleri
+    /// Catalog.Domain assembly'sinden taranır; handler'lar çağıran tarafça ayrıca kaydedilir.
     /// </summary>
-    public static IServiceCollection AddCatalogOutboxDispatching(this IServiceCollection services)
-    {
-        var eventTypes = typeof(ProductItemCreated).Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false } && typeof(IntegrationEvent).IsAssignableFrom(type))
-            .ToArray();
-
-        services.AddSingleton(new IntegrationEventTypeRegistry(eventTypes));
-        services.AddScoped<IntegrationEventDispatcher>();
-        services.AddScoped<OutboxProcessor>();
-
-        return services;
-    }
+    /// <param name="services">Servis koleksiyonu.</param>
+    /// <returns>Zincirleme için aynı servis koleksiyonu.</returns>
+    public static IServiceCollection AddCatalogOutboxDispatching(this IServiceCollection services) =>
+        services.AddOutboxDispatching<CatalogDbContext>(typeof(ProductItemCreated).Assembly);
 }

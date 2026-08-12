@@ -1,6 +1,7 @@
 using Channels.Domain.AttributeChannelMappings;
 using Channels.Domain.CategoryChannelMappings;
 using Channels.Domain.Connections;
+using Channels.Domain.Listings;
 using Channels.Domain.ProductImports;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,5 +33,10 @@ internal static class ChannelsTenancyExtensions
 
         modelBuilder.Entity<AttributeValueChannelMapping>()
             .HasQueryFilter(mapping => mapping.TenantId == tenantId);
+
+        // Senkron worker'ı kirli (tenant, pazaryeri) çiftlerini keşfederken bu filtreyi bilinçli
+        // olarak IgnoreQueryFilters ile aşar; işleme her zaman tenant bağlamı kurulduktan sonra yapılır.
+        modelBuilder.Entity<ProductListing>()
+            .HasQueryFilter(listing => listing.TenantId == tenantId);
     }
 }

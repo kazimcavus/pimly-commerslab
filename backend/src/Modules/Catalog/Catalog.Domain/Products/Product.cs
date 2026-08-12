@@ -225,7 +225,22 @@ public sealed class Product : AggregateRoot<Guid>
             AttributeValues = attributeValues;
         }
 
+        RaiseContentChanged();
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Ürünün pazaryerine giden içeriğinin değiştiğini duyurur. Kalemi olmayan ürün için olay
+    /// yayımlanmaz — listeleme kaydı kalem düzeyinde olduğu için işaretlenecek bir şey yoktur.
+    /// </summary>
+    private void RaiseContentChanged()
+    {
+        if (_items.Count == 0)
+        {
+            return;
+        }
+
+        RaiseDomainEvent(new ProductContentChanged(Id, [.. _items.Select(item => item.Id)]));
     }
 
     /// <summary>Belirtilen satılabilir kalemin fiyat, stok ve özellik bilgilerini günceller.</summary>
@@ -254,7 +269,15 @@ public sealed class Product : AggregateRoot<Guid>
             return Result.Failure(Error.Conflict("Variant SKU already exists on this product."));
         }
 
-        return item.Update(update);
+        var itemUpdateResult = item.Update(update);
+        if (itemUpdateResult.IsSuccess)
+        {
+            // Kalem düzeyi güncelleme barkod/SKU'yu da değiştirebilir; ikisi de pazaryerine giden
+            // içeriğin parçasıdır.
+            RaiseDomainEvent(new ProductContentChanged(Id, [item.Id]));
+        }
+
+        return itemUpdateResult;
     }
 
     /// <summary>
@@ -375,6 +398,7 @@ public sealed class Product : AggregateRoot<Guid>
         }
 
         _images.Add(createResult.Value);
+        RaiseContentChanged();
         return Result.Success(createResult.Value);
     }
 
@@ -407,7 +431,13 @@ public sealed class Product : AggregateRoot<Guid>
             }
         }
 
-        return image.Update(url, sortOrder, altText, isPrimary, variantValueId);
+        var updateResult = image.Update(url, sortOrder, altText, isPrimary, variantValueId);
+        if (updateResult.IsSuccess)
+        {
+            RaiseContentChanged();
+        }
+
+        return updateResult;
     }
 
     /// <summary>Ürün galerisinden bir görseli kaldırır.</summary>
@@ -421,6 +451,7 @@ public sealed class Product : AggregateRoot<Guid>
         }
 
         _images.Remove(image);
+        RaiseContentChanged();
         return Result.Success();
     }
 
@@ -436,6 +467,7 @@ public sealed class Product : AggregateRoot<Guid>
 
         ClearPrimaryImage();
         image.MarkPrimary(true);
+        RaiseContentChanged();
         return Result.Success();
     }
 

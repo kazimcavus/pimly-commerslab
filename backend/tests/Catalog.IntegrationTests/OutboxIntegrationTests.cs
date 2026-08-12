@@ -2,13 +2,14 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Catalog.Infrastructure.Outbox;
+using Catalog.Infrastructure.Persistence;
 using Catalog.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Pimly.Catalog.Worker;
+using Pimly.Outbox;
+using Pimly.Outbox.Worker;
 
 namespace Catalog.IntegrationTests;
 
@@ -156,11 +157,11 @@ public class OutboxIntegrationTests : CatalogIntegrationTestBase
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
-        services.AddCatalogOutboxWorker(configuration);
+        services.AddPimlyOutboxWorker(configuration);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
-        var processor = scope.ServiceProvider.GetRequiredService<OutboxProcessor>();
+        var processor = scope.ServiceProvider.GetRequiredService<OutboxProcessor<CatalogDbContext>>();
 
         // Birkaç tur: bekleyen tüm mesajlar işlenene kadar.
         for (var attempt = 0; attempt < 5; attempt++)

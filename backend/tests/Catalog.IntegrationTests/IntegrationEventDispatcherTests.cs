@@ -1,7 +1,8 @@
 using Catalog.Domain.Products.Events;
-using Catalog.Infrastructure.Outbox;
+using Catalog.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Pimly.Outbox;
 using SharedKernel;
 
 namespace Catalog.IntegrationTests;
@@ -29,7 +30,7 @@ public class IntegrationEventDispatcherTests
     [Fact]
     public void TypeRegistry_ResolvesKnownType_AndReturnsNullForUnknown()
     {
-        var registry = new IntegrationEventTypeRegistry([typeof(ProductItemCreated)]);
+        var registry = new IntegrationEventTypeRegistry<CatalogDbContext>([typeof(ProductItemCreated)]);
 
         registry.Resolve(typeof(ProductItemCreated).FullName!).Should().Be<ProductItemCreated>();
         registry.Resolve("Nonexistent.Type").Should().BeNull();

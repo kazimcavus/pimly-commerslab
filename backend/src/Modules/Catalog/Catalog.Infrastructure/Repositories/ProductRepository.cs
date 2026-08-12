@@ -32,6 +32,48 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
             .FirstOrDefaultAsync(p => p.ModelCode == code, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Product>> ListByItemIdsAsync(
+        IReadOnlyCollection<Guid> productItemIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (productItemIds.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = productItemIds as Guid[] ?? [.. productItemIds];
+
+        var productIds = await db.ProductItems
+            .Where(item => ids.Contains(item.Id))
+            .Select(item => EF.Property<Guid>(item, "ProductId"))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return await db.Products
+            .Include(p => p.Items)
+            .Include(p => p.Images)
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> ListItemIdsByCategoriesAsync(
+        IReadOnlyCollection<Guid> categoryIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (categoryIds.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = categoryIds as Guid[] ?? [.. categoryIds];
+
+        return await db.Products
+            .Where(p => ids.Contains(p.CategoryId))
+            .SelectMany(p => p.Items)
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<ProductItem?> GetItemByIdAsync(Guid itemId, CancellationToken cancellationToken = default) =>
         await db.ProductItems.FirstOrDefaultAsync(v => v.Id == itemId, cancellationToken);
 
@@ -76,6 +118,31 @@ internal sealed class ProductRepository(CatalogDbContext db) : IProductRepositor
 
     public async Task<bool> VariantSkuExistsAsync(string sku, CancellationToken cancellationToken = default) =>
         await db.ProductItems.AnyAsync(v => v.Sku == sku, cancellationToken);
+
+    public async Task<IReadOnlyDictionary<string, Guid>> ResolveItemIdsByBarcodeAsync(
+        IReadOnlyCollection<string> barcodes,
+        CancellationToken cancellationToken = default)
+    {
+        if (barcodes.Count == 0)
+        {
+            return new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var lookup = barcodes as string[] ?? [.. barcodes];
+
+        var rows = await db.ProductItems
+            .Where(item => item.Barcode != null && lookup.Contains(item.Barcode))
+            .Select(item => new { item.Barcode, item.Id })
+            .ToListAsync(cancellationToken);
+
+        var result = new Dictionary<string, Guid>(rows.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows.Where(row => row.Barcode is not null))
+        {
+            result[row.Barcode!] = row.Id;
+        }
+
+        return result;
+    }
 
     public async Task AddAsync(Product product, CancellationToken cancellationToken = default) =>
         await db.Products.AddAsync(product, cancellationToken);

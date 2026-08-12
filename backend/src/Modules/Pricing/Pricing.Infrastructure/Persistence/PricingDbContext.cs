@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Pimly.Outbox;
 using Pricing.Domain;
 using Pricing.Domain.BasePrices;
 using Pricing.Domain.ChannelPrices;
@@ -10,7 +11,7 @@ using SharedKernel.Tenancy;
 namespace Pricing.Infrastructure.Persistence;
 
 /// <summary>Pricing modülü için Entity Framework veritabanı bağlamı.</summary>
-public sealed class PricingDbContext : DbContext, IUnitOfWork
+public sealed class PricingDbContext : DbContext, IUnitOfWork, IOutboxDbContext
 {
     private readonly ITenantContext? _tenantContext;
 
@@ -36,6 +37,9 @@ public sealed class PricingDbContext : DbContext, IUnitOfWork
 
     /// <summary>Gets kalem kanal (pazaryeri) fiyatları kümesi.</summary>
     public DbSet<ChannelPrice> ChannelPrices => Set<ChannelPrice>();
+
+    /// <summary>Gets modülün outbox kayıtları kümesi.</summary>
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     internal Guid CurrentTenantId =>
         _tenantContext?.TenantId
@@ -63,7 +67,12 @@ public sealed class PricingDbContext : DbContext, IUnitOfWork
     {
         if (_tenantContext is not null)
         {
-            this.StampTenantId(CurrentTenantId);
+            // Tenant yalnızca tenant-kapsamlı EKLEME veya integration olay varsa zorunludur.
+            // Outbox'ı "işlendi" işaretleyen tenant'sız kaydetmeler (dispatcher üst scope'u) serbest
+            // geçer; StampTenantId ve WriteOutboxMessages boş tenant'ta ekleme/olay bulursa hata verir.
+            var tenantId = ModelCacheTenantId;
+            this.StampTenantId(tenantId);
+            this.WriteOutboxMessages(tenantId);
         }
 
         return await base.SaveChangesAsync(cancellationToken);
@@ -77,5 +86,7 @@ public sealed class PricingDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyPricingTenancy(ModelCacheTenantId);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PricingDbContext).Assembly);
+
+        modelBuilder.AddOutbox();
     }
 }

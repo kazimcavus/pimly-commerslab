@@ -462,7 +462,7 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.ToTable("variants", "catalog");
                 });
 
-            modelBuilder.Entity("Catalog.Infrastructure.Outbox.OutboxMessage", b =>
+            modelBuilder.Entity("Pimly.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

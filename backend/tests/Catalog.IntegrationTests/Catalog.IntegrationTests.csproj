@@ -25,7 +25,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pimly.Api\Pimly.Api.csproj" />
     <ProjectReference Include="..\..\src\Pimly.ProductImports.Worker\Pimly.ProductImports.Worker.csproj" />
-    <ProjectReference Include="..\..\src\Pimly.Catalog.Worker\Pimly.Catalog.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Pimly.Outbox.Worker\Pimly.Outbox.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Pimly.ProductPublications.Worker\Pimly.ProductPublications.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Pimly.ListingSync.Worker\Pimly.ListingSync.Worker.csproj" />
   </ItemGroup>
 
 </Project>

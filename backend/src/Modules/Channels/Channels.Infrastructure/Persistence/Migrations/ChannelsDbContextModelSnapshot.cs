@@ -355,6 +355,96 @@ namespace Channels.Infrastructure.Persistence.Migrations
                     b.ToTable("external_category_attributes", "channels");
                 });
 
+            modelBuilder.Entity("Channels.Domain.Listings.ProductListing", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ContentDirtyAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("content_dirty_at");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("content_hash");
+
+                    b.Property<string>("ExternalListingId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("external_listing_id");
+
+                    b.Property<DateTimeOffset?>("LastConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_confirmed_at");
+
+                    b.Property<DateTimeOffset?>("LastSubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_submitted_at");
+
+                    b.Property<string>("Marketplace")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("marketplace_code");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<DateTimeOffset?>("OfferDirtyAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("offer_dirty_at");
+
+                    b.Property<string>("OfferHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("offer_hash");
+
+                    b.Property<Guid>("ProductItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_item_id");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SubmissionReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("submission_reference");
+
+                    b.Property<int>("SyncAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("sync_attempts");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductItemId");
+
+                    b.HasIndex("TenantId", "Marketplace")
+                        .HasDatabaseName("ix_product_listings_dirty")
+                        .HasFilter("content_dirty_at IS NOT NULL OR offer_dirty_at IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Marketplace", "ProductItemId")
+                        .IsUnique();
+
+                    b.ToTable("product_listings", "channels");
+                });
+
             modelBuilder.Entity("Channels.Domain.ProductImports.ProductImportRun", b =>
                 {
                     b.Property<Guid>("Id")

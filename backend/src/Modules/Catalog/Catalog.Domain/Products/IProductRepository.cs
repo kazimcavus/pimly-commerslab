@@ -52,6 +52,33 @@ public interface IProductRepository
     /// <param name="cancellationToken">İptal belirteci.</param>
     Task<bool> VariantSkuExistsAsync(string sku, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Verilen barkodlara karşılık gelen ürün kalemi kimliklerini toplu çözer; bulunamayan barkodlar
+    /// sonuçta yer almaz.
+    /// </summary>
+    /// <param name="barcodes">Çözümlenecek barkodlar.</param>
+    /// <param name="cancellationToken">İptal belirteci.</param>
+    Task<IReadOnlyDictionary<string, Guid>> ResolveItemIdsByBarcodeAsync(
+        IReadOnlyCollection<string> barcodes,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verilen kalemleri barındıran ürünleri kalem ve görselleriyle birlikte toplu getirir
+    /// (pazaryerine gönderilecek içeriğin okunması için).
+    /// </summary>
+    /// <param name="productItemIds">Kapsanacak kalem kimlikleri.</param>
+    /// <param name="cancellationToken">İptal belirteci.</param>
+    Task<IReadOnlyList<Product>> ListByItemIdsAsync(
+        IReadOnlyCollection<Guid> productItemIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Verilen kategorilerdeki tüm satılabilir kalemlerin kimliklerini listeler.</summary>
+    /// <param name="categoryIds">Kapsanacak kategori kimlikleri.</param>
+    /// <param name="cancellationToken">İptal belirteci.</param>
+    Task<IReadOnlyList<Guid>> ListItemIdsByCategoriesAsync(
+        IReadOnlyCollection<Guid> categoryIds,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Yeni ürünü kalıcı depoya ekler.</summary>
     /// <param name="product">Eklenecek ürün.</param>
     /// <param name="cancellationToken">İptal belirteci.</param>

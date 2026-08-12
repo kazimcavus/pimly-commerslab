@@ -1,11 +1,15 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Pimly.Api/Pimly.Api.csproj" />
-    <Project Path="src/Pimly.Channels.Worker/Pimly.Channels.Worker.csproj" />
+    <Project Path="src/Pimly.TaxonomySync.Worker/Pimly.TaxonomySync.Worker.csproj" />
     <Project Path="src/Pimly.ProductImports.Worker/Pimly.ProductImports.Worker.csproj" />
-    <Project Path="src/Pimly.Catalog.Worker/Pimly.Catalog.Worker.csproj" />
+    <Project Path="src/Pimly.ProductPublications.Worker/Pimly.ProductPublications.Worker.csproj" />
+    <Project Path="src/Pimly.ListingSync.Worker/Pimly.ListingSync.Worker.csproj" />
+    <Project Path="src/Pimly.Outbox.Worker/Pimly.Outbox.Worker.csproj" />
     <Project Path="src/Pimly.AspNetCore/Pimly.AspNetCore.csproj" />
     <Project Path="src/SharedKernel/SharedKernel.csproj" />
+    <Project Path="src/Pimly.Outbox/Pimly.Outbox.csproj" />
+    <Project Path="src/Pimly.Integration/Pimly.Integration.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/Catalog/">
