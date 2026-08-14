@@ -237,19 +237,21 @@
 .pmatrix__head + .pmatrix__row { border-top: none; }
 .pmatrix__row:not(.pmatrix__head) + .pmatrix__row { border-top: 1px solid var(--border-subtle); }
 
-/* ---------- Photo gallery ---------- */
-.gallery { display: flex; gap: 10px; flex-wrap: wrap; }
-.gallery__thumb { position: relative; width: 92px; height: 92px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-default); background: var(--surface-sunken); flex-shrink: 0; }
+/* ---------- Photo gallery (düzenli 2:3 galeri) ---------- */
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; }
+.gallery__thumb { position: relative; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--surface-sunken); cursor: pointer; transition: box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+.gallery__thumb:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
 .gallery__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.gallery__thumb[data-primary="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-.gallery__badge { position: absolute; top: 4px; left: 4px; z-index: 1; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--accent); color: #fff; }
-.gallery__actions { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 5px; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); background: linear-gradient(to top, rgba(0,0,0,.5), transparent 62%); }
+.gallery__thumb[data-primary="true"] { border: 2px solid var(--accent); }
+.gallery__badge { position: absolute; top: 8px; left: 8px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: var(--radius-pill); background: var(--status-active-bg); color: var(--status-active-fg); font-size: 10px; font-weight: 600; }
+.gallery__badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--status-active-dot); }
+.gallery__actions { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 6px; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); background: linear-gradient(to top, rgba(0,0,0,.5), transparent 62%); }
 .gallery__thumb:hover .gallery__actions, .gallery__thumb:focus-within .gallery__actions { opacity: 1; }
 .gallery__act { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: none; background: rgba(255,255,255,.92); color: var(--text-strong); cursor: pointer; }
 .gallery__act:hover { background: #fff; }
 .gallery__act[disabled] { opacity: .4; cursor: default; }
-.gallery__add { width: 92px; height: 92px; border-radius: var(--radius-md); border: 1.5px dashed var(--border-strong); background: var(--surface-subtle); color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font-size: 11px; text-align: center; }
-.gallery__add:hover { border-color: var(--accent); color: var(--accent-text); }
+.gallery__add { aspect-ratio: 2 / 3; border-radius: 10px; border: 1.5px dashed var(--border-strong); background: var(--surface-subtle); color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 11px; font-weight: 500; text-align: center; }
+.gallery__add:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
 
 /* ---------- Media grid ---------- */
 .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
@@ -391,3 +393,87 @@
 .help-tips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
 .help-tips li { display: flex; gap: 9px; font-size: 13.5px; color: var(--text-default); line-height: 1.5; }
 .help-tips li svg { width: 15px; height: 15px; color: var(--accent); flex: 0 0 auto; margin-top: 2px; }
+
+/* ============================================================
+   Varyant tablosu (ürün detay + ürün oluştur — claude.ai/design şablonu)
+   Solda yapışkan varyant sütunu, dikey ayraç, sağa doğru büyüyen fiyat
+   kanalları, kesikli kenarlıklı toplu-doldur satırı.
+   ============================================================ */
+.vmx-wrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface); }
+.vmx-wrap::-webkit-scrollbar { height: 11px; }
+.vmx-wrap::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 3px solid var(--surface); }
+.vmx-wrap::-webkit-scrollbar-track { background: var(--surface-subtle); }
+.vmx { border-collapse: collapse; width: max-content; min-width: 100%; }
+.vmx th { padding: 10px 12px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); text-align: left; background: var(--surface-subtle); border-bottom: 1px solid var(--border-default); white-space: nowrap; }
+.vmx th[data-num="true"] { text-align: right; }
+.vmx td { padding: 7px 12px; border-bottom: 1px solid var(--border-subtle); background: var(--surface); }
+.vmx tbody tr:last-child td { border-bottom: none; }
+.vmx .vmx__lead { position: sticky; left: 0; z-index: 2; border-right: 1px solid var(--border-default); box-shadow: 6px 0 8px -6px rgba(0, 0, 0, .18); }
+.vmx thead .vmx__lead { z-index: 3; }
+.vmx td.vmx__lead[data-sel="true"] { background: var(--accent-soft); }
+.vmx .vmx__sep { border-right: 2px solid var(--border-default); }
+.vmx tr.vmx__bulk td { background: var(--surface-subtle); border-bottom: 1px solid var(--border-default); }
+.vmx__bulklabel { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--accent-text); white-space: nowrap; }
+.vmx__bulklabel svg { width: 13px; height: 13px; }
+.vmx__fill.pim-input, .vmx__fill .pim-input { border-style: dashed; border-color: var(--border-strong); }
+/* Sağa hizalı fiyat metni ₺ sonekinin altına kaymasın */
+.vmx .pim-input-group .pim-input { padding-right: 30px; }
+.vmx__chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 6px; background: var(--surface-sunken); font-size: 12px; font-weight: 600; color: var(--text-strong); font-family: var(--font-mono); white-space: nowrap; }
+.vmx__check { width: 17px; height: 17px; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: 0 0 auto; color: #fff; padding: 0; }
+.vmx__check[data-on="true"] { border-color: var(--accent); background: var(--accent); }
+.vmx__check svg { width: 11px; height: 11px; }
+.vmx__leadrow { display: inline-flex; align-items: center; gap: 9px; }
+
+/* Toplu yayma bilgi çubuğu (ürün detay) */
+.bulkbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 11px 14px; margin-bottom: 12px; background: var(--surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); font-size: 13px; color: var(--text-muted); }
+.bulkbar__title { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; color: var(--text-strong); flex: 0 0 auto; }
+.bulkbar__title svg { width: 15px; height: 15px; color: var(--accent-text); }
+.bulkbar b { color: var(--accent-text); }
+
+/* Sayfalayıcı */
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
+.pager__num { font-weight: 600; color: var(--text-default); font-family: var(--font-mono); min-width: 72px; text-align: center; }
+
+/* Yapışkan Kaydet/İptal çubuğu */
+.savebar { position: sticky; bottom: 16px; z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; margin-top: 18px; background: color-mix(in oklab, var(--surface) 88%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.savebar__meta { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.savebar__meta b { color: var(--text-strong); }
+
+/* Kopyalanabilir kod chip'i (model/stok kodu) */
+.codechip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border: 1px solid var(--border-default); border-radius: 7px; background: var(--surface); color: var(--text-default); font-size: 12px; font-weight: 600; font-family: var(--font-mono); cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); }
+.codechip:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.codechip svg { width: 13px; height: 13px; }
+
+/* 2 sütunlu özellik kartları ızgarası — aynı satıra denk gelen kartlar eş boyda uzar */
+.attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.attr-grid > [data-span="full"] { grid-column: 1 / -1; }
+@media (max-width: 900px) { .attr-grid { grid-template-columns: 1fr; } }
+
+/* Kısıtlanmış özellik kartı: chip alanı ~3 satır; fazlası "Devamını gör" ile
+   overlay olarak açılır — ızgara hücresi (attr-slot) yüksekliğini korur,
+   komşu kart uzamaz. */
+.attr-slot { position: relative; display: flex; min-width: 0; }
+.attr-slot > .attr-card { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+.attr-card__clip { overflow: hidden; flex: 1 1 auto; }
+.attr-card__clip[data-clamped] { max-height: 118px; mask-image: linear-gradient(to bottom, #000 70%, transparent); -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent); }
+.attr-card__more { margin-top: 8px; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent; padding: 2px 0; font-family: var(--font-sans); font-size: 12.5px; font-weight: 600; color: var(--accent-text); cursor: pointer; }
+.attr-card__more:hover { text-decoration: underline; }
+.attr-card[data-expanded] { position: absolute; top: 0; left: 0; right: 0; z-index: 40; box-shadow: var(--shadow-lg); border-color: var(--border-strong); background: var(--surface); }
+
+/* Overlay, kart panelinin (bnode) dışına taşabilmeli — yalnız özellik ızgarası
+   içeren panellerde köşe yuvarlama başlığa devredilir. */
+.bnode:has(.attr-grid) { overflow: visible; }
+.bnode:has(.attr-grid) > .bnode__head { border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0; }
+
+/* Değer seçim kartı (renk/beden — başlık + arama + chipler) */
+.selcard { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 16px; background: var(--surface); }
+.selcard__head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.selcard__title { display: flex; align-items: baseline; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text-strong); }
+.selcard__search { width: 200px; }
+
+/* Basit / Varyantlı büyük tip seçici (ürün oluştur) */
+.typetoggle { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 520px; }
+.typetoggle__btn { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1.5px solid var(--border-default); background: var(--surface); color: var(--text-strong); box-shadow: var(--shadow-xs); font-family: var(--font-sans); transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); }
+.typetoggle__btn svg { color: var(--text-subtle); }
+.typetoggle__btn[data-active="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); box-shadow: none; }
+.typetoggle__btn[data-active="true"] svg { color: var(--accent-text); }

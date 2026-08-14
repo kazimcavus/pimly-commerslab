@@ -3,6 +3,7 @@ import { Button, Drawer, Field, Input } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { askConfirm } from '../lib/confirm.jsx'
 
 // Özellikler (.NET Catalog): bir özellik = ad + otomatik anahtar (key). Her özelliğin
 // değerleri ayrı uçtan yönetilir (örn. Kumaş → Pamuk, Polyester). Kategorilere atanıp
@@ -28,16 +29,26 @@ export function Attributes({ onToast }) {
       const vals = await api.listAttributeValues(attr.id)
       setEditing({ ...attr, _values: vals })
       setDrawerOpen(true)
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Açılamadı', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Açılamadı', error: e }) }
   }
 
   const submit = async ({ name, rows }) => {
     let attrId
     if (editing) {
+      // Düzenlemede kaldırılan değerler kayıtta silinir — önce kullanıcıya sor.
+      const orig = editing._values || []
+      const removed = orig.filter((o) => !rows.some((r) => r.id === o.id))
+      if (removed.length > 0) {
+        const ok = await askConfirm({
+          title: removed.length === 1 ? 'Değer silinecek' : `${removed.length} değer silinecek`,
+          body: `${removed.map((v) => `"${v.name}"`).join(', ')} bu özellikten kalıcı olarak silinecek; ürünlerdeki seçimleri etkilenebilir.`,
+          tone: 'danger', confirmLabel: 'Sil ve kaydet',
+        })
+        if (!ok) return
+      }
       await api.updateAttribute(editing.id, { name })
       attrId = editing.id
-      const orig = editing._values || []
-      for (const o of orig) if (!rows.some((r) => r.id === o.id)) await api.deleteAttributeValue(o.id)
+      for (const o of removed) await api.deleteAttributeValue(o.id)
       for (const r of rows) {
         if (r.id) { const o = orig.find((x) => x.id === r.id); if (o && o.name !== r.name) await api.updateAttributeValue(r.id, { name: r.name }) }
         else await api.createAttributeValue(attrId, { name: r.name })
@@ -81,9 +92,14 @@ export function Attributes({ onToast }) {
                 <Button variant="secondary" size="sm" iconLeft={I('pencil')} onClick={() => openEdit(active)}>Düzenle</Button>
                 <button className="tb__icon" style={{ width: 30, height: 30 }} title="Özelliği sil"
                   onClick={async () => {
-                    if (!confirm(`"${active.name}" özelliğini ve tüm değerlerini sil?`)) return
+                    const ok = await askConfirm({
+                      title: 'Özelliği sil',
+                      body: `"${active.name}" özelliği ve tüm değerleri kalıcı olarak silinecek.`,
+                      tone: 'danger', confirmLabel: 'Sil',
+                    })
+                    if (!ok) return
                     try { await api.deleteAttribute(active.id); setSel(null); loadAttrs(); onToast?.({ tone: 'success', title: 'Özellik silindi' }) }
-                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: e }) }
                   }}>{I('trash-2')}</button>
               </div>
             </div>
@@ -141,7 +157,7 @@ function AttrDrawer({ open, editing, onClose, onSubmit, onToast }) {
     if (!name.trim()) { onToast?.({ tone: 'danger', title: 'Özellik adı gerekli' }); return }
     setBusy(true)
     try { await onSubmit({ name: name.trim(), rows: rows.map((r) => ({ ...r, name: (r.name || '').trim() })).filter((r) => r.name) }) }
-    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
+    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e }) }
     finally { setBusy(false) }
   }
 

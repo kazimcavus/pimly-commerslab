@@ -3,6 +3,7 @@ import { Button, Drawer, Field, Input } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { askConfirm } from '../lib/confirm.jsx'
 
 // Markalar (.NET Catalog): bir marka = ad + opsiyonel kod. Ürün açarken/detayında
 // seçilir. Düz bir tanım listesi — sol tarafta liste, sağda seçili markanın kartı.
@@ -62,9 +63,14 @@ export function Brands({ onToast }) {
                 <Button variant="secondary" size="sm" iconLeft={I('pencil')} onClick={() => openEdit(active)}>Düzenle</Button>
                 <button className="tb__icon" style={{ width: 30, height: 30 }} title="Markayı sil"
                   onClick={async () => {
-                    if (!confirm('Bu markayı silmek istediğinize emin misiniz?')) return
+                    const ok = await askConfirm({
+                      title: 'Markayı sil',
+                      body: `"${active.name}" markası kalıcı olarak silinecek.`,
+                      tone: 'danger', confirmLabel: 'Sil',
+                    })
+                    if (!ok) return
                     try { await api.deleteBrand(active.id); setSel(null); loadBrands(); onToast?.({ tone: 'success', title: 'Marka silindi' }) }
-                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: e }) }
                   }}>{I('trash-2')}</button>
               </div>
             </div>
@@ -103,7 +109,7 @@ function BrandDrawer({ open, editing, onClose, onSubmit, onToast }) {
     if (!name.trim()) { onToast?.({ tone: 'danger', title: 'Marka adı gerekli' }); return }
     setBusy(true)
     try { await onSubmit({ name: name.trim(), code: code.trim() || null }) }
-    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
+    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e }) }
     finally { setBusy(false) }
   }
 

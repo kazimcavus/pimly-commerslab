@@ -3,6 +3,7 @@ import { Button, Badge, Dialog, Field, Input, Select, Checkbox } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { askConfirm } from '../lib/confirm.jsx'
 import { slugify } from '../lib/slug.js'
 
 const EXP_KEY = 'pimly_cat_expanded'
@@ -77,13 +78,18 @@ export function Categories({ onToast }) {
 
   const removeCat = async () => {
     if (!active) return
-    if (!confirm(`"${active.name}" kategorisi silinecek. Emin misin?`)) return
+    const ok = await askConfirm({
+      title: 'Kategoriyi sil',
+      body: `"${active.name}" kategorisi kalıcı olarak silinecek.`,
+      tone: 'danger', confirmLabel: 'Sil',
+    })
+    if (!ok) return
     try {
       await api.deleteCategory(active.id)
       setSel(null)
       await loadCats()
       onToast?.({ tone: 'success', title: 'Kategori silindi' })
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: e }) }
   }
 
   const submitCategory = async (body) => {
@@ -100,7 +106,7 @@ export function Categories({ onToast }) {
         selectCat(c.id)
         onToast?.({ tone: 'success', title: 'Kategori eklendi' })
       }
-    } catch (e) { onToast?.({ tone: 'danger', title: dialog?.mode === 'edit' ? 'Güncellenemedi' : 'Eklenemedi', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: dialog?.mode === 'edit' ? 'Güncellenemedi' : 'Eklenemedi', error: e }) }
   }
 
   const editExclude = dialog?.mode === 'edit' && dialog.initial ? [dialog.initial.id, ...descendantsOf(dialog.initial.id)] : []
@@ -138,7 +144,19 @@ export function Categories({ onToast }) {
                           <td className="pim-td-strong">{a.name}</td>
                           <td className="pim-td-mono">{a.key}</td>
                           <td>{a.required ? I('check') : <span className="subtle">—</span>}</td>
-                          <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => { await api.deleteCategoryAttribute(a.category_attribute_id); setAttrs(attrs.filter((x) => x.category_attribute_id !== a.category_attribute_id)) }}>{I('trash-2')}</button></div></td>
+                          <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => {
+                            const ok = await askConfirm({
+                              title: 'Özelliği kategoriden kaldır',
+                              body: `"${a.name}" özelliği bu kategoriden kaldırılacak; ürünlerdeki seçimleri etkilenebilir.`,
+                              tone: 'danger', confirmLabel: 'Kaldır',
+                            })
+                            if (!ok) return
+                            try {
+                              await api.deleteCategoryAttribute(a.category_attribute_id)
+                              setAttrs(attrs.filter((x) => x.category_attribute_id !== a.category_attribute_id))
+                              onToast?.({ tone: 'success', title: 'Özellik kaldırıldı' })
+                            } catch (e) { onToast?.({ tone: 'danger', title: 'Kaldırılamadı', error: e }) }
+                          }}>{I('trash-2')}</button></div></td>
                         </tr>
                       ))}
                       {attrs.length === 0 && <tr><td colSpan={4} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
@@ -179,7 +197,7 @@ export function Categories({ onToast }) {
         onClose={() => setDialog(null)} onSubmit={submitCategory} />
 
       <AssignAttrDialog open={assignOpen} onClose={() => setAssignOpen(false)} attrs={allAttrs.filter((a) => !attrs.some((x) => x.attribute_id === a.id))}
-        onAssign={async (body) => { try { await api.assignCategoryAttribute(sel, body); setAssignOpen(false); api.listCategoryAttributes(sel).then(setAttrs); onToast?.({ tone: 'success', title: 'Özellik atandı' }) } catch (e) { onToast?.({ tone: 'danger', title: 'Atanamadı', body: e.message }) } }} />
+        onAssign={async (body) => { try { await api.assignCategoryAttribute(sel, body); setAssignOpen(false); api.listCategoryAttributes(sel).then(setAttrs); onToast?.({ tone: 'success', title: 'Özellik atandı' }) } catch (e) { onToast?.({ tone: 'danger', title: 'Atanamadı', error: e }) } }} />
     </div>
   )
 }

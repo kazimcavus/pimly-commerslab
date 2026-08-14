@@ -70,11 +70,16 @@ function Sidebar({ route, onNavigate, collapsed, pinned, onTogglePin, onHover })
     >
       <div className="sb__brand">
         {collapsed ? (
-          <img src="/assets/pimly-mark.svg" alt="pimly" className="sb__mark" />
+          <>
+            <img src="/brand/helpy-favicon-light.webp" alt="Helpy Connect" className="brand-mark pim-light-logo" />
+            <img src="/brand/helpy-favicon-dark.webp" alt="Helpy Connect" className="brand-mark pim-dark-logo" />
+          </>
         ) : (
           <>
-            <img src="/assets/pimly-wordmark.svg" alt="pimly" className="pim-light-logo" />
-            <img src="/assets/pimly-wordmark-dark.svg" alt="pimly" className="pim-dark-logo" />
+            <img src="/brand/helpy-logo-light.webp" alt="Helpy" className="brand-logo pim-light-logo" />
+            <img src="/brand/helpy-logo-dark.webp" alt="Helpy" className="brand-logo pim-dark-logo" />
+            <span className="brand-dot" />
+            <span className="brand-suffix">Connect</span>
           </>
         )}
         {!collapsed && (
@@ -141,7 +146,7 @@ function Sidebar({ route, onNavigate, collapsed, pinned, onTogglePin, onHover })
 }
 
 function TopBar({ user, tenant, onLogout, onToggleTheme }) {
-  const name = user?.name || user?.email || 'pimly'
+  const name = user?.name || user?.email || 'Helpy'
   return (
     <header className="tb">
       <div className="tb__tenant" title={tenant?.name ? `Çalışma alanı: ${tenant.name}` : undefined}>

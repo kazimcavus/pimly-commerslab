@@ -3,6 +3,7 @@ import { Button, Field, Input, Banner } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { friendlyError } from '../lib/errors.js'
 
 const MP = 'TY' // Trendyol pazaryeri kodu
 
@@ -45,7 +46,7 @@ export function TrendyolOnboarding({ onNavigate, onToast }) {
     return () => clearInterval(pollRef.current)
   }, [])
 
-  const fail = (e, fallback) => setError(e?.message || fallback)
+  const fail = (e, fallback) => setError(e ? friendlyError(e) : fallback)
 
   // --- Adım 1: bağlantıyı kaydet ---
   const saveConnection = async (e) => {

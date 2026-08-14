@@ -3,6 +3,7 @@ import { Button, Banner } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { friendlyError } from '../lib/errors.js'
 
 const MP = 'TY'
 
@@ -22,7 +23,7 @@ const ERROR_MAP = [
   { test: /category .*not.*(found|mapped)|kategori.*eşle/i, friendly: 'Ürünün Trendyol kategorisi Pimly kategorisine eşlenemedi.' },
   { test: /barcode.*(exist|duplicate)|barkod.*(var|çak)/i, friendly: 'Bu barkod kataloğunda zaten kullanılıyor.' },
 ]
-function friendlyError(message) {
+function friendlyImportError(message) {
   if (!message) return 'Bilinmeyen bir hata oluştu.'
   for (const e of ERROR_MAP) if (e.test.test(message)) return e.friendly
   return message
@@ -81,7 +82,7 @@ export function Channels({ onNavigate, onToast }) {
     setDetails((d) => ({ ...d, [expandedId]: { ...(d[expandedId] || {}), loading: !d[expandedId]?.data } }))
     api.getImportRun(MP, expandedId)
       .then((full) => { if (!cancelled) setDetails((d) => ({ ...d, [expandedId]: { loading: false, data: full } })) })
-      .catch((e) => { if (!cancelled) setDetails((d) => ({ ...d, [expandedId]: { loading: false, error: e?.message || 'Ayrıntılar alınamadı' } })) })
+      .catch((e) => { if (!cancelled) setDetails((d) => ({ ...d, [expandedId]: { loading: false, error: friendlyError(e) } })) })
     return () => { cancelled = true }
   }, [expandedId, expandedRun?.failed_products, expandedRun?.status])
 
@@ -169,7 +170,7 @@ export function Channels({ onNavigate, onToast }) {
                           {det?.data && (
                             <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--surface-subtle)' }}>
                               {(det.data.errors || []).map((er, i) => {
-                                const friendly = friendlyError(er.message)
+                                const friendly = friendlyImportError(er.message)
                                 const showTech = friendly !== er.message
                                 return (
                                   <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 12px', borderBottom: '1px solid var(--border-subtle)' }}>

@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { I } from '../icons.jsx'
 import { api } from '../../lib/api.js'
+import { askConfirm } from '../../lib/confirm.jsx'
 
 // Ürün foto galerisi: yükle / sil / kapak yap / sırala.
 // Bağlı mod (productId verili): her işlem anında API'ye gider, sonra onChanged() ile
@@ -40,7 +41,7 @@ export function PhotoGallery({ images = [], productId, onChanged, onToast }) {
       onToast?.({ tone: 'success', title: files.length > 1 ? `${files.length} görsel eklendi` : 'Görsel eklendi' })
       await onChanged?.()
     } catch (err) {
-      onToast?.({ tone: 'danger', title: 'Görsel yüklenemedi', body: err.message })
+      onToast?.({ tone: 'danger', title: 'Görsel yüklenemedi', error: err })
     } finally { setBusy(false) }
   }
 
@@ -48,7 +49,7 @@ export function PhotoGallery({ images = [], productId, onChanged, onToast }) {
     if (img.is_primary) return
     setBusy(true)
     try { await patch(img, { is_primary: true }); await onChanged?.() }
-    catch (e) { onToast?.({ tone: 'danger', title: 'Kapak yapılamadı', body: e.message }) }
+    catch (e) { onToast?.({ tone: 'danger', title: 'Kapak yapılamadı', error: e }) }
     finally { setBusy(false) }
   }
 
@@ -61,18 +62,23 @@ export function PhotoGallery({ images = [], productId, onChanged, onToast }) {
     try {
       await Promise.all([patch(a, { sort_order: b.sort_order ?? j }), patch(b, { sort_order: a.sort_order ?? idx })])
       await onChanged?.()
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Sıralanamadı', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Sıralanamadı', error: e }) }
     finally { setBusy(false) }
   }
 
   const remove = async (img) => {
-    if (!confirm('Bu görsel silinecek. Emin misin?')) return
+    const ok = await askConfirm({
+      title: 'Görseli sil',
+      body: 'Bu görsel üründen kalıcı olarak kaldırılacak.',
+      tone: 'danger', confirmLabel: 'Sil',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       await api.deleteProductImage(img.id)
       onToast?.({ tone: 'success', title: 'Görsel silindi' })
       await onChanged?.()
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: e }) }
     finally { setBusy(false) }
   }
 

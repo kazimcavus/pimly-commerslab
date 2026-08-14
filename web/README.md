@@ -44,6 +44,11 @@ temayı değiştirir.
 - `src/ds/` tasarım sistemi primitive'leri, `src/styles/` tasarım token'ları
   (CSS değişkenleri) + UI-kit CSS'idir.
 
+> **Yeni sayfa eklerken:** onay modalları, toast/hata metinleri ve
+> kaydedilmemiş-değişiklik koruması için [docs/ui-feedback.md](docs/ui-feedback.md)
+> zorunlu kurallardır — tarayıcı `confirm/alert` kullanılmaz, ham `e.message`
+> gösterilmez.
+
 ## Ekranlar
 
 | Ekran | Açıklama | Backend |

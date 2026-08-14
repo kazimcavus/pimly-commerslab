@@ -3,6 +3,7 @@ import { Button } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { askConfirm } from '../lib/confirm.jsx'
 
 // Ürünler (.NET Catalog): her ürün bir "model" (group_id) altında yaşar. Slicer'lı
 // bir ürün renk renk ayrı ürünlere bölünür; burada aynı model_id altında gruplanır.
@@ -57,9 +58,14 @@ export function ProductList({ onNavigate, onToast, initialFilter }) {
 
   const remove = async (e, id, name) => {
     e.stopPropagation()
-    if (!confirm(`"${name}" ürünü ve tüm varyantları silinecek. Emin misin?`)) return
+    const ok = await askConfirm({
+      title: 'Ürünü sil',
+      body: `"${name}" ürünü ve tüm varyantları kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
+      tone: 'danger', confirmLabel: 'Ürünü sil',
+    })
+    if (!ok) return
     try { await api.deleteProduct(id); onToast?.({ tone: 'success', title: 'Ürün silindi' }); load() }
-    catch (err) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: err.message }) }
+    catch (err) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: err }) }
   }
 
   let shown = filter === 'all' ? products : products.filter((p) => p.status === filter)

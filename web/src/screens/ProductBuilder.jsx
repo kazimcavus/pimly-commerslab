@@ -3,13 +3,16 @@ import { Button, Field, Input, Select, Banner, RichText } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader, StatusBadge } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { friendlyError } from '../lib/errors.js'
 import { parseTrMoney } from '../lib/format.js'
+import { registerNavGuard } from '../lib/navGuard.js'
 import { isHtmlEmpty } from '../lib/sanitizeHtml.js'
 import { loadSkuConfig } from '../lib/skuConfig.js'
+import { AttributeEditor } from './parts/AttributeEditor.jsx'
 
 const MAX_TYPES = 3
-const VAR_COLS = '1.5fr 0.9fr 0.9fr 0.6fr 1.1fr 1.1fr'
 const SEG_NAME = { fixed: 'Sabit', counter: 'Sıra', year: 'Yıl', manual: 'Değer' }
+const EMPTY_CHAN = { amount: '', compareAt: '' }
 
 // Cartesian product of arrays-of-values → array of combos (each combo an array).
 function cartesian(arrays) {
@@ -36,51 +39,59 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
 
   // Variant product: chosen types (ordered) + selected value ids + per-combo data.
   const [chosen, setChosen] = useState([]) // [{ typeId, valueIds: [] }]
-  const [rowData, setRowData] = useState({}) // { comboKey: {price,compareAt,stock,sku} }
+  const [rowData, setRowData] = useState({}) // { comboKey: {price,compareAt,stock,sku,barcode} }
   const [adding, setAdding] = useState(false)
   // Ayraç değeri başına ürün adı: yalnızca elle değiştirilen girişler tutulur;
   // boş bırakılanlar ürün adından + katalog ayarındaki konum tercihinden türetilir.
   const [splitNames, setSplitNames] = useState({}) // { slicerValueId: text }
   const [namePos, setNamePos] = useState('suffix') // 'suffix' | 'prefix' — backend'den yüklenir
 
-  // Tanımlı fiyat alanları (Tanımlar → Fiyatlar).
+  // Tanımlı fiyat alanları (Tanımlar → Fiyatlar) — tabloda birer sütun.
   const [priceDefs, setPriceDefs] = useState([]) // [{id,name,code}]
   const [defPrices, setDefPrices] = useState({}) // basit ürün: { defId: text }
   const [itemDefPrices, setItemDefPrices] = useState({}) // varyant: { comboKey: { defId: text } }
+
+  // Kanal (pazaryeri) fiyat sütunları — bağlı pazaryerleri; create sonrası
+  // Pricing channel-price uçlarına yazılır.
+  const [marketplaces, setMarketplaces] = useState([])
+  const [itemChannels, setItemChannels] = useState({}) // { comboKey: { code: {amount, compareAt} } }
+  const [simpleChannels, setSimpleChannels] = useState({}) // { code: {amount, compareAt} }
 
   // Tenant settings: SKU generator + barcode config.
   const [skuCfg, setSkuCfg] = useState({ enabled: false, segments: [] })
   const [bcOn, setBcOn] = useState(false)
   const [codeInputs, setCodeInputs] = useState({}) // { segIndex: value } for manual
 
-  // Category attributes: assigned attrs of the chosen category + their values + selection.
-  const [allAttrs, setAllAttrs] = useState([])     // [{id,name,key}] — full attribute list
+  // Kategori özellikleri: AttributeEditor yükler, zorunlu doğrulaması için
+  // meta buraya bildirilir; seçim attrPick'te tutulur.
   const [catAttrs, setCatAttrs] = useState([])     // [{category_attribute_id,attribute_id,name,required,...}]
-  const [attrVals, setAttrVals] = useState({})     // { attribute_id: [{id,name}] }
   const [attrPick, setAttrPick] = useState({})     // { attribute_id: valueId }
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Kaydedilmemiş değişiklik koruması: kullanıcı forma bir şey girdiyse
+  // ekrandan ayrılmadan önce sorulur (barkod oto-tahsisi kirlilik sayılmaz).
+  const dirtyRef = useRef(false)
+  useEffect(() => registerNavGuard(() => dirtyRef.current), [])
+  dirtyRef.current = !!(
+    title.trim() || !isHtmlEmpty(description) || groupCode.trim()
+    || chosen.some((c) => c.valueIds.length > 0)
+    || Object.values(attrPick).some(Boolean)
+    || (mode === 'simple' && (simple.sku || simple.price || simple.compareAt || (simple.stock && simple.stock !== '0')))
+  )
+
   useEffect(() => { api.listCategories().then(setCategories).catch(() => {}) }, [])
   useEffect(() => { api.listBrands().then(setBrands).catch(() => {}) }, [])
-  useEffect(() => { api.listAttributes().then(setAllAttrs).catch(() => {}) }, [])
   useEffect(() => { api.listPriceDefinitions().then(setPriceDefs).catch(() => {}) }, [])
   useEffect(() => { api.getCatalogSettings().then((s) => setNamePos(s.slicer_name_position || 'suffix')).catch(() => {}) }, [])
-
-  // Load the selected category's assigned attributes + each attribute's values.
   useEffect(() => {
-    if (!categoryId) { setCatAttrs([]); setAttrVals({}); setAttrPick({}); return }
-    let alive = true
-    api.listCategoryAttributes(categoryId).then(async (cas) => {
-      if (!alive) return
-      setCatAttrs(cas)
-      const entries = await Promise.all(cas.map((ca) =>
-        api.listAttributeValues(ca.attribute_id).then((vs) => [ca.attribute_id, vs]).catch(() => [ca.attribute_id, []])))
-      if (alive) setAttrVals(Object.fromEntries(entries))
-    }).catch(() => { if (alive) { setCatAttrs([]); setAttrVals({}) } })
-    return () => { alive = false }
-  }, [categoryId])
+    api.listMarketplaces()
+      .then((mps) => setMarketplaces((mps || []).filter((m) => m.is_configured)))
+      .catch(() => {})
+  }, [])
+  // Kategori değişince seçimler sıfırlanır (özellik listesi AttributeEditor'da yüklenir).
+  useEffect(() => { setAttrPick({}) }, [categoryId])
   // SKU şablonu .NET Catalog'dan; barkod serisi .NET'ten.
   useEffect(() => {
     loadSkuConfig()
@@ -174,7 +185,9 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
   }))
 
   const setRow = (key, patch) => setRowData((d) => ({ ...d, [key]: { ...d[key], ...patch } }))
-  const rowOf = (key) => rowData[key] || { price: '', compareAt: '', stock: '0', sku: '', barcode: '' }
+  // Barkod tahsisi satırı kısmi yaratabilir ({barcode} tek başına) — varsayılanlarla birleştir,
+  // yoksa kontrollü input'lar undefined değere düşer.
+  const rowOf = (key) => ({ price: '', compareAt: '', stock: '0', sku: '', barcode: '', ...(rowData[key] || {}) })
 
   // Add a brand-new value to a type inline (e.g. a color/size not yet defined),
   // persist it, then auto-select it for this product.
@@ -186,36 +199,15 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       const v = await api.createVariantValue(typeId, { label: l, color: t?.selection_style === 'color' ? '#d3ccc1' : null, sort_order: (t?.values || []).length })
       setTypes((ts) => ts.map((x) => x.id === typeId ? { ...x, values: [...(x.values || []), v] } : x))
       toggleValue(typeId, v.id)
-    } catch (e) { setError(e.message || 'Değer eklenemedi') }
-  }
-
-  // --- category attribute handlers ---
-  const selectAttrVal = (attrId, valId) => setAttrPick((p) => ({ ...p, [attrId]: valId }))
-  const addAttrValue = async (attrId, name) => {
-    const n = name.trim(); if (!n) return
-    const v = await api.createAttributeValue(attrId, { name: n })
-    setAttrVals((m) => ({ ...m, [attrId]: [...(m[attrId] || []), v] }))
-    setAttrPick((p) => ({ ...p, [attrId]: v.id }))
-  }
-  const assignAttribute = async (attrId) => {
-    const ca = await api.assignCategoryAttribute(categoryId, { attribute_id: attrId, required: false, sort_order: catAttrs.length })
-    setCatAttrs((c) => [...c, ca])
-    const vs = await api.listAttributeValues(attrId).catch(() => [])
-    setAttrVals((m) => ({ ...m, [attrId]: vs }))
-  }
-  const createAndAssignAttribute = async (name) => {
-    const n = name.trim(); if (!n) return
-    const a = await api.createAttribute({ name: n })
-    setAllAttrs((xs) => [...xs, a])
-    await assignAttribute(a.id)
+    } catch (e) { setError(friendlyError(e)) }
   }
 
   // Catalog artık saf PIM: fiyat/stok kaleme inline yazılmaz. Kalemler
   // products:batch ile oluşturulduktan SONRA temel fiyat → Pricing (base-price),
-  // stok → Inventory, tanımlı fiyatlar → Pricing (item-price) uçlarına yazılır.
-  // Kalemler BARKOD ile eşlenir (ayraç birden çok ürün üretebilir; yanıt kalem
-  // id'si içermiyorsa üründen çekilir). Kısmi hata ürünü geri almaz — true dönerse
-  // çağıran uyarı gösterir.
+  // stok → Inventory, tanımlı fiyatlar → Pricing (item-price), kanal fiyatları →
+  // Pricing (channel-price) uçlarına yazılır. Kalemler BARKOD ile eşlenir (ayraç
+  // birden çok ürün üretebilir; yanıt kalem id'si içermiyorsa üründen çekilir).
+  // Kısmi hata ürünü geri almaz — true dönerse çağıran uyarı gösterir.
   const writeItemPricingAndStock = async (created, byBarcode) => {
     if (!byBarcode || Object.keys(byBarcode).length === 0) return false
     let warn = false
@@ -232,13 +224,21 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
         calls.push(api.putBasePrice(it.id, { amount: data.price, compare_at_amount: data.compareAt, currency: 'TRY' }))
         calls.push(api.putStock(it.id, { quantity: data.stock }))
         for (const d of data.defs) calls.push(api.putItemPrice(it.id, d.id, { amount: d.amount, currency: 'TRY' }))
+        for (const c of data.channels) calls.push(api.putChannelPrice(it.id, c.code, { amount: c.amount, compare_at_amount: c.compareAt, currency: 'TRY' }))
       }
     }
     const results = await Promise.allSettled(calls)
     return warn || results.some((r) => r.status === 'rejected')
   }
 
-  // Barkod → { price, compareAt, stock, defs:[{id,amount}] } haritası (create sonrası yazım için).
+  // Barkod → { price, compareAt, stock, defs, channels } haritası (create sonrası yazım için).
+  const channelList = (per) => marketplaces
+    .filter((m) => (per?.[m.code]?.amount || '').trim())
+    .map((m) => ({
+      code: m.code,
+      amount: parseTrMoney(per[m.code].amount),
+      compareAt: (per[m.code].compareAt || '').trim() ? parseTrMoney(per[m.code].compareAt) : null,
+    }))
   const buildItemDataByBarcode = () => {
     const map = {}
     if (mode === 'variant') {
@@ -255,6 +255,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
           compareAt: r.compareAt ? parseTrMoney(r.compareAt) : null,
           stock: parseInt(r.stock, 10) || 0,
           defs,
+          channels: channelList(itemChannels[key]),
         }
       }
     } else {
@@ -268,28 +269,33 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
           compareAt: simple.compareAt ? parseTrMoney(simple.compareAt) : null,
           stock: parseInt(simple.stock, 10) || 0,
           defs,
+          channels: channelList(simpleChannels),
         }
       }
     }
     return map
   }
 
-  // Varyant başına tanımlı fiyat setter'ı (matris hücreleri) + gruba toplu doldurma.
+  // Varyant başına tanımlı fiyat / kanal fiyatı setter'ları + gruba toplu doldurma.
   const setItemDef = (key, defId, value) =>
     setItemDefPrices((m) => ({ ...m, [key]: { ...(m[key] || {}), [defId]: value } }))
   const fillGroupDef = (keys, defId, value) =>
     setItemDefPrices((m) => { const n = { ...m }; keys.forEach((k) => { n[k] = { ...(n[k] || {}), [defId]: value } }); return n })
   const fillGroupRow = (keys, field, value) =>
     setRowData((d) => { const n = { ...d }; keys.forEach((k) => { n[k] = { ...(n[k] || rowOf(k)), [field]: value } }); return n })
+  const chanOf = (key, code) => itemChannels[key]?.[code] || EMPTY_CHAN
+  const setItemChannel = (key, code, patch) =>
+    setItemChannels((m) => ({ ...m, [key]: { ...(m[key] || {}), [code]: { ...(m[key]?.[code] || EMPTY_CHAN), ...patch } } }))
+  const fillGroupChannel = (keys, code, field, value) =>
+    setItemChannels((m) => { const n = { ...m }; keys.forEach((k) => { n[k] = { ...(n[k] || {}), [code]: { ...(n[k]?.[code] || EMPTY_CHAN), [field]: value } } }); return n })
 
   const totalVariants = mode === 'variant' ? combos.length : 1
   // Slicer-aware summary: a slicer axis splits into one product per value.
   const usedTypes = activeChosen.map((c) => typeById[c.typeId])
   const slicerSel = mode === 'variant' ? usedTypes.findIndex((t) => t?.slicer) : -1
   const productCount = slicerSel !== -1 && combos.length ? new Set(combos.map((c) => c[slicerSel]?.id)).size : 1
-  const buildSummary = slicerSel !== -1 && combos.length ? `${productCount} ürün · ${totalVariants} varyant` : `${totalVariants} varyant`
 
-  // Ayraç türü + bu üründe seçili değerleri — "X bazında ad ve stok kodu" paneli için.
+  // Ayraç türü + bu üründe seçili değerleri — renk başına ürün kartları için.
   const slicerType = slicerSel !== -1 ? usedTypes[slicerSel] : null
   // Ayraç değeri ürün adı: elle girilmişse o, değilse ürün adından türet (konum Ayarlar'dan).
   const derivedSplitName = (label) => {
@@ -318,9 +324,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
         title: title.trim(), variant_types: [],
         variants: [{
           sku: simple.sku.trim(), barcode: simple.barcode.trim(),
-          price: parseTrMoney(simple.price || '0'),
-          compare_at_price: simple.compareAt ? parseTrMoney(simple.compareAt) : null,
-          stock: parseInt(simple.stock, 10) || 0, options: [],
+          options: [],
         }],
       }
     } else {
@@ -335,9 +339,6 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
           return {
             sku: (r.sku || '').trim(),
             barcode: (r.barcode || '').trim(),
-            price: parseTrMoney(r.price || '0'),
-            compare_at_price: r.compareAt ? parseTrMoney(r.compareAt) : null,
-            stock: parseInt(r.stock, 10) || 0,
             options: combo.map((v, i) => ({
               type_id: used[i].id, type_name: used[i].name,
               value_id: v.id, value_label: v.label, color: v.color || '', image_url: v.image_url || '', key: v.key || '',
@@ -347,15 +348,6 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       }
     }
 
-    // Category attribute selections → product.attribute_values (used by products:batch).
-    product.attribute_values = catAttrs
-      .filter((ca) => attrPick[ca.attribute_id])
-      .map((ca) => ({
-        attribute_id: ca.attribute_id,
-        attribute_value_id: attrPick[ca.attribute_id],
-        value: (attrVals[ca.attribute_id] || []).find((x) => x.id === attrPick[ca.attribute_id])?.name || null,
-      }))
-
     // SKU generator: send per-product manual inputs; require them.
     if (skuOn) {
       for (let i = 0; i < skuCfg.segments.length; i++) {
@@ -364,7 +356,6 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
           setError(`Ürün kodu için "${s.label || 'değer'}" alanını doldur.`); return
         }
       }
-      product.code_inputs = skuCfg.segments.map((s, i) => s.type === 'manual' ? (codeInputs[i] || '').trim() : '')
 
       // "Key" kaynaklı varyant segmentleri, seçili her değerde bir key gerektirir
       // (key boşsa backend addan otomatik üretir; yine de boş kalmasına izin verme).
@@ -402,10 +393,12 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       name: title.trim(),
       description: isHtmlEmpty(description) ? null : description,
       status,
-      attribute_values: (product.attribute_values || []).map((a) => ({ attribute_id: a.attribute_id, attribute_value_id: a.attribute_value_id })),
+      attribute_values: catAttrs
+        .filter((ca) => attrPick[ca.attribute_id])
+        .map((ca) => ({ attribute_id: ca.attribute_id, attribute_value_id: attrPick[ca.attribute_id] })),
       variants: (product.variant_types || []).map((t) => ({ id: t.id, name: t.name, selection_style: t.selection_style })),
       // Catalog kalemi saf PIM: fiyat/stok göndermeyiz (backend yok sayar).
-      // Temel fiyat + stok + tanımlı fiyatlar create sonrası ayrı uçlara yazılır.
+      // Temel fiyat + stok + tanımlı/kanal fiyatları create sonrası ayrı uçlara yazılır.
       items: product.variants.map((v) => ({
         sku: skuOn ? null : (v.sku || null),
         barcode: v.barcode,
@@ -431,27 +424,24 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       const itemCount = created.reduce((a, p) => a + (p.items?.length || p.variants?.length || 0), 0)
       // Fiyat + stok yazımını navigasyondan ÖNCE yap (onSaved ürün listesine götürür).
       const priceWarn = await writeItemPricingAndStock(created, buildItemDataByBarcode())
+      dirtyRef.current = false // kayıt tamam; ayrılma korumasını bırak
       onSaved?.(`${created.length} ürün · ${itemCount} varyant oluşturuldu.`)
       if (priceWarn) onToast?.({ tone: 'danger', title: 'Bazı fiyat/stok alanları kaydedilemedi', body: 'Ürün oluşturuldu; eksik değerleri ürün detayından girebilirsiniz.' })
     } catch (e) {
-      setError(e.message || 'Kaydedilemedi')
+      setError(friendlyError(e))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="page" style={{ maxWidth: 1040 }}>
+    <div className="page" style={{ maxWidth: 1060 }}>
       <PageHeader
         crumbs={[{ label: 'Ürünler', onClick: () => onNavigate('products') }, { label: 'Ürün Oluştur' }]}
         eyebrow="Tek yazma yolu · products:batch"
         title="Ürün Oluştur"
         help="product-builder"
-        sub="Basit ürün ya da varyantlı ürün (Varyantlar'dan tür seç, kombinasyonlar otomatik üretilir)."
-        actions={<>
-          <Button variant="secondary" onClick={() => onNavigate('products')}>İptal</Button>
-          <Button variant="primary" iconLeft={I('check')} onClick={save} loading={saving}>Kaydet</Button>
-        </>}
+        sub="Basit ya da varyantlı ürün — grup, ürünler ve varyantlar tek kayıtta oluşturulur. Kombinasyonlar seçtiğin değerlerden otomatik üretilir."
       />
 
       {error && <div style={{ marginBottom: 16 }}><Banner tone="danger" title="Kaydedilemedi">{error}</Banner></div>}
@@ -461,7 +451,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
         <div className="bnode">
           <div className="bnode__head">
             <span className="ic">{I('folder')}</span>
-            <div><div className="bnode__title">1 · Temel bilgiler</div><div className="list-meta">Başlık, kategori, açıklama, durum</div></div>
+            <div><div className="bnode__title">1 · Temel bilgiler</div><div className="list-meta">Başlık, kategori, marka ve ürün kodu</div></div>
             <div style={{ marginLeft: 'auto' }}>
               <div className="seg">
                 <button data-active={status === 'draft'} onClick={() => setStatus('draft')}>Taslak</button>
@@ -472,7 +462,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
           <div className="bnode__body">
             <div className="fieldgrid">
               <Field label="Başlık" required>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Örn. El dokuması kilim" />
               </Field>
               <Field label="Kategori" required>
                 <Select placeholder="Seç…" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
@@ -484,7 +474,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
               </Field>
               {!skuOn && (
                 <Field label="Ürün kodu" required auto="Ayarlar'dan üretici açılırsa otomatik gelir">
-                  <Input mono value={groupCode} onChange={(e) => setGroupCode(e.target.value)} />
+                  <Input mono value={groupCode} onChange={(e) => setGroupCode(e.target.value)} placeholder="TS-0001" />
                 </Field>
               )}
             </div>
@@ -524,38 +514,32 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
         <div className="bnode">
           <div className="bnode__head">
             <span className="ic">{I('package')}</span>
-            <div><div className="bnode__title">2 · Ürün tipi</div><div className="list-meta">Basit tek SKU, varyantlı çoklu kombinasyon</div></div>
-            <span className="pim-badge pim-badge--count" style={{ marginLeft: 'auto' }}>{buildSummary}</span>
+            <div><div className="bnode__title">2 · Ürün tipi</div><div className="list-meta">Basit tek SKU ya da varyantlı çoklu kombinasyon</div></div>
+            <span className="pim-badge pim-badge--count" style={{ marginLeft: 'auto' }}>{productCount} ürün · {totalVariants} varyant</span>
           </div>
           <div className="bnode__body">
-            <div className="style-seg" style={{ maxWidth: 420, marginBottom: 16 }}>
-              <div className="style-card" data-active={mode === 'simple'} onClick={() => setMode('simple')}>{I('box')} Basit ürün</div>
-              <div className="style-card" data-active={mode === 'variant'} onClick={() => setMode('variant')}>{I('layers')} Varyantlı ürün</div>
+            <div className="typetoggle" style={{ marginBottom: 20 }}>
+              <button type="button" className="typetoggle__btn" data-active={mode === 'simple'} onClick={() => setMode('simple')}>{I('box', { size: 18 })} Basit ürün</button>
+              <button type="button" className="typetoggle__btn" data-active={mode === 'variant'} onClick={() => setMode('variant')}>{I('layers', { size: 18 })} Varyantlı ürün</button>
             </div>
 
             {mode === 'simple' ? (
-              <>
-                <div className="fieldgrid">
-                  <Field label="SKU" optional={!skuOn} auto={skuOn ? 'şablondan otomatik üretilir' : undefined}><Input mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik üretilir (Ayarlar → Ürün Kodu Oluşturucu)' : undefined} value={skuOn ? (productCodePreview || '') : simple.sku} onChange={(e) => { if (!skuOn) setSimple((s) => ({ ...s, sku: e.target.value })) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} /></Field>
-                  <Field label="Barkod" required={!bcOn} auto={bcOn ? 'otomatik üretilir' : "elle gir ya da Ayarlar'dan üreticiyi aç"}><Input mono value={simple.barcode} onChange={(e) => setSimple((s) => ({ ...s, barcode: e.target.value }))} placeholder={bcOn ? 'otomatik' : 'zorunlu'} /></Field>
-                  <Field label="Satış fiyatı" help="Kendi siteniz için genel fiyat. Pazaryeri (Trendyol, Hepsiburada…) fiyatlarını ürün detayından kanal bazında ekleyebilirsiniz."><Input mono suffix="₺" value={simple.price} onChange={(e) => setSimple((s) => ({ ...s, price: e.target.value }))} placeholder="0,00" /></Field>
-                  <Field label="Karşılaştırma fiyatı" help="İndirim öncesi üstü çizili gösterilecek fiyat."><Input mono suffix="₺" value={simple.compareAt} onChange={(e) => setSimple((s) => ({ ...s, compareAt: e.target.value }))} placeholder="—" /></Field>
-                  <Field label="Stok"><Input mono value={simple.stock} onChange={(e) => setSimple((s) => ({ ...s, stock: e.target.value }))} /></Field>
-                </div>
-                <DefPriceFields defs={priceDefs} values={defPrices} setValues={setDefPrices} />
-              </>
+              <SimpleTable
+                simple={simple} setSimple={setSimple} skuOn={skuOn} bcOn={bcOn} productCodePreview={productCodePreview}
+                priceDefs={priceDefs} defPrices={defPrices} setDefPrices={setDefPrices}
+                marketplaces={marketplaces} simpleChannels={simpleChannels} setSimpleChannels={setSimpleChannels}
+              />
             ) : (
-              <>
-                <VariantSection
-                  types={types} chosen={chosen} typeById={typeById} availableToAdd={availableToAdd}
-                  adding={adding} setAdding={setAdding} addType={addType} removeType={removeType} toggleValue={toggleValue} addValue={addValue}
-                  combos={combos} activeChosen={activeChosen} rowOf={rowOf} setRow={setRow}
-                  skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
-                  splitNameOf={splitNameOf} setSplitName={setSplitName}
-                  priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
-                  fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
-                />
-              </>
+              <VariantSection
+                types={types} chosen={chosen} typeById={typeById} availableToAdd={availableToAdd}
+                adding={adding} setAdding={setAdding} addType={addType} removeType={removeType} toggleValue={toggleValue} addValue={addValue}
+                combos={combos} activeChosen={activeChosen} rowOf={rowOf} setRow={setRow}
+                skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
+                splitNameOf={splitNameOf} setSplitName={setSplitName}
+                priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
+                fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
+                marketplaces={marketplaces} chanOf={chanOf} setItemChannel={setItemChannel} fillGroupChannel={fillGroupChannel}
+              />
             )}
           </div>
         </div>
@@ -568,18 +552,16 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
             {categoryId && <span className="pim-badge pim-badge--count" style={{ marginLeft: 'auto' }}>{catAttrs.length} özellik</span>}
           </div>
           <div className="bnode__body">
-            <CategoryAttributesSection
-              categoryId={categoryId} catAttrs={catAttrs} attrVals={attrVals} attrPick={attrPick} allAttrs={allAttrs}
-              selectAttrVal={selectAttrVal} addAttrValue={addAttrValue} assignAttribute={assignAttribute} createAndAssignAttribute={createAndAssignAttribute}
-              onError={setError}
-            />
+            <AttributeEditor grid categoryId={categoryId} pick={attrPick} onPickChange={setAttrPick}
+              onAttrsLoaded={setCatAttrs} onToast={onToast} />
           </div>
         </div>
       </div>
 
-      <div className="between" style={{ marginTop: 18, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)' }}>
-        <div className="list-meta">
-          <span style={{ color: 'var(--text-strong)', fontWeight: 600 }}>{buildSummary}</span> oluşturulacak · durum: <StatusBadge status={status} />
+      {/* Sticky Kaydet/İptal */}
+      <div className="savebar">
+        <div className="savebar__meta">
+          <b>{productCount} ürün</b> · <b>{totalVariants} varyant</b> oluşturulacak · durum: <StatusBadge status={status} />
         </div>
         <div className="hstack">
           <Button variant="secondary" onClick={() => onNavigate('products')}>İptal</Button>
@@ -590,100 +572,77 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
   )
 }
 
-// Tanımlı fiyat alanları (Tanımlar → Fiyatlar): ürün seviyesinde opsiyonel tutarlar;
-// kayıttan sonra oluşturulan TÜM kalemlere yazılır. Tanım yoksa hiçbir şey çizilmez.
-function DefPriceFields({ defs, values, setValues }) {
-  if (defs.length === 0) return null
-  return (
-    <div style={{ marginTop: 14, padding: 12, background: 'var(--surface-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-      <div className="hstack" style={{ gap: 6, marginBottom: 10 }}>{I('banknote', { size: 15 })}<span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>Diğer fiyat alanları</span><span className="list-meta">Tanımlar → Fiyatlar</span></div>
-      <div className="hstack" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        {defs.map((d) => (
-          <Field key={d.id} label={d.name}>
-            <Input mono suffix="₺" value={values[d.id] || ''} placeholder="—" style={{ width: 130 }}
-              onChange={(e) => setValues((m) => ({ ...m, [d.id]: e.target.value }))} />
-          </Field>
-        ))}
-      </div>
-      <div className="list-meta" style={{ marginTop: 10 }}>Bu alanlar tüm varyantlara uygulanır; varyant bazında ürün detayından değiştirebilirsiniz.</div>
-    </div>
-  )
+// Fiyat kanalı sütun başlıkları: Genel satış/karş. + her fiyat tanımı + bağlı
+// pazaryerlerinin satış/karşılaştırma çiftleri. İki tablo (basit + varyant) paylaşır.
+function priceColumns(priceDefs, marketplaces) {
+  return [
+    { key: 'price', label: 'Genel satış ₺', ph: '0,00' },
+    { key: 'compareAt', label: 'Genel karş. ₺', ph: '—' },
+    ...priceDefs.map((d) => ({ key: `def:${d.id}`, label: `${d.name} ₺`, ph: '—', def: d })),
+    ...marketplaces.flatMap((m) => [
+      { key: `mp:${m.code}:amount`, label: `${m.name} satış ₺`, ph: '0,00', mp: m, field: 'amount' },
+      { key: `mp:${m.code}:compareAt`, label: `${m.name} karş. ₺`, ph: '—', mp: m, field: 'compareAt' },
+    ]),
+  ]
 }
 
-// Ayraç değeri başına ad/stok kodu override'ları: ayraç her değeri ayrı ürüne
-// böldüğünden, oluşacak her ürünün adı ve stok kodu burada özelleştirilebilir.
-// Boş bırakılanları backend türetir; üretici açıkken stok kodu şablondan gelir.
-function CategoryAttributesSection({ categoryId, catAttrs, attrVals, attrPick, allAttrs, selectAttrVal, addAttrValue, assignAttribute, createAndAssignAttribute, onError }) {
-  const [addingFor, setAddingFor] = useState(null) // attribute_id whose value-add input is open
-  const [valDraft, setValDraft] = useState('')
-  const [assignOpen, setAssignOpen] = useState(false)
-  const [newAttr, setNewAttr] = useState('')
-
-  if (!categoryId) {
-    return <Banner tone="info" title="Önce kategori seç">1 · Temel bilgiler'den kategori seçince o kategorinin özellikleri burada listelenir; değer seçebilir, yeni değer/özellik ekleyebilirsin.</Banner>
+// Basit ürün: tek SKU satırı — stok, barkod, SKU ve tüm fiyat kanalları tek tabloda.
+function SimpleTable({ simple, setSimple, skuOn, bcOn, productCodePreview, priceDefs, defPrices, setDefPrices, marketplaces, simpleChannels, setSimpleChannels }) {
+  const numStyle = { textAlign: 'right' }
+  const cols = priceColumns(priceDefs, marketplaces)
+  const colVal = (c) => {
+    if (c.def) return defPrices[c.def.id] || ''
+    if (c.mp) return simpleChannels[c.mp.code]?.[c.field] || ''
+    return simple[c.key]
   }
-  const unassigned = allAttrs.filter((a) => !catAttrs.some((ca) => ca.attribute_id === a.id))
-  const commitVal = async (attrId) => { try { await addAttrValue(attrId, valDraft) } catch (e) { onError?.(e.message) } setValDraft(''); setAddingFor(null) }
-  const commitNewAttr = async () => { if (!newAttr.trim()) return; try { await createAndAssignAttribute(newAttr) } catch (e) { onError?.(e.message) } setNewAttr(''); setAssignOpen(false) }
-
+  const setCol = (c, v) => {
+    if (c.def) setDefPrices((m) => ({ ...m, [c.def.id]: v }))
+    else if (c.mp) setSimpleChannels((m) => ({ ...m, [c.mp.code]: { ...(m[c.mp.code] || EMPTY_CHAN), [c.field]: v } }))
+    else setSimple((s) => ({ ...s, [c.key]: v }))
+  }
   return (
-    <div className="stack" style={{ gap: 14 }}>
-      {catAttrs.length === 0 && <div className="list-meta">Bu kategoride henüz özellik yok — aşağıdan ekleyebilirsin.</div>}
-
-      {catAttrs.map((ca) => {
-        const vals = attrVals[ca.attribute_id] || []
-        return (
-          <div key={ca.category_attribute_id} className="vtype">
-            <div className="between" style={{ marginBottom: 8 }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>{ca.name}{ca.required && <span style={{ color: 'var(--danger-fg)' }}> *</span>}</span>
-            </div>
-            <div className="chipset" style={{ alignItems: 'center' }}>
-              {vals.map((v) => (
-                <span key={v.id} className="sizechip" data-on={attrPick[ca.attribute_id] === v.id}
-                  onClick={() => selectAttrVal(ca.attribute_id, attrPick[ca.attribute_id] === v.id ? '' : v.id)}>{v.name}</span>
+    <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 15px', background: 'var(--surface-subtle)', borderBottom: '1px solid var(--border-subtle)', fontSize: 13, fontWeight: 600, color: 'var(--text-strong)' }}>
+        Tek SKU — stok, barkod ve fiyat kanalları
+      </div>
+      <div className="vmx-wrap" style={{ border: 'none', borderRadius: 0 }}>
+        <table className="vmx">
+          <thead>
+            <tr>
+              <th data-num="true" style={{ width: 110 }}>Stok</th>
+              <th style={{ width: 160 }}>Barkod</th>
+              <th className="vmx__sep" style={{ width: 170 }}>SKU</th>
+              {cols.map((c) => <th key={c.key} data-num="true" style={{ minWidth: 128 }}>{c.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><Input size="sm" mono value={simple.stock} style={numStyle} onChange={(e) => setSimple((s) => ({ ...s, stock: e.target.value }))} /></td>
+              <td><Input size="sm" mono value={simple.barcode} placeholder={bcOn ? 'otomatik' : 'zorunlu'} onChange={(e) => setSimple((s) => ({ ...s, barcode: e.target.value }))} /></td>
+              <td className="vmx__sep">
+                <Input size="sm" mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik üretilir (Ayarlar → Ürün Kodu Oluşturucu)' : undefined}
+                  value={skuOn ? (productCodePreview || '') : simple.sku}
+                  onChange={(e) => { if (!skuOn) setSimple((s) => ({ ...s, sku: e.target.value })) }}
+                  placeholder={skuOn ? 'otomatik' : 'opsiyonel'} />
+              </td>
+              {cols.map((c) => (
+                <td key={c.key}>
+                  <Input size="sm" mono suffix="₺" value={colVal(c)} placeholder={c.ph} style={numStyle} onChange={(e) => setCol(c, e.target.value)} />
+                </td>
               ))}
-              {addingFor === ca.attribute_id ? (
-                <span className="enter-field" style={{ display: 'inline-block', width: 160 }}>
-                  <Input size="sm" autoFocus value={valDraft} onChange={(e) => setValDraft(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitVal(ca.attribute_id) } if (e.key === 'Escape') { setAddingFor(null); setValDraft('') } }}
-                    onBlur={() => commitVal(ca.attribute_id)} placeholder="Yeni değer" />
-                </span>
-              ) : (
-                <span className="sizechip sizechip--add" onClick={() => { setAddingFor(ca.attribute_id); setValDraft('') }}>{I('plus', { size: 13 })} Değer ekle</span>
-              )}
-            </div>
-          </div>
-        )
-      })}
-
-      {assignOpen ? (
-        <div className="vtype">
-          <div className="list-meta" style={{ marginBottom: 8 }}>Bu kategoriye özellik ekle</div>
-          <div className="chipset">
-            {unassigned.map((a) => (
-              <span key={a.id} className="sizechip" onClick={async () => { try { await assignAttribute(a.id) } catch (e) { onError?.(e.message) } setAssignOpen(false) }}>{a.name}</span>
-            ))}
-            {unassigned.length === 0 && <span className="list-meta">Tüm mevcut özellikler atanmış — aşağıdan yeni oluştur.</span>}
-          </div>
-          <div className="hstack" style={{ marginTop: 10, gap: 8 }}>
-            <span className="enter-field" style={{ flex: 1, maxWidth: 260 }}>
-              <Input size="sm" value={newAttr} onChange={(e) => setNewAttr(e.target.value)} placeholder="Yeni özellik adı (örn. Kumaş)"
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitNewAttr() } }} />
-            </span>
-            <Button size="sm" variant="secondary" onClick={commitNewAttr}>Oluştur & ekle</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setAssignOpen(false); setNewAttr('') }}>Kapat</Button>
-          </div>
-        </div>
-      ) : (
-        <div><Button variant="secondary" size="sm" iconLeft={I('plus')} onClick={() => setAssignOpen(true)}>Özellik ekle</Button></div>
-      )}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
 
-function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow }) {
+// Varyant seçimi: tür başına arama + chip kartı; ardından ayraç (renk) başına ürün kartları.
+function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
   const [newValFor, setNewValFor] = useState(null)
   const [valDraft, setValDraft] = useState('')
+  const [queries, setQueries] = useState({}) // typeId -> arama metni
   if (types.length === 0) {
     return <Banner tone="info" title="Varyant türü yok">Önce <strong>Varyantlar</strong> ekranından tür (Renk, Beden…) ve değerlerini ekle.</Banner>
   }
@@ -694,14 +653,22 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
         const t = typeById[c.typeId]
         if (!t) return null
         const isColor = t.selection_style === 'color'
+        const q = (queries[c.typeId] || '').trim().toLowerCase()
+        const values = (t.values || []).filter((v) => !q || (v.label || '').toLowerCase().includes(q))
         return (
-          <div key={c.typeId} className="vtype">
-            <div className="between" style={{ marginBottom: 8 }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>{t.name}</span>
-              <button className="tb__icon" style={{ width: 28, height: 28 }} title="Türü kaldır" onClick={() => removeType(c.typeId)}>{I('trash-2')}</button>
+          <div key={c.typeId} className="selcard">
+            <div className="selcard__head">
+              <span className="selcard__title">{t.name}<span className="list-meta">{c.valueIds.length} seçili</span></span>
+              <div className="hstack" style={{ gap: 8 }}>
+                <span className="selcard__search">
+                  <Input size="sm" icon={I('search', { size: 15 })} value={queries[c.typeId] || ''} placeholder={`${t.name} ara…`}
+                    onChange={(e) => setQueries((m) => ({ ...m, [c.typeId]: e.target.value }))} />
+                </span>
+                <button className="tb__icon" style={{ width: 28, height: 28 }} title="Türü kaldır" onClick={() => removeType(c.typeId)}>{I('trash-2')}</button>
+              </div>
             </div>
             <div className="chipset" style={{ alignItems: 'center' }}>
-              {(t.values || []).map((v) => (
+              {values.map((v) => (
                 <span key={v.id} className="sizechip" data-on={c.valueIds.includes(v.id)} onClick={() => toggleValue(c.typeId, v.id)}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   {isColor && <span className="swatch-sm" style={swatchOf(v)} />}{v.label}
@@ -723,7 +690,7 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
 
       {chosen.length < MAX_TYPES && (
         adding ? (
-          <div className="vtype">
+          <div className="selcard">
             <div className="list-meta" style={{ marginBottom: 8 }}>Varyant türü seç</div>
             <div className="chipset">
               {availableToAdd.map((t) => (
@@ -738,34 +705,38 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
         )
       )}
 
+      {combos.length === 0 && activeChosen.length === 0 && chosen.length > 0 && (
+        <Banner tone="info" title="En az bir değer seç">Seçtiğin değerlerden varyant satırları otomatik üretilir; ayraç türü her değeri ayrı ürüne böler.</Banner>
+      )}
+
       {combos.length > 0 && (
         <VariantGroups
-          combos={combos} activeChosen={activeChosen} typeById={typeById}
+          combos={combos} activeChosen={activeChosen} typeById={typeById} toggleValue={toggleValue}
           rowOf={rowOf} setRow={setRow} skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
           priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
           fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
           splitNameOf={splitNameOf} setSplitName={setSplitName}
+          marketplaces={marketplaces} chanOf={chanOf} setItemChannel={setItemChannel} fillGroupChannel={fillGroupChannel}
         />
       )}
     </div>
   )
 }
 
-// Varyant düzenleyici: ayraç (renk) başına kart; kart içinde iki sekme —
-// "Fiyatlar" (Genel Satış/Karş + her tanımlı fiyat bir sütun, yatay büyür, sütun
-// başlığından tümüne uygula) ve "Stok & Kodlar" (stok/barkod/SKU).
-function VariantGroups({ combos, activeChosen, typeById, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, splitNameOf, setSplitName }) {
+// Varyant düzenleyici: ayraç (renk) başına ürün kartı — kart başında renk yutusu,
+// ad, kod chip'i ve kaldırma; gövdede hizalı varyant matrisi.
+function VariantGroups({ combos, activeChosen, typeById, toggleValue, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, splitNameOf, setSplitName, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
   const used = activeChosen.map((c) => typeById[c.typeId])
   const slicerIdx = used.findIndex((t) => t?.slicer)
   const slicerType = slicerIdx !== -1 ? used[slicerIdx] : null
 
   const variantLabel = (combo) => {
     const labels = combo.filter((_, i) => i !== slicerIdx)
-    if (labels.length === 0) return <span className="list-meta">tek varyant</span>
+    if (labels.length === 0) return <span className="vmx__chip">tek varyant</span>
     return labels.map((v) => {
       const ti = combo.indexOf(v)
       return (
-        <span key={v.id} className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span key={v.id} className="vmx__chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           {used[ti]?.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(v)} />}{v.label}
         </span>
       )
@@ -776,7 +747,8 @@ function VariantGroups({ combos, activeChosen, typeById, rowOf, setRow, skuOn, b
     <MatrixTable rows={rows} keys={rows.map(comboKey)} variantLabel={variantLabel}
       rowOf={rowOf} setRow={setRow} skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
       priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
-      fillGroupRow={fillGroupRow} fillGroupDef={fillGroupDef} />
+      fillGroupRow={fillGroupRow} fillGroupDef={fillGroupDef}
+      marketplaces={marketplaces} chanOf={chanOf} setItemChannel={setItemChannel} fillGroupChannel={fillGroupChannel} />
   )
 
   if (slicerIdx === -1) {
@@ -791,19 +763,23 @@ function VariantGroups({ combos, activeChosen, typeById, rowOf, setRow, skuOn, b
     )
   }
 
+  const slicerChosen = activeChosen[slicerIdx]
   const groupVals = (slicerType.values || []).filter((v) => combos.some((c) => c[slicerIdx]?.id === v.id))
   return (
-    <div className="stack" style={{ gap: 12 }}>
+    <div className="stack" style={{ gap: 14 }}>
       {groupVals.map((sv) => {
         const rows = combos.filter((c) => c[slicerIdx]?.id === sv.id)
         return (
           <div className="vcard" key={sv.id}>
             <div className="vcard__head">
               <div className="vcard__titlerow">
-                {slicerType.selection_style === 'color' && <span className="swatch-sm" style={swatchOf(sv)} />}
+                {slicerType.selection_style === 'color' && <span className="swatch-sm" style={{ ...swatchOf(sv), width: 18, height: 18, borderRadius: 5 }} />}
                 <span className="vcard__title">{sv.label}</span>
+                {sv.key && <span className="typechip">{String(sv.key).toUpperCase()}</span>}
                 <span className="pim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>{I('scissors', { size: 11 })} ayrı ürün</span>
                 <span className="list-meta" style={{ marginLeft: 'auto' }}>{rows.length} varyant</span>
+                <button className="tb__icon" style={{ width: 28, height: 28 }} title={`${sv.label} rengini kaldır`}
+                  onClick={() => toggleValue(slicerChosen.typeId, sv.id)}>{I('trash-2')}</button>
               </div>
               <div className="vcard__namerow">
                 <Field label="Ürün adı">
@@ -820,49 +796,80 @@ function VariantGroups({ combos, activeChosen, typeById, rowOf, setRow, skuOn, b
   )
 }
 
-// Tek geniş varyant tablosu: Varyant | Stok | Barkod | SKU ‖ Genel Satış | Genel Karş | [tanımlar].
-// Önde ürün bilgisi, dikey ayraç, sonra fiyatlar; tanım eklendikçe yatay büyür (hscroll).
-// Sütun başlığındaki küçük "tümü" alanı o kolonu tüm satırlara doldurur.
-function MatrixTable({ rows, keys, variantLabel, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupRow, fillGroupDef }) {
-  const priceCount = 2 + priceDefs.length
-  const cols = `minmax(150px,1.3fr) 0.7fr 1.05fr 1.05fr 2px repeat(${priceCount}, minmax(120px,1fr))`
-  const minW = 150 + 76 + 150 + 150 + 2 + priceCount * 128
+// Hizalı varyant matrisi: solda yapışkan Varyant sütunu; Stok | Barkod | SKU ‖
+// fiyat kanalları (Genel + tanımlar + pazaryeri satış/karş.). En üstte kesikli
+// kenarlıklı toplu-doldur satırı: stok ve fiyatlar gruptaki tüm satırlara yayılır.
+function MatrixTable({ rows, keys, variantLabel, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupRow, fillGroupDef, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
+  const numStyle = { textAlign: 'right' }
+  const cols = priceColumns(priceDefs, marketplaces)
+  const cellVal = (key, c, r) => {
+    if (c.def) return itemDefPrices[key]?.[c.def.id] || ''
+    if (c.mp) return chanOf(key, c.mp.code)[c.field] || ''
+    return r[c.key]
+  }
+  const setCell = (key, c, v) => {
+    if (c.def) setItemDef(key, c.def.id, v)
+    else if (c.mp) setItemChannel(key, c.mp.code, { [c.field]: v })
+    else setRow(key, { [c.key]: v })
+  }
+  const fillCol = (c, v) => {
+    if (c.def) fillGroupDef(keys, c.def.id, v)
+    else if (c.mp) fillGroupChannel(keys, c.mp.code, c.field, v)
+    else fillGroupRow(keys, c.key, v)
+  }
   return (
-    <div className="hscroll">
-      <div className="pmatrix__row pmatrix__head" style={{ gridTemplateColumns: cols, minWidth: minW }}>
-        <span>Varyant</span>
-        <span>Stok<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupRow(keys, 'stock', e.target.value)} /></span>
-        <span>Barkod</span>
-        <span>SKU</span>
-        <span className="pmatrix__vrule" />
-        <span className="pmatrix__pcol">Genel Satış ₺<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupRow(keys, 'price', e.target.value)} /></span>
-        <span className="pmatrix__pcol">Genel Karş. ₺<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupRow(keys, 'compareAt', e.target.value)} /></span>
-        {priceDefs.map((d) => (
-          <span key={d.id} className="pmatrix__pcol">{d.name}<Input size="sm" mono className="pmatrix__fill" placeholder="tümü" onChange={(e) => fillGroupDef(keys, d.id, e.target.value)} /></span>
-        ))}
+    <>
+      <div className="vmx-wrap">
+        <table className="vmx">
+          <thead>
+            <tr>
+              <th className="vmx__lead" style={{ minWidth: 92 }}>Varyant</th>
+              <th data-num="true" style={{ width: 100 }}>Stok</th>
+              <th style={{ width: 150 }}>Barkod</th>
+              <th className="vmx__sep" style={{ width: 150 }}>SKU</th>
+              {cols.map((c) => <th key={c.key} data-num="true" style={{ minWidth: 128 }}>{c.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Toplu doldurma satırı */}
+            <tr className="vmx__bulk">
+              <td className="vmx__lead"><span className="vmx__bulklabel">{I('sparkles')} Toplu</span></td>
+              <td><Input size="sm" mono className="vmx__fill" placeholder="tümü" style={numStyle} onChange={(e) => fillGroupRow(keys, 'stock', e.target.value)} /></td>
+              <td />
+              <td className="vmx__sep" />
+              {cols.map((c) => (
+                <td key={c.key}><Input size="sm" mono suffix="₺" className="vmx__fill" placeholder="tümü" style={numStyle} onChange={(e) => fillCol(c, e.target.value)} /></td>
+              ))}
+            </tr>
+            {rows.map((combo) => {
+              const key = comboKey(combo)
+              const r = rowOf(key)
+              return (
+                <tr key={key}>
+                  <td className="vmx__lead">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{variantLabel(combo)}</span>
+                  </td>
+                  <td><Input size="sm" mono value={r.stock} style={numStyle} onChange={(e) => setRow(key, { stock: e.target.value })} /></td>
+                  <td><Input size="sm" mono value={r.barcode} onChange={(e) => setRow(key, { barcode: e.target.value })} placeholder={bcOn ? 'ayrılıyor…' : 'zorunlu'} /></td>
+                  <td className="vmx__sep">
+                    <Input size="sm" mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik (Ayarlar → Ürün Kodu)' : undefined}
+                      value={skuOn ? (variantSkuPreview(combo) || '') : r.sku}
+                      onChange={(e) => { if (!skuOn) setRow(key, { sku: e.target.value }) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} />
+                  </td>
+                  {cols.map((c) => (
+                    <td key={c.key}>
+                      <Input size="sm" mono suffix="₺" value={cellVal(key, c, r)} placeholder={c.ph} style={numStyle} onChange={(e) => setCell(key, c, e.target.value)} />
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
-      {rows.map((combo) => {
-        const key = comboKey(combo)
-        const r = rowOf(key)
-        return (
-          <div className="pmatrix__row" key={key} style={{ gridTemplateColumns: cols, minWidth: minW }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{variantLabel(combo)}</span>
-            <Input size="sm" mono value={r.stock} onChange={(e) => setRow(key, { stock: e.target.value })} />
-            <Input size="sm" mono value={r.barcode} onChange={(e) => setRow(key, { barcode: e.target.value })} placeholder={bcOn ? 'ayrılıyor…' : 'zorunlu'} />
-            <Input size="sm" mono readOnly={skuOn} title={skuOn ? 'Şablondan otomatik (Ayarlar → Ürün Kodu)' : undefined}
-              value={skuOn ? (variantSkuPreview(combo) || '') : r.sku}
-              onChange={(e) => { if (!skuOn) setRow(key, { sku: e.target.value }) }} placeholder={skuOn ? 'otomatik' : 'opsiyonel'} />
-            <span className="pmatrix__vrule" />
-            <Input size="sm" mono suffix="₺" value={r.price} onChange={(e) => setRow(key, { price: e.target.value })} placeholder="0,00" />
-            <Input size="sm" mono suffix="₺" value={r.compareAt} onChange={(e) => setRow(key, { compareAt: e.target.value })} placeholder="—" />
-            {priceDefs.map((d) => (
-              <Input key={d.id} size="sm" mono suffix="₺" value={itemDefPrices[key]?.[d.id] || ''} placeholder="—"
-                onChange={(e) => setItemDef(key, d.id, e.target.value)} />
-            ))}
-          </div>
-        )
-      })}
-      <div className="list-meta" style={{ marginTop: 8 }}>{I('info', { size: 13 })} Önde ürün bilgisi (stok/barkod/SKU), ayraçtan sonra fiyatlar. {priceDefs.length === 0 ? 'Pazaryeri/özel fiyat sütunları için Tanımlar → Fiyatlar.' : 'Fiyat tanımı ekledikçe tablo sağa doğru genişler.'}</div>
-    </div>
+      <div className="list-meta" style={{ marginTop: 9 }}>
+        {I('info', { size: 13 })} Solda stok / barkod / SKU sabit; sağda fiyat kanalları. Varyant sütunu kaydırınca yapışık kalır. {bcOn ? 'Barkod boşsa otomatik üretilir.' : 'Barkod zorunludur.'} Pazaryeri sütunları o kanalın yayın fiyatını belirler.
+      </div>
+    </>
   )
 }

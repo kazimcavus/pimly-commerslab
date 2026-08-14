@@ -1,9 +1,19 @@
 /* App-level overrides on top of the design system. */
 
+/* Helpy Connect marka kilidi: logo + accent nokta + harf aralıklı sonek
+   (HelpyLabel'daki "Helpy · Label" düzeniyle aynı). Tema gizleme kuralları
+   bu bloktan SONRA gelmeli ki display:none kazansın. */
+.brand-logo { height: 20px; display: block; }
+.brand-mark { height: 22px; display: block; }
+.brand-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+.brand-dot--lg { width: 8px; height: 8px; }
+.brand-suffix { font-size: 11px; font-weight: 800; letter-spacing: .28em; text-transform: uppercase; color: var(--text-strong); }
+.brand-suffix--lg { font-size: 14px; }
+
 /* Theme-aware logo swap (replaces the prototype's inline JS toggling). */
 .pim-dark-logo { display: none; }
 [data-theme='dark'] .pim-light-logo { display: none; }
-[data-theme='dark'] .pim-dark-logo { display: inline; }
+[data-theme='dark'] .pim-dark-logo { display: block; }
 
 /* Full-height app root. */
 html, body, #root { height: 100%; margin: 0; }

@@ -3,6 +3,7 @@ import { Button, Drawer, Field, Input } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { askConfirm } from '../lib/confirm.jsx'
 
 // Fiyat tanımları (.NET Catalog): bir tanım = ad + opsiyonel kod. Her varyanta
 // tanım başına bir tutar girilir (ürün ekleme + ürün detayı). Trendyol import'u
@@ -63,9 +64,14 @@ export function PriceDefinitions({ onToast }) {
                 <Button variant="secondary" size="sm" iconLeft={I('pencil')} onClick={() => openEdit(active)}>Düzenle</Button>
                 <button className="tb__icon" style={{ width: 30, height: 30 }} title="Fiyat tanımını sil"
                   onClick={async () => {
-                    if (!confirm('Bu fiyat tanımını silmek istediğinize emin misiniz? Ürünlerde bu alana girilmiş fiyatlar da silinir.')) return
+                    const ok = await askConfirm({
+                      title: 'Fiyat tanımını sil',
+                      body: `"${active.name}" tanımı silinecek; ürünlerde bu alana girilmiş fiyatlar da silinir.`,
+                      tone: 'danger', confirmLabel: 'Sil',
+                    })
+                    if (!ok) return
                     try { await api.deletePriceDefinition(active.id); setSel(null); loadDefs(); onToast?.({ tone: 'success', title: 'Fiyat tanımı silindi' }) }
-                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: e }) }
                   }}>{I('trash-2')}</button>
               </div>
             </div>
@@ -104,7 +110,7 @@ function PriceDefinitionDrawer({ open, editing, onClose, onSubmit, onToast }) {
     if (!name.trim()) { onToast?.({ tone: 'danger', title: 'Tanım adı gerekli' }); return }
     setBusy(true)
     try { await onSubmit({ name: name.trim(), code: code.trim() || null }) }
-    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
+    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e }) }
     finally { setBusy(false) }
   }
 

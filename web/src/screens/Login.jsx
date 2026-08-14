@@ -14,7 +14,11 @@ export function Login({ onSignIn, onShowRegister, error, loading }) {
   return (
     <div className="login">
       <div className="login__aside">
-        <img src="/assets/pimly-wordmark-dark.svg" alt="pimly" style={{ height: 34, alignSelf: 'flex-start' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, alignSelf: 'flex-start' }}>
+          <img src="/brand/helpy-logo-dark.webp" alt="Helpy" style={{ height: 28, display: 'block' }} />
+          <span className="brand-dot brand-dot--lg" />
+          <span className="brand-suffix brand-suffix--lg" style={{ color: '#fff' }}>Connect</span>
+        </div>
         <div>
           <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.15, marginBottom: 14 }}>
             Kataloğun<br />tek doğruluk kaynağı.
@@ -26,7 +30,6 @@ export function Login({ onSignIn, onShowRegister, error, loading }) {
         <div style={{ display: 'flex', gap: 18, color: '#7e7568', fontSize: 13 }}>
           <span>PIM</span><span>·</span><span>Trendyol-ready</span><span>·</span><span>v1</span>
         </div>
-        <img className="login__layers" src="/assets/pimly-mark.svg" alt="" style={{ width: 320 }} />
       </div>
       <div className="login__form">
         <form className="login__card" onSubmit={submit}>

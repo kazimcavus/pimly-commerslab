@@ -42,6 +42,12 @@ builder.Services.AddInventoryApplication();
 builder.Services.AddInventoryInfrastructure(builder.Configuration);
 builder.Services.AddCatalogReadGateways();
 builder.Services.AddProductItemExistenceGateways();
+
+// AddChannelsApplication listing-sync handler'larını da kaydettiğinden bu host,
+// handler'ların gateway bağımlılıklarını da karşılamak zorunda (DI ValidateOnBuild).
+builder.Services.AddPricingChannelPriceGateway();
+builder.Services.AddInventoryStockGateway();
+builder.Services.AddCatalogListingSourceGateway();
 builder.Services.AddIdentityApplication();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddMediaApplication();

@@ -4,6 +4,7 @@ import { Button, Drawer, Field, Input, ColorPicker, Switch } from '../ds'
 import { I } from './icons.jsx'
 import { PageHeader } from './PageHeader.jsx'
 import { api } from '../lib/api.js'
+import { askConfirm } from '../lib/confirm.jsx'
 
 // Swatch background: an uploaded image wins over a hex color (image is just a
 // nicer preview of the same value).
@@ -33,17 +34,27 @@ export function Variants({ onToast }) {
       const vals = await api.listVariantValues(type.id)
       setEditing({ ...type, _values: vals })
       setDrawerOpen(true)
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Açılamadı', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Açılamadı', error: e }) }
   }
 
   const submit = async ({ name, style, slicer, rows }) => {
     let typeId
     const body = (r, i) => ({ label: r.label, color: style === 'color' ? r.color : null, image_url: style === 'color' ? (r.image_url || null) : null, key: r.key ? r.key.trim() : null, sort_order: i })
     if (editing) {
+      // Düzenlemede kaldırılan değerler kayıtta silinir — önce kullanıcıya sor.
+      const orig = editing._values || []
+      const removed = orig.filter((o) => !rows.some((r) => r.id === o.id))
+      if (removed.length > 0) {
+        const ok = await askConfirm({
+          title: removed.length === 1 ? 'Değer silinecek' : `${removed.length} değer silinecek`,
+          body: `${removed.map((v) => `"${v.label}"`).join(', ')} bu türden kalıcı olarak silinecek; bu değerleri kullanan ürün varyantları etkilenebilir.`,
+          tone: 'danger', confirmLabel: 'Sil ve kaydet',
+        })
+        if (!ok) return
+      }
       await api.updateVariantType(editing.id, { name, selection_style: style, slicer })
       typeId = editing.id
-      const orig = editing._values || []
-      for (const o of orig) if (!rows.some((r) => r.id === o.id)) await api.deleteVariantValue(o.id)
+      for (const o of removed) await api.deleteVariantValue(o.id)
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i]
         if (r.id) await api.updateVariantValue(r.id, body(r, i))
@@ -85,9 +96,14 @@ export function Variants({ onToast }) {
                 <Button variant="secondary" size="sm" iconLeft={I('pencil')} onClick={() => openEdit(active)}>Düzenle</Button>
                 <button className="tb__icon" style={{ width: 30, height: 30 }} title="Türü sil"
                   onClick={async () => {
-                    if (!confirm(`"${active.name}" türünü ve tüm değerlerini sil?`)) return
+                    const ok = await askConfirm({
+                      title: 'Varyant türünü sil',
+                      body: `"${active.name}" türü ve tüm değerleri kalıcı olarak silinecek.`,
+                      tone: 'danger', confirmLabel: 'Sil',
+                    })
+                    if (!ok) return
                     try { await api.deleteVariantType(active.id); setSel(null); loadTypes(); onToast?.({ tone: 'success', title: 'Tür silindi' }) }
-                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', body: e.message }) }
+                    catch (e) { onToast?.({ tone: 'danger', title: 'Silinemedi', error: e }) }
                   }}>{I('trash-2')}</button>
               </div>
             </div>
@@ -176,7 +192,7 @@ function TypeDrawer({ open, editing, onClose, onSubmit, onToast }) {
     if (!name.trim()) { onToast?.({ tone: 'danger', title: 'Ad gerekli' }); return }
     setBusy(true)
     try { await onSubmit({ name: name.trim(), style, slicer, rows }) }
-    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
+    catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e }) }
     finally { setBusy(false) }
   }
 
@@ -308,7 +324,7 @@ function ImageUpload({ value, onUpload, onClear, onToast }) {
     if (!file) return
     setBusy(true)
     try { const res = await api.uploadImage(file); onUpload(res.url) }
-    catch (e) { onToast?.({ tone: 'danger', title: 'Yüklenemedi', body: e.message }) }
+    catch (e) { onToast?.({ tone: 'danger', title: 'Yüklenemedi', error: e }) }
     finally { setBusy(false) }
   }
   return (

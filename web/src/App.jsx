@@ -17,6 +17,9 @@ import { Settings } from './screens/Settings.jsx'
 import { Channels } from './screens/Channels.jsx'
 import { TrendyolOnboarding } from './screens/TrendyolOnboarding.jsx'
 import { HelpProvider } from './help/Help.jsx'
+import { ConfirmHost, askConfirm } from './lib/confirm.jsx'
+import { friendlyError } from './lib/errors.js'
+import { hasUnsavedChanges } from './lib/navGuard.js'
 
 export function App() {
   const [session, setSession] = useState(null) // { user: { id, email, name }, tenant: { id, name } }
@@ -43,19 +46,68 @@ export function App() {
     }
   }, [])
 
-  const navigate = (r, param = null) => {
+  // popstate'te "geri dönülecek" mevcut ekranı bilmek için ref'te tut.
+  const routeRef = React.useRef({ route, param: routeParam })
+
+  const applyRoute = (r, param) => {
     setRoute(r)
     setRouteParam(param)
+    routeRef.current = { route: r, param }
     localStorage.setItem('pimly_route', r)
     if (param) localStorage.setItem('pimly_route_param', param)
     else localStorage.removeItem('pimly_route_param')
     document.querySelector('.app__content')?.scrollTo(0, 0)
   }
 
+  // Kaydedilmemiş değişiklik varsa ekran değiştirmeden önce sor.
+  const confirmLeave = () => askConfirm({
+    title: 'Kaydedilmemiş değişiklikler var',
+    body: 'Bu sayfadan ayrılırsan yaptığın değişiklikler kaybolacak.',
+    tone: 'danger', confirmLabel: 'Değişiklikleri sil ve çık', cancelLabel: 'Sayfada kal',
+  })
+
+  const navigate = async (r, param = null) => {
+    if (hasUnsavedChanges() && !(await confirmLeave())) return
+    applyRoute(r, param)
+    window.history.pushState({ pimly: true, route: r, param }, '')
+  }
+
+  // Tarayıcı geri/ileri desteği: URL değişmez, ekran history state'inde taşınır.
+  // İlk kayıt replaceState ile damgalanır; popstate'te ekran geri yüklenir.
+  // Kirli formda geri tuşuna basılırsa onay istenir; vazgeçilirse mevcut ekran
+  // history'ye geri itilir (pointer zaten hareket etmiştir).
+  useEffect(() => {
+    window.history.replaceState({ pimly: true, route, param: routeParam }, '')
+    const onPop = async (e) => {
+      if (!e.state?.pimly) return
+      if (hasUnsavedChanges() && !(await confirmLeave())) {
+        const cur = routeRef.current
+        window.history.pushState({ pimly: true, route: cur.route, param: cur.param }, '')
+        return
+      }
+      applyRoute(e.state.route, e.state.param ?? null)
+    }
+    window.addEventListener('popstate', onPop)
+    // Sekme kapatma/yenileme: burada tarayıcının kendi uyarısı zorunludur
+    // (özel modal teknik olarak mümkün değil).
+    const onBeforeUnload = (e) => {
+      if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = '' }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Bildirimler: hata nesnesi `error` alanıyla geçilir, gövde kullanıcı dostu
+  // metne burada çevrilir (ham e.message asla gösterilmez — bkz. docs/ui-feedback.md).
   const showToast = (t) => {
-    setToast(t)
+    const body = t.error ? friendlyError(t.error) : t.body
+    setToast({ ...t, body })
     clearTimeout(window.__pt)
-    window.__pt = setTimeout(() => setToast(null), 3800)
+    window.__pt = setTimeout(() => setToast(null), t.tone === 'danger' ? 6500 : 3800)
   }
 
   const signIn = async (email, password) => {
@@ -66,7 +118,7 @@ export function App() {
       setSession({ user: r.user, tenant: r.tenant || null })
       navigate('dashboard')
     } catch (e) {
-      setAuthError(e.message || 'Giriş başarısız')
+      setAuthError(e.status === 401 ? 'E-posta ya da şifre hatalı.' : friendlyError(e))
     } finally {
       setLoading(false)
     }
@@ -82,7 +134,7 @@ export function App() {
       setSession({ user: r.user, tenant: r.tenant || null })
       navigate('onboarding')
     } catch (e) {
-      setAuthError(e.message || 'Kayıt başarısız')
+      setAuthError(friendlyError(e))
     } finally {
       setLoading(false)
     }
@@ -131,6 +183,7 @@ export function App() {
           <Toast tone={toast.tone} title={toast.title} onClose={() => setToast(null)}>{toast.body}</Toast>
         </div>
       )}
+      <ConfirmHost />
     </HelpProvider>
   )
 }

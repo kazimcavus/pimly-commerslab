@@ -57,7 +57,7 @@ export function Settings({ onToast }) {
       onToast?.({ tone: 'success', title: 'Adlandırma tercihi kaydedildi' })
     } catch (e) {
       setSlicerNamePos(prev)
-      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message })
+      onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e })
     }
   }
 
@@ -115,7 +115,7 @@ export function Settings({ onToast }) {
       })
       setSku((s) => ({ ...s, counterNextValue: saved.counterNextValue ?? s.counterNextValue }))
       onToast?.({ tone: 'success', title: 'Ürün kodu ayarı kaydedildi' })
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e }) }
     finally { setSavingSku(false) }
   }
 
@@ -130,7 +130,7 @@ export function Settings({ onToast }) {
       const fresh = await api.getBarcodeSequence().catch(() => null)
       if (fresh) setBarcode((b) => ({ ...b, nextValue: String(fresh.next_value), nextPreview: fresh.next_preview || '' }))
       onToast?.({ tone: 'success', title: 'Barkod ayarı kaydedildi' })
-    } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', body: e.message }) }
+    } catch (e) { onToast?.({ tone: 'danger', title: 'Kaydedilemedi', error: e }) }
     finally { setSavingBc(false) }
   }
 
