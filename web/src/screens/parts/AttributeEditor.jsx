@@ -62,13 +62,20 @@ function AttrCard({ grid, head, children }) {
   )
 }
 
+// Özelliğin seviyesi (scope): model | slicer (renk bazlı) | item (varyant bazlı).
+const SCOPE_LABEL = { slicer: 'renk bazlı', item: 'varyant bazlı' }
+export const scopeOf = (ca) => ca.scope || 'model'
+
 // Kategori özellikleri editörü (ürün ekleme + ürün detayında paylaşılır).
 // Kategorinin TÜM atanmış özelliklerini (boşlar dâhil) listeler; değer chip'leriyle seçim,
 // satır-içi değer ekle/sil, özellik ata/kaldır, yeni özellik oluştur+ata.
 // pick controlled: { attribute_id: value_id }. onPickChange ile üst bileşene bildirilir.
-// onAttrsLoaded(catAttrs) → üst bileşen zorunlu-alan doğrulaması yapabilsin diye.
+// onAttrsLoaded(catAttrs) → üst bileşen zorunlu-alan doğrulaması yapabilsin diye
+// (scope filtresinden bağımsız olarak TÜM atamalar bildirilir).
 // grid: özellik kartlarını 2 sütunlu ızgarada dizer (ürün detay/oluştur tasarımı).
-export function AttributeEditor({ categoryId, pick = {}, onPickChange, onAttrsLoaded, onToast, grid = false }) {
+// scopes: verilirse yalnızca bu seviyelerdeki özellikler gösterilir (örn. ['model']);
+// ürün oluşturucu renk bazlı özellikleri renk kartlarında ayrıca seçtirir.
+export function AttributeEditor({ categoryId, pick = {}, onPickChange, onAttrsLoaded, onToast, grid = false, scopes = null }) {
   const [catAttrs, setCatAttrs] = useState([])
   const [attrVals, setAttrVals] = useState({})   // { attribute_id: [{id,name}] }
   const [allAttrs, setAllAttrs] = useState([])
@@ -158,15 +165,18 @@ export function AttributeEditor({ categoryId, pick = {}, onPickChange, onAttrsLo
   const commitVal = (attrId) => { addValue(attrId, valDraft); setValDraft(''); setAddingFor(null) }
   const commitNewAttr = () => { if (!newAttr.trim()) return; createAndAssign(newAttr); setNewAttr(''); setAssignOpen(false) }
 
+  const visibleAttrs = scopes ? catAttrs.filter((ca) => scopes.includes(scopeOf(ca))) : catAttrs
+
   return (
     <div className={grid ? 'attr-grid' : 'stack'} style={grid ? undefined : { gap: 12 }}>
-      {catAttrs.map((ca) => {
+      {visibleAttrs.map((ca) => {
         const vals = attrVals[ca.attribute_id] || []
         return (
           <AttrCard key={ca.category_attribute_id} grid={grid} head={
             <div className="between" style={{ marginBottom: 8 }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-strong)' }}>
-                {ca.name}{ca.required && <span style={{ color: 'var(--danger-fg)', marginLeft: 4 }}>*</span>}
+              <span style={{ fontWeight: 600, color: 'var(--text-strong)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {ca.name}{ca.required && <span style={{ color: 'var(--danger-fg)' }}>*</span>}
+                {SCOPE_LABEL[scopeOf(ca)] && <span className="pim-badge" style={{ fontSize: 10 }}>{SCOPE_LABEL[scopeOf(ca)]}</span>}
               </span>
               <button className="tb__icon" style={{ width: 28, height: 28 }} title="Özelliği kategoriden kaldır" onClick={() => unassign(ca)}>{I('x')}</button>
             </div>

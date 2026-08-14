@@ -49,15 +49,18 @@ public sealed class CreateProductsBatchHandler(
                 return Result.Failure<CreateProductsBatchResult>(Error.NotFound("Category not found."));
             }
 
-            var requiredAttributesResult = await ProductCreationSupport.EnsureRequiredCategoryAttributesAsync(
-                attributes,
-                category,
-                (item.AttributeValueInputs ?? []).Select(input => input.AttributeId).ToHashSet(),
-                cancellationToken);
-
-            if (requiredAttributesResult.IsFailure)
+            if (command.EnforceRequiredAttributes)
             {
-                return Result.Failure<CreateProductsBatchResult>(requiredAttributesResult.Error);
+                var requiredAttributesResult = await ProductCreationSupport.EnsureRequiredCategoryAttributesAsync(
+                    attributes,
+                    category,
+                    (item.AttributeValueInputs ?? []).Select(input => input.AttributeId).ToHashSet(),
+                    cancellationToken);
+
+                if (requiredAttributesResult.IsFailure)
+                {
+                    return Result.Failure<CreateProductsBatchResult>(requiredAttributesResult.Error);
+                }
             }
 
             var resolvedTypesResult = await ProductCreationSupport.ResolveVariantsAsync(
@@ -105,6 +108,24 @@ public sealed class CreateProductsBatchHandler(
                 return Result.Failure<CreateProductsBatchResult>(plansResult.Error);
             }
 
+            // Slicer (renk) seviyeli özellik değerleri: değer adına göre çözülür ve aşağıda
+            // SlicerValue eşleşen plana model-düzeyi değerlerin üzerine eklenir.
+            var splitValuesByName = new Dictionary<string, IReadOnlyList<AttributeValue>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var splitValues in item.SplitAttributeValueInputs ?? [])
+            {
+                var resolvedSplitResult = await ProductCreationSupport.ResolveAttributeValuesAsync(
+                    attributes,
+                    splitValues.Values,
+                    cancellationToken);
+
+                if (resolvedSplitResult.IsFailure)
+                {
+                    return Result.Failure<CreateProductsBatchResult>(resolvedSplitResult.Error);
+                }
+
+                splitValuesByName[splitValues.ValueName.Trim()] = resolvedSplitResult.Value;
+            }
+
             foreach (var plan in plansResult.Value)
             {
                 var batchUniquenessResult = EnsureBatchUniqueness(
@@ -132,7 +153,7 @@ public sealed class CreateProductsBatchHandler(
                     plan,
                     item.CategoryId,
                     ProductMappings.ParseStatus(item.Status),
-                    attributeValuesResult.Value,
+                    MergeSplitAttributeValues(attributeValuesResult.Value, plan.SlicerValue, splitValuesByName),
                     item.BrandId,
                     plan.Description ?? item.Description)); // slicer (renk) açıklaması yoksa grup açıklaması
             }
@@ -172,6 +193,27 @@ public sealed class CreateProductsBatchHandler(
 
         return Result.Success(new CreateProductsBatchResult(
             createdProducts.Select(product => product.ToDto()).ToList()));
+    }
+
+    // Model-düzeyi değerlerin üzerine, planın slicer değerine (ör. "Antrasit") özgü değerleri
+    // ekler; aynı öznitelik iki düzeyde de varsa slicer değeri geçerlidir.
+    private static IReadOnlyList<AttributeValue> MergeSplitAttributeValues(
+        IReadOnlyList<AttributeValue> modelValues,
+        string? slicerValue,
+        IReadOnlyDictionary<string, IReadOnlyList<AttributeValue>> splitValuesByName)
+    {
+        if (slicerValue is null || !splitValuesByName.TryGetValue(slicerValue.Trim(), out var splitValues))
+        {
+            return modelValues;
+        }
+
+        var byAttributeId = modelValues.ToDictionary(value => value.Attribute.Id);
+        foreach (var value in splitValues)
+        {
+            byAttributeId[value.Attribute.Id] = value;
+        }
+
+        return [.. byAttributeId.Values];
     }
 
     private static Result EnsureBatchUniqueness(

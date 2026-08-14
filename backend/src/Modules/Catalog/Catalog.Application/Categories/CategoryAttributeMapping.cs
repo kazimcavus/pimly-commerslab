@@ -15,5 +15,6 @@ internal static class CategoryAttributeMapping
             attribute.Key.Value,
             attribute.Name,
             assignment.Required,
-            assignment.SortOrder);
+            assignment.SortOrder,
+            assignment.Scope.ToString().ToLowerInvariant());
 }

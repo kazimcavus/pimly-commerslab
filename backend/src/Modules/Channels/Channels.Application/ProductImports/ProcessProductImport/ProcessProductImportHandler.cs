@@ -504,6 +504,30 @@ public sealed class ProcessProductImportHandler(
                 itemAttributeSelections));
         }
 
+        // Split (renk) başına geçersiz kılmalar + renk-bazlı özellik seçimleri.
+        var splitInputs = new List<CatalogSplitInput>();
+        foreach (var split in group.SplitOverrides)
+        {
+            var splitSelections = new List<CatalogSelectionInput>();
+            foreach (var attributeValue in split.SplitAttributeValues)
+            {
+                var selection = await EnsureAttributeSelectionAsync(context, categorySetup, attributeValue, cancellationToken);
+                if (selection.IsFailure)
+                {
+                    return Result.Failure<CatalogProductBatchInput>(selection.Error);
+                }
+
+                splitSelections.Add(selection.Value);
+            }
+
+            splitInputs.Add(new CatalogSplitInput(
+                split.ValueName,
+                split.StockCode,
+                split.Title,
+                split.Description,
+                splitSelections.Count > 0 ? splitSelections : null));
+        }
+
         return Result.Success(new CatalogProductBatchInput(
             Guid.NewGuid(),
             categorySetup.CatalogCategoryId,
@@ -513,9 +537,7 @@ public sealed class ProcessProductImportHandler(
             attributeSelections,
             axisInputs,
             itemInputs,
-            group.SplitOverrides
-                .Select(split => new CatalogSplitInput(split.ValueName, split.StockCode, split.Title, split.Description))
-                .ToList(),
+            splitInputs,
             BrandId: brandId,
             Description: group.Description));
     }
@@ -599,20 +621,27 @@ public sealed class ProcessProductImportHandler(
             context.AttributesByName[attributeValue.AttributeName] = ensured;
         }
 
+        // Atama run başına bir kez yapılır; ancak model seviyesinde atanmış bir özellik için
+        // sonradan daha özgül bir seviye (slicer/kalem) tespit edilirse yükseltme yeniden gönderilir.
+        var scope = MapScope(attributeValue.Scope);
         var assignmentKey = (categorySetup.CatalogCategoryId, ensured.AttributeId);
-        if (context.AssignedAttributes.Add(assignmentKey))
+        var hasAssigned = context.AssignedAttributes.TryGetValue(assignmentKey, out var assignedScope);
+        if (!hasAssigned || (assignedScope == CatalogAttributeScope.Model && scope != CatalogAttributeScope.Model))
         {
             var assignResult = await catalog.AssignAttributeToCategoryAsync(
                 categorySetup.CatalogCategoryId,
                 ensured.AttributeId,
                 attributeValue.Required,
-                sortOrder: context.AssignedAttributes.Count,
+                sortOrder: context.AssignedAttributes.Count + 1,
+                scope,
                 cancellationToken);
 
             if (assignResult.IsFailure)
             {
                 return Result.Failure<CatalogSelectionInput>(assignResult.Error);
             }
+
+            context.AssignedAttributes[assignmentKey] = scope;
         }
 
         await UpsertAttributeMappingAsync(
@@ -989,6 +1018,13 @@ public sealed class ProcessProductImportHandler(
         }
     }
 
+    private static CatalogAttributeScope MapScope(PlannedAttributeScope scope) => scope switch
+    {
+        PlannedAttributeScope.Slicer => CatalogAttributeScope.Slicer,
+        PlannedAttributeScope.Item => CatalogAttributeScope.Item,
+        _ => CatalogAttributeScope.Model,
+    };
+
     private static void ApplyProgress(ProductImportRun run, ImportProgress progress) =>
         run.UpdateProgress(
             progress.Processed,
@@ -1041,7 +1077,7 @@ public sealed class ProcessProductImportHandler(
 
         public Dictionary<string, EnsuredAttribute> AttributesByName { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public HashSet<(Guid CategoryId, Guid AttributeId)> AssignedAttributes { get; } = [];
+        public Dictionary<(Guid CategoryId, Guid AttributeId), CatalogAttributeScope> AssignedAttributes { get; } = [];
 
         public Dictionary<(Guid CategoryId, AttributeMappingSourceType SourceType, Guid CatalogSourceId), Guid> AttributeMappingIds { get; } = [];
 

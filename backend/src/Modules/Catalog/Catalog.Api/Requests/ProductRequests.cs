@@ -37,12 +37,16 @@ public sealed record BatchProductRequest(
     [property: JsonPropertyName("splits")] IReadOnlyList<ProductSplitRequest>? Splits = null);
 
 /// <summary>Slicer değeri başına model kodu/ad geçersiz kılma girdisi.</summary>
-/// <remarks>ValueName boş olan girdiler bölme sırasında yok sayılır (import davranışıyla uyumlu).</remarks>
+/// <remarks>
+/// ValueName boş olan girdiler bölme sırasında yok sayılır (import davranışıyla uyumlu).
+/// AttributeValues, slicer (renk) seviyeli özelliklerin bu renge özgü seçimlerini taşır.
+/// </remarks>
 public sealed record ProductSplitRequest(
     [property: JsonPropertyName("value_name")] string ValueName,
     [property: JsonPropertyName("model_code")] string? ModelCode = null,
     string? Name = null,
-    string? Description = null);
+    string? Description = null,
+    [property: JsonPropertyName("attribute_values")] JsonElement? AttributeValues = null);
 
 /// <summary>Ürün güncelleme isteği.</summary>
 public sealed record UpdateProductRequest(

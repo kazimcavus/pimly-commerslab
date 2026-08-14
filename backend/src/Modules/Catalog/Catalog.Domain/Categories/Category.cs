@@ -93,10 +93,12 @@ public sealed class Category : AggregateRoot<Guid>
     /// <param name="attributeId">Atanacak öznitelik tanımlayıcısı.</param>
     /// <param name="required">Öznitelik bu kategoride zorunlu mu.</param>
     /// <param name="sortOrder">Kategori içindeki görüntüleme sırası.</param>
+    /// <param name="scope">Özniteliğin seçim seviyesi (model / slicer değeri / kalem).</param>
     public Result<CategoryAttributeAssignment> AssignAttribute(
         Guid attributeId,
         bool required,
-        int sortOrder)
+        int sortOrder,
+        AttributeScope scope = AttributeScope.Model)
     {
         if (_assignments.Any(a => a.AttributeId == attributeId))
         {
@@ -108,7 +110,8 @@ public sealed class Category : AggregateRoot<Guid>
             Guid.NewGuid(),
             attributeId,
             required,
-            sortOrder);
+            sortOrder,
+            scope);
 
         _assignments.Add(assignment);
         return Result.Success(assignment);
@@ -118,10 +121,12 @@ public sealed class Category : AggregateRoot<Guid>
     /// <param name="assignmentId">Güncellenecek atama tanımlayıcısı.</param>
     /// <param name="required">Öznitelik bu kategoride zorunlu mu.</param>
     /// <param name="sortOrder">Kategori içindeki görüntüleme sırası.</param>
+    /// <param name="scope">Özniteliğin seçim seviyesi; null verilirse mevcut seviye korunur.</param>
     public Result UpdateAssignment(
         Guid assignmentId,
         bool required,
-        int sortOrder)
+        int sortOrder,
+        AttributeScope? scope = null)
     {
         var assignment = _assignments.FirstOrDefault(a => a.Id == assignmentId);
         if (assignment is null)
@@ -129,7 +134,7 @@ public sealed class Category : AggregateRoot<Guid>
             return Result.Failure(Error.NotFound("Category attribute assignment not found."));
         }
 
-        assignment.Update(required, sortOrder);
+        assignment.Update(required, sortOrder, scope ?? assignment.Scope);
         return Result.Success();
     }
 

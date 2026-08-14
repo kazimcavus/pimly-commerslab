@@ -9,10 +9,13 @@ namespace Channels.Application.ProductImports.Planning;
 /// Kurallar:
 /// <list type="bullet">
 /// <item>Aynı ürünün varyantları ProductMainId ile gruplanır; ModelCode = ProductMainId.</item>
-/// <item>IsVariant=true attribute VEYA Renk/color adlı attribute → varyant ekseni; diğerleri ürün düzeyi özellik.</item>
+/// <item>IsVariant=true attribute VEYA Renk/color adlı attribute → varyant ekseni; diğerleri özellik.</item>
 /// <item>Renk/color adlı veya IsSlicer işaretli eksen → renk seçim stili + slicer (varsayılan davranış); kategori "variant" bayrağını taşımasa bile.</item>
 /// <item>Tek slicer: birden fazla aday varsa ilki kalır, diğerleri slicer'sız devam eder (uyarı).</item>
 /// <item>En fazla 3 eksen: fazlası kalem düzeyi özelliğe indirgenir (uyarı).</item>
+/// <item>Eksen olmayan özelliklerin seviyesi TÜM satırlara bakılarak tespit edilir: her satırda aynı
+/// değer → model; slicer (renk) değeri içinde sabit ama renkler arasında farklı (ör. Web Renk) veya
+/// kategori tanımında IsSlicer işaretli → slicer; aynı renk içinde bile farklı → kalem düzeyi.</item>
 /// <item>CompareAtPrice yalnızca ListPrice &gt; SalePrice ise yazılır.</item>
 /// </list>
 /// </remarks>
@@ -141,34 +144,129 @@ public static class ProductImportPlanner
 
         var axisIds = axes.Select(axis => axis.ExternalAttributeId).ToHashSet(StringComparer.Ordinal);
 
-        // Ürün düzeyi özellikler: ilk satırdaki varyant-olmayan attribute'lar.
-        var productAttributes = new List<PlannedAttributeValue>();
-        foreach (var attribute in first.Attributes)
+        // Satır başına slicer (renk) değeri: seviye tespiti ve renk-bazlı değer gruplama için.
+        var groupSlicerAxisId = axes.FirstOrDefault(axis => axis.Slicer)?.ExternalAttributeId;
+        string? RowSlicerValue(MarketplaceProductNode row)
         {
-            if (axisIds.Contains(attribute.ExternalAttributeId)
-                || demotedAxisIds.Contains(attribute.ExternalAttributeId))
+            if (groupSlicerAxisId is null)
+            {
+                return null;
+            }
+
+            var attribute = row.Attributes.FirstOrDefault(candidate =>
+                string.Equals(candidate.ExternalAttributeId, groupSlicerAxisId, StringComparison.Ordinal));
+
+            return attribute is null ? null : ResolveValueName(attribute);
+        }
+
+        // Eksen olmayan özellikler TÜM satırlara bakılarak seviyelendirilir (yalnızca ilk satır değil):
+        // model (her satırda aynı), slicer (renk içinde sabit, renkler arasında farklı — ör. Web Renk)
+        // veya kalem düzeyi (aynı renk içinde bile farklı).
+        var productAttributes = new List<PlannedAttributeValue>();
+        var slicerAttributesByValue = new Dictionary<string, List<PlannedAttributeValue>>(StringComparer.OrdinalIgnoreCase);
+        var itemScopedAttributeIds = new HashSet<string>(StringComparer.Ordinal);
+
+        var nonAxisAttributeIds = uniqueRows
+            .SelectMany(row => row.Attributes)
+            .Select(attribute => attribute.ExternalAttributeId)
+            .Where(id => !axisIds.Contains(id) && !demotedAxisIds.Contains(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var attributeId in nonAxisAttributeIds)
+        {
+            defsById.TryGetValue(attributeId, out var def);
+
+            var perRow = new List<(MarketplaceProductNode Row, MarketplaceProductAttributeNode Attribute, string Value)>();
+            foreach (var row in uniqueRows)
+            {
+                var attribute = row.Attributes.FirstOrDefault(candidate =>
+                    string.Equals(candidate.ExternalAttributeId, attributeId, StringComparison.Ordinal));
+
+                var value = attribute is null ? null : ResolveValueName(attribute);
+                if (value is not null)
+                {
+                    perRow.Add((row, attribute!, value));
+                }
+            }
+
+            if (perRow.Count == 0)
             {
                 continue;
             }
 
-            var valueName = ResolveValueName(attribute);
-            if (valueName is null)
-            {
-                continue;
-            }
-
-            defsById.TryGetValue(attribute.ExternalAttributeId, out var def);
             if (def is null)
             {
-                warnings.Add($"'{attribute.Name}' özelliği kategori tanımında yok; yine de özellik olarak aktarıldı.");
+                warnings.Add($"'{perRow[0].Attribute.Name}' özelliği kategori tanımında yok; yine de özellik olarak aktarıldı.");
             }
 
-            productAttributes.Add(new PlannedAttributeValue(
-                attribute.ExternalAttributeId,
-                def?.Name ?? attribute.Name,
-                valueName,
-                attribute.ExternalValueId,
-                def?.Required ?? false));
+            var attributeName = def?.Name ?? perRow[0].Attribute.Name;
+            var required = def?.Required ?? false;
+            var distinctValueCount = perRow
+                .Select(entry => entry.Value)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+
+            // Kategori tanımı IsSlicer diyorsa değerler şu an tekdüze olsa bile (tek renkli ürün)
+            // özellik yapısal olarak renk-bazlıdır; bayrak varyans analizini ezer.
+            var flaggedSlicer = def?.IsSlicer == true && groupSlicerAxisId is not null;
+
+            if (!flaggedSlicer && distinctValueCount <= 1)
+            {
+                var sample = perRow[0];
+                productAttributes.Add(new PlannedAttributeValue(
+                    attributeId,
+                    attributeName,
+                    sample.Value,
+                    sample.Attribute.ExternalValueId,
+                    required,
+                    PlannedAttributeScope.Model));
+                continue;
+            }
+
+            // Renk (slicer değeri) içinde sabit mi? Slicer değeri okunamayan satırlar analizi bozar.
+            var uniformWithinSlicer = groupSlicerAxisId is not null;
+            if (uniformWithinSlicer)
+            {
+                foreach (var valueGroup in perRow.GroupBy(
+                             entry => RowSlicerValue(entry.Row) ?? string.Empty,
+                             StringComparer.OrdinalIgnoreCase))
+                {
+                    if (valueGroup.Key.Length == 0
+                        || valueGroup.Select(entry => entry.Value).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+                    {
+                        uniformWithinSlicer = false;
+                        break;
+                    }
+                }
+            }
+
+            if (flaggedSlicer || uniformWithinSlicer)
+            {
+                foreach (var valueGroup in perRow
+                             .Where(entry => RowSlicerValue(entry.Row) is not null)
+                             .GroupBy(entry => RowSlicerValue(entry.Row)!, StringComparer.OrdinalIgnoreCase))
+                {
+                    var sample = valueGroup.First();
+                    if (!slicerAttributesByValue.TryGetValue(valueGroup.Key, out var list))
+                    {
+                        list = [];
+                        slicerAttributesByValue[valueGroup.Key] = list;
+                    }
+
+                    list.Add(new PlannedAttributeValue(
+                        attributeId,
+                        attributeName,
+                        sample.Value,
+                        sample.Attribute.ExternalValueId,
+                        required,
+                        PlannedAttributeScope.Slicer));
+                }
+
+                continue;
+            }
+
+            itemScopedAttributeIds.Add(attributeId);
         }
 
         // Satırlar: eksen seçimleri + indirgenen eksenlerin kalem düzeyi özellik değerleri.
@@ -214,8 +312,10 @@ public static class ProductImportPlanner
                 continue;
             }
 
+            // İndirgenen eksenler + kalem düzeyi tespit edilen özellikler kaleme yazılır.
             var itemAttributes = row.Attributes
-                .Where(attribute => demotedAxisIds.Contains(attribute.ExternalAttributeId))
+                .Where(attribute => demotedAxisIds.Contains(attribute.ExternalAttributeId)
+                    || itemScopedAttributeIds.Contains(attribute.ExternalAttributeId))
                 .Select(attribute =>
                 {
                     var valueName = ResolveValueName(attribute);
@@ -230,7 +330,8 @@ public static class ProductImportPlanner
                         def?.Name ?? attribute.Name,
                         valueName,
                         attribute.ExternalValueId,
-                        def?.Required ?? false);
+                        def?.Required ?? false,
+                        PlannedAttributeScope.Item);
                 })
                 .Where(planned => planned is not null)
                 .Select(planned => planned!)
@@ -288,7 +389,12 @@ public static class ProductImportPlanner
                     .Select(p => string.IsNullOrWhiteSpace(p.Row.Description) ? null : p.Row.Description.Trim())
                     .FirstOrDefault(d => d is not null);
 
-                splits.Add(new PlannedSplit(valueGroup.Key, code, title, description));
+                splits.Add(new PlannedSplit(
+                    valueGroup.Key,
+                    code,
+                    title,
+                    description,
+                    slicerAttributesByValue.GetValueOrDefault(valueGroup.Key)));
             }
         }
 
@@ -432,13 +538,18 @@ public sealed record ProductGroupPlan(
         new(productMainId, name, string.Empty, productMainId, [], [], [], [], error);
 }
 
-/// <summary>Slicer değerine özel plan geçersiz kılması: gerçek stok kodu ve orijinal başlık.</summary>
+/// <summary>Slicer değerine özel plan geçersiz kılması: gerçek stok kodu, orijinal başlık ve renk-bazlı özellik değerleri.</summary>
 /// <example>ValueName "Antrasit", StockCode "25CSM02817GR52", Title "Antrasit Klasik Göbekli Halı".</example>
 public sealed record PlannedSplit(
     string ValueName,
     string? StockCode,
     string? Title,
-    string? Description = null);
+    string? Description = null,
+    IReadOnlyList<PlannedAttributeValue>? AttributeValues = null)
+{
+    /// <summary>Gets bu slicer değerinin ürününe yazılacak özellik değerleri; boş olabilir.</summary>
+    public IReadOnlyList<PlannedAttributeValue> SplitAttributeValues => AttributeValues ?? [];
+}
 
 /// <summary>Planlanan varyant ekseni.</summary>
 public sealed record PlannedVariantAxis(
@@ -447,13 +558,27 @@ public sealed record PlannedVariantAxis(
     bool IsColor,
     bool Slicer);
 
-/// <summary>Planlanan özellik değeri (ürün veya kalem düzeyi).</summary>
+/// <summary>Planlanan özellik değeri; Scope, değerin hangi seviyede yazılacağını belirtir.</summary>
 public sealed record PlannedAttributeValue(
     string ExternalAttributeId,
     string AttributeName,
     string ValueName,
     string? ExternalValueId,
-    bool Required);
+    bool Required,
+    PlannedAttributeScope Scope = PlannedAttributeScope.Model);
+
+/// <summary>İçe aktarılan özelliğin tespit edilen seviyesi (kategori atamasına da yazılır).</summary>
+public enum PlannedAttributeScope
+{
+    /// <summary>Model (ürün) başına tek değer.</summary>
+    Model = 0,
+
+    /// <summary>Slicer (renk) değeri başına değer; bölünen ürüne yazılır.</summary>
+    Slicer = 1,
+
+    /// <summary>Satılabilir kalem başına değer.</summary>
+    Item = 2,
+}
 
 /// <summary>Planlanan satılabilir kalem.</summary>
 public sealed record PlannedItem(

@@ -24,6 +24,16 @@ public interface ICatalogListingSourceGateway
     Task<IReadOnlyList<Guid>> ListItemIdsByCategoriesAsync(
         IReadOnlyCollection<Guid> categoryIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bir ürünün tüm kalemlerinin içerik anlık görüntülerini okur (kanal hazırlık kontrolü için).
+    /// Ürün yoksa veya kalemi yoksa boş liste döner.
+    /// </summary>
+    /// <param name="productId">Catalog ürün kimliği.</param>
+    /// <param name="cancellationToken">İptal belirteci.</param>
+    Task<IReadOnlyList<CatalogListingSource>> GetByProductAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Bir satılabilir kalemin pazaryerine giden kanonik içeriği.</summary>

@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IGetTaxonomyStatusHandler, GetTaxonomyStatusHandler>();
         services.AddScoped<ISearchExternalCategoriesHandler, SearchExternalCategoriesHandler>();
         services.AddScoped<IProcessTaxonomySyncHandler, ProcessTaxonomySyncHandler>();
+        services.AddScoped<Readiness.GetProductReadiness.IGetProductReadinessHandler, Readiness.GetProductReadiness.GetProductReadinessHandler>();
         services.AddScoped<IUpsertCategoryChannelMappingHandler, UpsertCategoryChannelMappingHandler>();
         services.AddScoped<IGetCategoryChannelMappingHandler, GetCategoryChannelMappingHandler>();
         services.AddScoped<IListCategoryChannelMappingsHandler, ListCategoryChannelMappingsHandler>();

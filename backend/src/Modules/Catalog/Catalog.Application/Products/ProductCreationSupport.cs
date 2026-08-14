@@ -164,8 +164,10 @@ internal static class ProductCreationSupport
     }
 
     /// <summary>
-    /// Kategoride zorunlu olarak işaretlenen her özniteliğin, ürün düzeyindeki özellik değeri
-    /// girdilerinde karşılığının bulunduğunu doğrular (AttributeId üzerinden eşleşir).
+    /// Kategoride zorunlu olarak işaretlenen model-düzeyi özniteliklerin, ürün düzeyindeki özellik
+    /// değeri girdilerinde karşılığının bulunduğunu doğrular (AttributeId üzerinden eşleşir).
+    /// Slicer/kalem seviyeli atamalar burada denetlenmez; onlar renk kartı veya kalem başına
+    /// dolduğu için kanal hazırlık (readiness) kontrolüne bırakılır.
     /// </summary>
     /// <param name="attributes">Hata mesajında öznitelik adını çözmek için kullanılan depo.</param>
     /// <param name="category">Zorunluluk atamalarıyla birlikte yüklenmiş kategori.</param>
@@ -177,7 +179,8 @@ internal static class ProductCreationSupport
         IReadOnlySet<Guid> providedAttributeIds,
         CancellationToken cancellationToken)
     {
-        foreach (var assignment in category.Assignments.Where(assignment => assignment.Required))
+        foreach (var assignment in category.Assignments.Where(assignment =>
+                     assignment.Required && assignment.Scope == AttributeScope.Model))
         {
             if (providedAttributeIds.Contains(assignment.AttributeId))
             {

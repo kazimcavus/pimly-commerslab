@@ -118,6 +118,8 @@ export const api = {
   startImport: (code) => req('POST', `${CHANNELS}/marketplaces/${code}/imports`),
   getImportRun: (code, runId) => req('GET', `${CHANNELS}/marketplaces/${code}/imports/${runId}`),
   listImportRuns: (code, limit = 20) => req('GET', `${CHANNELS}/marketplaces/${code}/imports?limit=${limit}`),
+  // Ürünün bağlı pazaryerlerine yayın hazırlığı (kategori eşlemesi + zorunlu özellik + barkod).
+  productReadiness: (productId) => req('GET', `${CHANNELS}/products/${productId}/readiness`),
 
   // --- fiyat tanımları & kalem fiyatları (Pricing modülü) ---
   // Kullanıcı tanımlı fiyat alanları (örn. "TY Satış"); her kaleme tanım başına bir tutar girilir.

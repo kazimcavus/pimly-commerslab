@@ -137,13 +137,24 @@ export function Categories({ onToast }) {
                 </div>
                 <div className="pim-table-wrap">
                   <table className="pim-table">
-                    <thead><tr><th>Özellik</th><th>Anahtar</th><th>Zorunlu</th><th></th></tr></thead>
+                    <thead><tr><th>Özellik</th><th>Anahtar</th><th>Zorunlu</th><th>Seviye</th><th></th></tr></thead>
                     <tbody>
                       {attrs.map((a) => (
                         <tr key={a.category_attribute_id}>
                           <td className="pim-td-strong">{a.name}</td>
                           <td className="pim-td-mono">{a.key}</td>
                           <td>{a.required ? I('check') : <span className="subtle">—</span>}</td>
+                          <td style={{ minWidth: 130 }}>
+                            <Select size="sm" value={a.scope || 'model'} options={SCOPE_OPTIONS}
+                              title="Değerin seçildiği seviye: model başına, renk (slicer) başına ya da varyant (kalem) başına. Import kaynağın bayraklarından otomatik tespit eder."
+                              onChange={async (e) => {
+                                const scope = e.target.value
+                                try {
+                                  await api.updateCategoryAttribute(a.category_attribute_id, { required: a.required, sort_order: a.sort_order, scope })
+                                  setAttrs(attrs.map((x) => x.category_attribute_id === a.category_attribute_id ? { ...x, scope } : x))
+                                } catch (err) { onToast?.({ tone: 'danger', title: 'Seviye güncellenemedi', error: err }) }
+                              }} />
+                          </td>
                           <td><div className="rowact"><button className="tb__icon" style={{ width: 28, height: 28 }} title="Kaldır" onClick={async () => {
                             const ok = await askConfirm({
                               title: 'Özelliği kategoriden kaldır',
@@ -159,7 +170,7 @@ export function Categories({ onToast }) {
                           }}>{I('trash-2')}</button></div></td>
                         </tr>
                       ))}
-                      {attrs.length === 0 && <tr><td colSpan={4} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
+                      {attrs.length === 0 && <tr><td colSpan={5} className="subtle" style={{ padding: 14 }}>Bu kategoriye özellik atanmamış.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -219,15 +230,26 @@ function CategoryDialog({ open, mode, initial, onClose, onSubmit, cats, excludeI
   )
 }
 
+// Özelliğin seviyesi: değer model başına mı, renk (slicer) başına mı, varyant (kalem) başına mı seçilir.
+const SCOPE_OPTIONS = [
+  { value: 'model', label: 'Model' },
+  { value: 'slicer', label: 'Renk bazlı' },
+  { value: 'item', label: 'Varyant bazlı' },
+]
+
 function AssignAttrDialog({ open, onClose, onAssign, attrs }) {
   const [attrId, setAttrId] = useState('')
   const [required, setRequired] = useState(false)
-  useEffect(() => { if (open) { setAttrId(''); setRequired(false) } }, [open])
+  const [scope, setScope] = useState('model')
+  useEffect(() => { if (open) { setAttrId(''); setRequired(false); setScope('model') } }, [open])
   return (
     <Dialog open={open} title="Özellik ata" confirmLabel="Ata" cancelLabel="İptal" onClose={onClose}
-      onConfirm={() => attrId && onAssign({ attribute_id: attrId, required, sort_order: 0 })}>
+      onConfirm={() => attrId && onAssign({ attribute_id: attrId, required, sort_order: 0, scope })}>
       <Field label="Özellik" required>
         <Select value={attrId} placeholder="Seç…" onChange={(e) => setAttrId(e.target.value)} options={attrs.map((a) => ({ value: a.id, label: a.name }))} />
+      </Field>
+      <Field label="Seviye" help="Renk bazlı: her renk kendi değerini taşır (ör. Web Renk). Varyant bazlı: kalem başına değer.">
+        <Select value={scope} onChange={(e) => setScope(e.target.value)} options={SCOPE_OPTIONS} />
       </Field>
       <div style={{ marginTop: 4 }}>
         <Checkbox label="Zorunlu" checked={required} onChange={(e) => setRequired(e.target.checked)} />

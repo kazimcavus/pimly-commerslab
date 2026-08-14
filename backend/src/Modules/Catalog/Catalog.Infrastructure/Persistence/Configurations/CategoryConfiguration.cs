@@ -38,6 +38,14 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
             assignment.Property(a => a.AttributeId).HasColumnName("attribute_id").IsRequired();
             assignment.Property(a => a.Required).HasColumnName("required");
             assignment.Property(a => a.SortOrder).HasColumnName("sort_order");
+            assignment.Property(a => a.Scope)
+                .HasColumnName("scope")
+                .HasConversion(
+                    v => v.ToString().ToLowerInvariant(),
+                    v => Enum.Parse<AttributeScope>(v, true))
+                .HasMaxLength(20)
+                .HasDefaultValue(AttributeScope.Model)
+                .IsRequired();
             assignment.Ignore(a => a.DomainEvents);
             assignment.HasIndex(a => new { a.AttributeId }).IsUnique(false);
             assignment.HasIndex("CategoryId", nameof(CategoryAttributeAssignment.AttributeId)).IsUnique();

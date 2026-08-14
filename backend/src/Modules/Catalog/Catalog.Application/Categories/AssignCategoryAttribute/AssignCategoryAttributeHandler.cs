@@ -30,7 +30,8 @@ public sealed class AssignCategoryAttributeHandler(
         var assignResult = category.AssignAttribute(
             command.AttributeId,
             command.Required,
-            command.SortOrder);
+            command.SortOrder,
+            command.Scope);
 
         if (assignResult.IsFailure)
         {

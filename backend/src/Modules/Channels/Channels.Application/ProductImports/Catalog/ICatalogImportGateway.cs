@@ -54,12 +54,16 @@ public interface ICatalogImportGateway
         string label,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Özelliği kategoriye atar; zaten atanmışsa başarı döner.</summary>
+    /// <summary>
+    /// Özelliği kategoriye atar; zaten atanmışsa başarı döner. Mevcut atama model seviyesindeyken
+    /// daha özgül bir seviye (slicer/kalem) tespit edilirse seviye yükseltilir (asla düşürülmez).
+    /// </summary>
     Task<Result> AssignAttributeToCategoryAsync(
         Guid categoryId,
         Guid attributeId,
         bool required,
         int sortOrder,
+        CatalogAttributeScope scope,
         CancellationToken cancellationToken = default);
 
     /// <summary>Model kodu veya barkodlardan biri zaten kayıtlıysa true döner (grup atlanır).</summary>
@@ -128,13 +132,27 @@ public sealed record CatalogProductBatchInput(
     Guid? BrandId = null,
     string? Description = null);
 
-/// <summary>Slicer değerine özel ürün geçersiz kılmaları (kod/ad/açıklama).</summary>
+/// <summary>Slicer değerine özel ürün geçersiz kılmaları (kod/ad/açıklama) ve renk-bazlı özellik seçimleri.</summary>
 /// <example>ValueName "Antrasit", ModelCode "25CSM02817GR52", Name "Antrasit Klasik Göbekli Halı".</example>
 public sealed record CatalogSplitInput(
     string ValueName,
     string? ModelCode,
     string? Name,
-    string? Description = null);
+    string? Description = null,
+    IReadOnlyList<CatalogSelectionInput>? AttributeValues = null);
+
+/// <summary>Kategori-özellik atamasının seçim seviyesi (Catalog AttributeScope karşılığı).</summary>
+public enum CatalogAttributeScope
+{
+    /// <summary>Model (ürün) başına tek değer.</summary>
+    Model = 0,
+
+    /// <summary>Slicer (renk) değeri başına değer.</summary>
+    Slicer = 1,
+
+    /// <summary>Satılabilir kalem başına değer.</summary>
+    Item = 2,
+}
 
 /// <summary>Ürünün kullandığı varyant ekseni.</summary>
 public sealed record CatalogVariantAxisInput(Guid VariantId, bool IsColor, bool Slicer);

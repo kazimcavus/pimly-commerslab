@@ -90,6 +90,15 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
   const [initialAttrPick, setInitialAttrPick] = useState({})
   const [catAttrsMeta, setCatAttrsMeta] = useState([])
 
+  // Kanal hazırlığı: bağlı pazaryerlerine yayına hazır mı (kategori eşleme + zorunlu özellik + barkod).
+  const [readiness, setReadiness] = useState(null)
+  useEffect(() => {
+    if (!productId) return
+    let alive = true
+    api.productReadiness(productId).then((r) => { if (alive) setReadiness(r) }).catch(() => {})
+    return () => { alive = false }
+  }, [productId])
+
   useEffect(() => { api.listBrands().then(setBrands).catch(() => {}) }, [])
   useEffect(() => { api.listCategories().then(setCategories).catch(() => {}) }, [])
 
@@ -338,7 +347,8 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
 
   // Sticky footer'daki Kaydet: ürün alanları + tüm kirli satırlar tek seferde.
   const saveAll = async () => {
-    const missing = catAttrsMeta.filter((ca) => ca.required && !attrPick[ca.attribute_id]).map((ca) => ca.name)
+    // Kalem (varyant) bazlı özellikler ürün panelinden seçilmez; zorunluluk kontrolüne girmez.
+    const missing = catAttrsMeta.filter((ca) => ca.required && (ca.scope || 'model') !== 'item' && !attrPick[ca.attribute_id]).map((ca) => ca.name)
     if (dirtyProduct && missing.length) { onToast?.({ tone: 'danger', title: 'Zorunlu özellikler eksik', body: missing.join(', ') }); return }
     for (const it of dirtyItems) {
       const err = rowError(it)
@@ -496,6 +506,43 @@ export function ProductDetail({ productId, onNavigate, onToast }) {
           <PhotoGallery images={images} productId={product.id} onChanged={load} onToast={onToast} />
         </div>
       </div>
+
+      {/* Kanal hazırlığı — pazaryeri başına yayına hazırlık durumu */}
+      {readiness?.channels?.length > 0 && (
+        <div className="bnode" style={{ marginBottom: 18 }}>
+          <div className="bnode__head">
+            <span className="ic">{I('globe')}</span>
+            <div><div className="bnode__title">Kanal hazırlığı</div>
+              <div className="list-meta">Pazaryerinin kendi zorunlu alanlarına göre; eksikler yayını engeller, ürün kaydını engellemez.</div></div>
+          </div>
+          <div className="bnode__body">
+            <div className="stack" style={{ gap: 10 }}>
+              {readiness.channels.map((ch) => (
+                <div key={ch.marketplace_code} className="hstack" style={{ gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <b style={{ minWidth: 90 }}>{ch.marketplace_name}</b>
+                  {ch.ready ? (
+                    <span className="pim-badge" style={{ color: 'var(--success-fg, #1a7f37)' }}>{I('check', { size: 12 })} Yayına hazır</span>
+                  ) : !ch.category_mapped ? (
+                    <span className="pim-badge" style={{ color: 'var(--danger-fg)' }}>Kategori eşlemesi yok</span>
+                  ) : (
+                    <span className="hstack" style={{ gap: 8, flexWrap: 'wrap' }}>
+                      {ch.items_missing_barcode > 0 && (
+                        <span className="pim-badge" style={{ color: 'var(--danger-fg)' }}>{ch.items_missing_barcode} kalemde barkod yok</span>
+                      )}
+                      {(ch.missing_attributes || []).map((ma) => (
+                        <span key={ma.external_attribute_id} className="pim-badge" style={{ color: 'var(--danger-fg)' }}
+                          title={ma.reason === 'unmapped' ? 'PIM özelliğiyle eşlenmemiş' : `${ma.missing_item_count} kalemde değer seçilmemiş`}>
+                          {ma.name} · {ma.reason === 'unmapped' ? 'eşlenmemiş' : 'değer eksik'}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sekmeler */}
       <Tabs

@@ -3,6 +3,7 @@ using Catalog.Application.Attributes.CreateAttribute;
 using Catalog.Application.Brands.CreateBrand;
 using Catalog.Application.Categories.AssignCategoryAttribute;
 using Catalog.Application.Categories.CreateCategory;
+using Catalog.Application.Categories.UpdateCategoryAttribute;
 using Catalog.Application.Products;
 using Catalog.Application.Products.AddProductImage;
 using Catalog.Application.Products.CreateProduct;
@@ -10,6 +11,7 @@ using Catalog.Application.Products.CreateProductsBatch;
 using Catalog.Application.Variants.AddVariantValue;
 using Catalog.Application.Variants.CreateVariantType;
 using Catalog.Domain;
+using Catalog.Domain.Categories;
 using Catalog.Domain.Products;
 using Catalog.Domain.Variants;
 using Channels.Application.ProductImports.Catalog;
@@ -44,6 +46,7 @@ public sealed class CatalogImportGateway(
     ICreateVariantTypeHandler createVariantType,
     IAddVariantValueHandler addVariantValue,
     IAssignCategoryAttributeHandler assignCategoryAttribute,
+    IUpdateCategoryAttributeHandler updateCategoryAttribute,
     ICreateProductsBatchHandler createProductsBatch,
     IAddProductImageHandler addProductImage,
     IUploadImageHandler uploadImage,
@@ -265,6 +268,7 @@ public sealed class CatalogImportGateway(
         Guid attributeId,
         bool required,
         int sortOrder,
+        CatalogAttributeScope scope,
         CancellationToken cancellationToken = default)
     {
         var category = await categories.GetByIdAsync(categoryId, cancellationToken);
@@ -273,13 +277,29 @@ public sealed class CatalogImportGateway(
             return Result.Failure(Error.NotFound("Category not found."));
         }
 
-        if (category.Assignments.Any(assignment => assignment.AttributeId == attributeId))
+        var mappedScope = MapScope(scope);
+        var existing = category.Assignments.FirstOrDefault(assignment => assignment.AttributeId == attributeId);
+        if (existing is not null)
         {
+            // Seviye yalnızca yükseltilir (model → slicer/kalem); kullanıcının elle verdiği
+            // daha özgül seviye import tarafından asla model'e düşürülmez.
+            if (existing.Scope == AttributeScope.Model && mappedScope != AttributeScope.Model)
+            {
+                var upgradeResult = await updateCategoryAttribute.ExecuteAsync(
+                    new UpdateCategoryAttributeCommand(existing.Id, existing.Required, existing.SortOrder, mappedScope),
+                    cancellationToken);
+
+                if (upgradeResult.IsFailure)
+                {
+                    return Result.Failure(upgradeResult.Error);
+                }
+            }
+
             return Result.Success();
         }
 
         var assignResult = await assignCategoryAttribute.ExecuteAsync(
-            new AssignCategoryAttributeCommand(categoryId, attributeId, required, sortOrder),
+            new AssignCategoryAttributeCommand(categoryId, attributeId, required, sortOrder, mappedScope),
             cancellationToken);
 
         // Eşzamanlı atama çakışması idempotentlik açısından başarı sayılır.
@@ -328,6 +348,16 @@ public sealed class CatalogImportGateway(
             .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name, split.Description))
             .ToList();
 
+        // Slicer (renk) seviyeli özellik değerleri: değer adıyla bölünen ürüne bağlanır.
+        var splitAttributeValues = input.Splits?
+            .Where(split => split.AttributeValues is { Count: > 0 })
+            .Select(split => new BatchSplitAttributeValues(
+                split.ValueName,
+                split.AttributeValues!
+                    .Select(selection => new AttributeValueInput(selection.Id, selection.ValueId))
+                    .ToList()))
+            .ToList();
+
         var batchItem = new CreateProductsBatchItem(
             input.CategoryId,
             input.ModelCode,
@@ -361,10 +391,13 @@ public sealed class CatalogImportGateway(
                 .ToList(),
             splitOverrides,
             input.BrandId,
-            input.Description);
+            input.Description,
+            splitAttributeValues);
 
+        // Import edilen veri kaynağın gerçeğidir; PIM'de sonradan eklenen zorunlu özellikler
+        // (başka kanal/sistem gereksinimleri) importu bloklamaz — hazırlık kontrolüne bırakılır.
         var createResult = await createProductsBatch.ExecuteAsync(
-            new CreateProductsBatchCommand(input.GroupId, [batchItem]),
+            new CreateProductsBatchCommand(input.GroupId, [batchItem], EnforceRequiredAttributes: false),
             cancellationToken);
 
         if (createResult.IsFailure)
@@ -463,6 +496,13 @@ public sealed class CatalogImportGateway(
 
         return addResult.IsFailure ? Result.Failure(addResult.Error) : Result.Success();
     }
+
+    private static AttributeScope MapScope(CatalogAttributeScope scope) => scope switch
+    {
+        CatalogAttributeScope.Slicer => AttributeScope.Slicer,
+        CatalogAttributeScope.Item => AttributeScope.Item,
+        _ => AttributeScope.Model,
+    };
 
     // Trendyol CDN'i ara sıra geçici DNS/timeout hatası verir; artan beklemeyle en fazla
     // 3 deneme yapılır (1s, 3s). Kalıcı hata ve gerçek iptal aynen üst katmana taşınır.

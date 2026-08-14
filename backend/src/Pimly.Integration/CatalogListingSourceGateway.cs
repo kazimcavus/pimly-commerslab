@@ -10,7 +10,8 @@ namespace Pimly.Integration;
 /// </summary>
 public sealed class CatalogListingSourceGateway(
     IProductRepository products,
-    IBrandRepository brands) : ICatalogListingSourceGateway
+    IBrandRepository brands,
+    IVariantRepository variants) : ICatalogListingSourceGateway
 {
     /// <inheritdoc/>
     public async Task<IReadOnlyList<CatalogListingSource>> GetAsync(
@@ -25,6 +26,28 @@ public sealed class CatalogListingSourceGateway(
         var wanted = productItemIds.ToHashSet();
         var loaded = await products.ListByItemIdsAsync(productItemIds, cancellationToken);
 
+        return await BuildSourcesAsync(loaded, item => wanted.Contains(item.Id), cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<CatalogListingSource>> GetByProductAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default)
+    {
+        var product = await products.GetByIdAsync(productId, cancellationToken);
+        if (product is null)
+        {
+            return [];
+        }
+
+        return await BuildSourcesAsync([product], _ => true, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<CatalogListingSource>> BuildSourcesAsync(
+        IReadOnlyList<Product> loaded,
+        Func<ProductItem, bool> includeItem,
+        CancellationToken cancellationToken)
+    {
         // Marka adları ürün başına tekrar ettiği için tek turda önbelleklenir.
         var brandNames = new Dictionary<Guid, (string Name, string? Code)>();
         foreach (var brandId in loaded.Where(p => p.BrandId.HasValue).Select(p => p.BrandId!.Value).Distinct())
@@ -35,6 +58,13 @@ public sealed class CatalogListingSourceGateway(
                 brandNames[brandId] = (brand.Name, brand.Code);
             }
         }
+
+        // Bölünmüş (slicer) ürünlerde renk seçimi kalem VariantValues'unda taşınmaz;
+        // Product.SlicerValue etiketinden slicer ekseninin değerine çözülür ki renk,
+        // eşleme ve hazırlık kontrollerinde görünür olsun.
+        var slicerVariant = loaded.Any(p => !string.IsNullOrWhiteSpace(p.SlicerValue))
+            ? await variants.GetSlicerVariantAsync(excludeId: null, cancellationToken)
+            : null;
 
         var sources = new List<CatalogListingSource>();
 
@@ -50,7 +80,23 @@ public sealed class CatalogListingSourceGateway(
                 .Select(image => image.Url)
                 .ToList();
 
-            foreach (var item in product.Items.Where(item => wanted.Contains(item.Id)))
+            CatalogListingSelection? slicerSelection = null;
+            if (!string.IsNullOrWhiteSpace(product.SlicerValue) && slicerVariant is not null)
+            {
+                var slicerValue = slicerVariant.Values.FirstOrDefault(value =>
+                    string.Equals(value.Label, product.SlicerValue, StringComparison.OrdinalIgnoreCase));
+
+                if (slicerValue is not null)
+                {
+                    slicerSelection = new CatalogListingSelection(
+                        true,
+                        slicerVariant.Id,
+                        slicerValue.Id,
+                        slicerValue.Label);
+                }
+            }
+
+            foreach (var item in product.Items.Where(includeItem))
             {
                 sources.Add(new CatalogListingSource(
                     item.Id,
@@ -63,7 +109,7 @@ public sealed class CatalogListingSourceGateway(
                     product.ModelCode.Value,
                     item.Barcode,
                     item.Sku,
-                    BuildSelections(product, item),
+                    BuildSelections(product, item, slicerSelection),
                     imageUrls));
             }
         }
@@ -80,10 +126,19 @@ public sealed class CatalogListingSourceGateway(
     /// <summary>
     /// Ürün düzeyi özellikler ile kalem düzeyi özellik/varyant seçimlerini tek listede birleştirir.
     /// Kalem seçimi ürün seçimini ezer (aynı özellik iki düzeyde tanımlıysa kalemdeki geçerlidir).
+    /// Slicer seçimi (bölünmüş ürünün rengi) verilmişse varyant seçimi olarak eklenir.
     /// </summary>
-    private static List<CatalogListingSelection> BuildSelections(Product product, ProductItem item)
+    private static List<CatalogListingSelection> BuildSelections(
+        Product product,
+        ProductItem item,
+        CatalogListingSelection? slicerSelection)
     {
         var byKey = new Dictionary<(bool IsVariant, Guid SourceId), CatalogListingSelection>();
+
+        if (slicerSelection is not null)
+        {
+            byKey[(true, slicerSelection.SourceId)] = slicerSelection;
+        }
 
         foreach (var attributeValue in product.AttributeValues)
         {

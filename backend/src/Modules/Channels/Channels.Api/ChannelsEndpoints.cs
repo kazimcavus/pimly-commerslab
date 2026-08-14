@@ -120,6 +120,20 @@ public static class ChannelsEndpoints
                 dto));
         });
 
+        // Ürünün bağlı pazaryerlerine yayın hazırlığı: kategori eşlemesi + pazaryerinin
+        // zorunlu özellikleri (kendi şemasından) + kalem barkodları.
+        group.MapGet("/products/{productId:guid}/readiness", async (
+            Guid productId,
+            Channels.Application.Readiness.GetProductReadiness.IGetProductReadinessHandler handler,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await handler.ExecuteAsync(
+                new Channels.Application.Readiness.GetProductReadiness.GetProductReadinessQuery(productId),
+                cancellationToken);
+
+            return result.ToHttpResult();
+        });
+
         group.MapPost("/marketplaces/{code}/imports", async (
             string code,
             IEnqueueProductImportHandler handler,

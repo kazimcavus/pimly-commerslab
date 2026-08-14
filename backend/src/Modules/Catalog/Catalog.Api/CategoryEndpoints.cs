@@ -60,7 +60,8 @@ internal static class CategoryEndpoints
                 id,
                 request.AttributeId,
                 request.Required,
-                request.SortOrder));
+                request.SortOrder,
+                ParseScope(request.Scope) ?? Catalog.Domain.Categories.AttributeScope.Model));
             return result.ToCreatedResult(dto => $"/api/v1/catalog/category-attributes/{dto.CategoryAttributeId}");
         });
 
@@ -82,7 +83,8 @@ internal static class CategoryEndpoints
             var result = await handler.ExecuteAsync(new UpdateCategoryAttributeCommand(
                 id,
                 request.Required,
-                request.SortOrder));
+                request.SortOrder,
+                ParseScope(request.Scope)));
             return result.ToHttpResult();
         });
 
@@ -92,4 +94,10 @@ internal static class CategoryEndpoints
             return result.ToHttpResult();
         });
     }
+
+    // "model" | "slicer" | "item" → enum; boş veya tanınmayan değer null döner (çağıran varsayılanı seçer).
+    private static Catalog.Domain.Categories.AttributeScope? ParseScope(string? value) =>
+        Enum.TryParse<Catalog.Domain.Categories.AttributeScope>(value, ignoreCase: true, out var scope)
+            ? scope
+            : null;
 }

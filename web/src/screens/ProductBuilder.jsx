@@ -8,7 +8,7 @@ import { parseTrMoney } from '../lib/format.js'
 import { registerNavGuard } from '../lib/navGuard.js'
 import { isHtmlEmpty } from '../lib/sanitizeHtml.js'
 import { loadSkuConfig } from '../lib/skuConfig.js'
-import { AttributeEditor } from './parts/AttributeEditor.jsx'
+import { AttributeEditor, scopeOf } from './parts/AttributeEditor.jsx'
 
 const MAX_TYPES = 3
 const SEG_NAME = { fixed: 'Sabit', counter: 'Sıra', year: 'Yıl', manual: 'Değer' }
@@ -64,8 +64,11 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
 
   // Kategori özellikleri: AttributeEditor yükler, zorunlu doğrulaması için
   // meta buraya bildirilir; seçim attrPick'te tutulur.
-  const [catAttrs, setCatAttrs] = useState([])     // [{category_attribute_id,attribute_id,name,required,...}]
+  const [catAttrs, setCatAttrs] = useState([])     // [{category_attribute_id,attribute_id,name,required,scope,...}]
   const [attrPick, setAttrPick] = useState({})     // { attribute_id: valueId }
+  // Renk (slicer) bazlı özellikler: renk kartında renk başına seçilir.
+  const [slicerAttrVals, setSlicerAttrVals] = useState({}) // { attribute_id: [{id,name}] }
+  const [splitAttrPick, setSplitAttrPick] = useState({})   // { slicerValueId: { attribute_id: valueId } }
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -78,6 +81,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
     title.trim() || !isHtmlEmpty(description) || groupCode.trim()
     || chosen.some((c) => c.valueIds.length > 0)
     || Object.values(attrPick).some(Boolean)
+    || Object.values(splitAttrPick).some((m) => Object.values(m || {}).some(Boolean))
     || (mode === 'simple' && (simple.sku || simple.price || simple.compareAt || (simple.stock && simple.stock !== '0')))
   )
 
@@ -91,7 +95,7 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       .catch(() => {})
   }, [])
   // Kategori değişince seçimler sıfırlanır (özellik listesi AttributeEditor'da yüklenir).
-  useEffect(() => { setAttrPick({}) }, [categoryId])
+  useEffect(() => { setAttrPick({}); setSplitAttrPick({}) }, [categoryId])
   // SKU şablonu .NET Catalog'dan; barkod serisi .NET'ten.
   useEffect(() => {
     loadSkuConfig()
@@ -108,6 +112,18 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
       setTypes(withVals)
     }).catch(() => {})
   }, [])
+
+  // Renk bazlı / kalem bazlı özellik atamaları (importla tespit edilir, elle de ayarlanabilir).
+  const slicerAttrs = useMemo(() => catAttrs.filter((ca) => scopeOf(ca) === 'slicer'), [catAttrs])
+  const itemScopedAttrs = useMemo(() => catAttrs.filter((ca) => scopeOf(ca) === 'item'), [catAttrs])
+  useEffect(() => {
+    if (slicerAttrs.length === 0) { setSlicerAttrVals({}); return }
+    let alive = true
+    Promise.all(slicerAttrs.map((ca) =>
+      api.listAttributeValues(ca.attribute_id).then((vs) => [ca.attribute_id, vs]).catch(() => [ca.attribute_id, []])))
+      .then((entries) => { if (alive) setSlicerAttrVals(Object.fromEntries(entries)) })
+    return () => { alive = false }
+  }, [slicerAttrs])
 
   const typeById = useMemo(() => Object.fromEntries(types.map((t) => [t.id, t])), [types])
   const availableToAdd = types.filter((t) => !chosen.some((c) => c.typeId === t.id))
@@ -310,13 +326,28 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
     ? (slicerType.values || []).filter((v) => activeChosen[slicerSel].valueIds.includes(v.id))
     : []
 
+  // Renk bazlı özellik seçimi (renk kartı başına); tekrar tıklanınca seçim kalkar.
+  const setSplitPick = (slicerValueId, attrId, valId) => setSplitAttrPick((m) => {
+    const cur = m[slicerValueId] || {}
+    return { ...m, [slicerValueId]: { ...cur, [attrId]: cur[attrId] === valId ? undefined : valId } }
+  })
+
   const save = async () => {
     setError('')
     if (!title.trim()) { setError('Ürün başlığı gerekli.'); return }
     if (!categoryId) { setError('Kategori seç — her ürün bir kategoriye bağlı olmalı.'); return }
     if (!skuOn && !groupCode.trim()) { setError('Ürün kodu gerekli — elle girin ya da Ayarlar\'dan ürün kodu üreticisini açın.'); return }
-    const missingAttrs = catAttrs.filter((ca) => ca.required && !attrPick[ca.attribute_id])
+    // Zorunlu kontrolü seviyeye göre: model bazlılar (slicer yoksa renk bazlılar da) ana panelden,
+    // renk bazlılar renk kartlarından doğrulanır. Kalem bazlılar hazırlık kontrolüne bırakılır.
+    const mainScopes = slicerType ? ['model'] : ['model', 'slicer']
+    const missingAttrs = catAttrs.filter((ca) => ca.required && mainScopes.includes(scopeOf(ca)) && !attrPick[ca.attribute_id])
     if (missingAttrs.length > 0) { setError(`Zorunlu özellikleri doldurun: ${missingAttrs.map((a) => a.name).join(', ')}`); return }
+    if (mode === 'variant' && slicerType) {
+      for (const ca of slicerAttrs.filter((a) => a.required)) {
+        const missingColor = slicerValues.find((v) => !splitAttrPick[v.id]?.[ca.attribute_id])
+        if (missingColor) { setError(`"${ca.name}" renk bazlı zorunlu — "${missingColor.label}" için değer seçin.`); return }
+      }
+    }
 
     let product
     if (mode === 'simple') {
@@ -408,11 +439,15 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
 
     // Ayraç değeri başına ürün adı — ekranda görünen ad aynen gönderilir
     // (elle girilmiş ya da konum tercihine göre türetilmiş). Stok kodu backend'e bırakılır.
+    // Renk bazlı özellik seçimleri de bölünen ürüne buradan bağlanır.
     if (mode === 'variant' && slicerType) {
       netProduct.splits = slicerValues.map((v) => ({
         value_name: v.label,
         name: splitNameOf(v).trim() || null,
         model_code: null,
+        attribute_values: slicerAttrs
+          .filter((ca) => splitAttrPick[v.id]?.[ca.attribute_id])
+          .map((ca) => ({ attribute_id: ca.attribute_id, attribute_value_id: splitAttrPick[v.id][ca.attribute_id] })),
       }))
     }
 
@@ -536,6 +571,8 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
                 combos={combos} activeChosen={activeChosen} rowOf={rowOf} setRow={setRow}
                 skuOn={skuOn} bcOn={bcOn} variantSkuPreview={variantSkuPreview}
                 splitNameOf={splitNameOf} setSplitName={setSplitName}
+                slicerAttrs={slicerAttrs} slicerAttrVals={slicerAttrVals}
+                splitAttrPick={splitAttrPick} setSplitPick={setSplitPick}
                 priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
                 fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
                 marketplaces={marketplaces} chanOf={chanOf} setItemChannel={setItemChannel} fillGroupChannel={fillGroupChannel}
@@ -553,7 +590,18 @@ export function ProductBuilder({ onNavigate, onToast, onSaved }) {
           </div>
           <div className="bnode__body">
             <AttributeEditor grid categoryId={categoryId} pick={attrPick} onPickChange={setAttrPick}
-              onAttrsLoaded={setCatAttrs} onToast={onToast} />
+              onAttrsLoaded={setCatAttrs} onToast={onToast}
+              scopes={mode === 'variant' && slicerType ? ['model'] : ['model', 'slicer']} />
+            {mode === 'variant' && slicerType && slicerAttrs.length > 0 && (
+              <div className="list-meta" style={{ marginTop: 10 }}>
+                {I('info', { size: 13 })} {slicerAttrs.map((a) => a.name).join(', ')} — renk bazlı; her renk kartında ayrıca seçilir.
+              </div>
+            )}
+            {itemScopedAttrs.length > 0 && (
+              <div className="list-meta" style={{ marginTop: 6 }}>
+                {I('info', { size: 13 })} {itemScopedAttrs.map((a) => a.name).join(', ')} — varyant (kalem) bazlı; importla kalem başına dolar, burada seçilmez.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -639,7 +687,7 @@ function SimpleTable({ simple, setSimple, skuOn, bcOn, productCodePreview, price
 }
 
 // Varyant seçimi: tür başına arama + chip kartı; ardından ayraç (renk) başına ürün kartları.
-function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
+function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAdding, addType, removeType, toggleValue, addValue, combos, activeChosen, rowOf, setRow, skuOn, bcOn, variantSkuPreview, splitNameOf, setSplitName, slicerAttrs, slicerAttrVals, splitAttrPick, setSplitPick, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
   const [newValFor, setNewValFor] = useState(null)
   const [valDraft, setValDraft] = useState('')
   const [queries, setQueries] = useState({}) // typeId -> arama metni
@@ -716,6 +764,8 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
           priceDefs={priceDefs} itemDefPrices={itemDefPrices} setItemDef={setItemDef}
           fillGroupDef={fillGroupDef} fillGroupRow={fillGroupRow}
           splitNameOf={splitNameOf} setSplitName={setSplitName}
+          slicerAttrs={slicerAttrs} slicerAttrVals={slicerAttrVals}
+          splitAttrPick={splitAttrPick} setSplitPick={setSplitPick}
           marketplaces={marketplaces} chanOf={chanOf} setItemChannel={setItemChannel} fillGroupChannel={fillGroupChannel}
         />
       )}
@@ -725,7 +775,7 @@ function VariantSection({ types, chosen, typeById, availableToAdd, adding, setAd
 
 // Varyant düzenleyici: ayraç (renk) başına ürün kartı — kart başında renk yutusu,
 // ad, kod chip'i ve kaldırma; gövdede hizalı varyant matrisi.
-function VariantGroups({ combos, activeChosen, typeById, toggleValue, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, splitNameOf, setSplitName, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
+function VariantGroups({ combos, activeChosen, typeById, toggleValue, rowOf, setRow, skuOn, bcOn, variantSkuPreview, priceDefs, itemDefPrices, setItemDef, fillGroupDef, fillGroupRow, splitNameOf, setSplitName, slicerAttrs, slicerAttrVals, splitAttrPick, setSplitPick, marketplaces, chanOf, setItemChannel, fillGroupChannel }) {
   const used = activeChosen.map((c) => typeById[c.typeId])
   const slicerIdx = used.findIndex((t) => t?.slicer)
   const slicerType = slicerIdx !== -1 ? used[slicerIdx] : null
@@ -787,6 +837,27 @@ function VariantGroups({ combos, activeChosen, typeById, toggleValue, rowOf, set
                     title="Ürün adına göre otomatik türetilir; elle değiştirebilirsin (konum: Ayarlar)" />
                 </Field>
               </div>
+              {(slicerAttrs || []).length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {slicerAttrs.map((ca) => (
+                    <div key={ca.attribute_id} style={{ marginTop: 6 }}>
+                      <div className="list-meta" style={{ marginBottom: 4 }}>
+                        {ca.name}{ca.required && <span style={{ color: 'var(--danger-fg)' }}> *</span>}
+                        <span className="pim-badge" style={{ fontSize: 10, marginLeft: 6 }}>renk bazlı</span>
+                      </div>
+                      <div className="chipset">
+                        {(slicerAttrVals[ca.attribute_id] || []).map((v) => (
+                          <span key={v.id} className="sizechip" data-on={splitAttrPick[sv.id]?.[ca.attribute_id] === v.id}
+                            onClick={() => setSplitPick(sv.id, ca.attribute_id, v.id)}>{v.name}</span>
+                        ))}
+                        {(slicerAttrVals[ca.attribute_id] || []).length === 0 && (
+                          <span className="list-meta">Değer yok — Özellikler ekranından ekleyin.</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="vcard__body">{table(rows)}</div>
           </div>

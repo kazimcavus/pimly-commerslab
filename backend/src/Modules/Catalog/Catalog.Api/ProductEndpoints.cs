@@ -95,12 +95,23 @@ internal static class ProductEndpoints
             MapItemInputs(request.Items),
             SplitOverrides: MapSplitOverrides(request.Splits),
             BrandId: request.BrandId,
-            Description: request.Description);
+            Description: request.Description,
+            SplitAttributeValueInputs: MapSplitAttributeValues(request.Splits));
 
     private static List<ProductSplitOverride>? MapSplitOverrides(
         IReadOnlyList<ProductSplitRequest>? splits) =>
         splits?
             .Select(split => new ProductSplitOverride(split.ValueName, split.ModelCode, split.Name, split.Description))
+            .ToList();
+
+    private static List<BatchSplitAttributeValues>? MapSplitAttributeValues(
+        IReadOnlyList<ProductSplitRequest>? splits) =>
+        splits?
+            .Where(split => split.AttributeValues is not null)
+            .Select(split => new BatchSplitAttributeValues(
+                split.ValueName,
+                ProductInputMapper.MapAttributeValues(split.AttributeValues)))
+            .Where(split => split.Values.Count > 0)
             .ToList();
 
     private static List<CreateProductItemInput> MapItemInputs(
