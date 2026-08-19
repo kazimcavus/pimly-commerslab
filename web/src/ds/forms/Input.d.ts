@@ -5,6 +5,8 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   icon?: React.ReactNode;
   /** Trailing affix, e.g. "₺" or "cm". */
   suffix?: React.ReactNode;
+  /** On a `type="password"` field, show the eye toggle that reveals the value. */
+  reveal?: boolean;
   /** Monospace + tabular figures — use for SKU, barcode, codes. */
   mono?: boolean;
   invalid?: boolean;

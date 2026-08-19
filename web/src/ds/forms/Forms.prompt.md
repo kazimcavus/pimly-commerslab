@@ -13,6 +13,10 @@ Form primitives for pimly's dynamic attribute forms — every control is built t
   <Input mono suffix="₺" inputMode="decimal" />
 </Field>
 
+<Field label="Şifre" required>
+  <Input type="password" reveal icon={I('lock')} />
+</Field>
+
 <Field label="Kategori"><Select placeholder="Seç…" options={[{value:'1',label:'Tişört'}]} /></Field>
 
 <Checkbox label="Zorunlu alan" hint="Aktife geçerken doldurulmalı" />
@@ -20,6 +24,6 @@ Form primitives for pimly's dynamic attribute forms — every control is built t
 ```
 
 - `Field` owns label, `required`/`optional`, `help`, `error`, and the `auto` hint. Pass `error` to flip the wrapped control into its invalid styling (set `invalid` on the control too).
-- `Input` supports `icon`, `suffix`, and `mono` (SKU/barcode/price).
+- `Input` supports `icon`, `suffix`, and `mono` (SKU/barcode/price). On a password field, `reveal` adds the eye toggle — the browser's own reveal control is suppressed so there is only one.
 - `Select` takes `options=[{value,label}]` or `<option>` children, with `placeholder`.
 - `Checkbox`/`Radio` accept `label` + `hint`; `Switch` is for flags/quick toggles.

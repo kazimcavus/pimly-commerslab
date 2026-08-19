@@ -32,7 +32,7 @@ export function Register({ onSignUp, onShowLogin, error, loading }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 18, color: '#7e7568', fontSize: 13 }}>
-          <span>PIM</span><span>·</span><span>Trendyol-ready</span><span>·</span><span>v1</span>
+          <span>Powered by Helpy</span><span>·</span><span>© {new Date().getFullYear()}</span><span>·</span><span>Tüm hakları saklıdır.</span>
         </div>
       </div>
       <div className="login__form">
@@ -52,7 +52,7 @@ export function Register({ onSignUp, onShowLogin, error, loading }) {
             <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} icon={I('mail')} />
           </Field>
           <Field label="Şifre" required hint="En az 8 karakter.">
-            <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} icon={I('lock')} />
+            <Input type="password" reveal required value={password} onChange={(e) => setPassword(e.target.value)} icon={I('lock')} />
           </Field>
           <Button variant="primary" fullWidth type="submit" loading={loading}>Hesabımı oluştur</Button>
           <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>

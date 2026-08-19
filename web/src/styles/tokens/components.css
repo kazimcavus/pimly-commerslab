@@ -106,6 +106,20 @@
 .pim-input-group__icon { position: absolute; left: var(--space-6); display: inline-flex; color: var(--text-subtle); pointer-events: none; }
 .pim-input-group__icon svg { width: 16px; height: 16px; }
 .pim-input-group__suffix { position: absolute; right: var(--space-8); font-size: var(--text-sm); color: var(--text-subtle); }
+/* şifre göster/gizle — tarayıcının kendi göz ikonu yerine bizimki */
+.pim-input-group--reveal .pim-input { padding-right: var(--space-16); }
+.pim-input-group--reveal:not(.pim-input-group--icon) .pim-input { padding-left: var(--space-8); }
+.pim-input-group__reveal {
+  position: absolute; right: var(--space-2); display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0; border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-subtle); cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.pim-input-group__reveal:hover { color: var(--text-muted); background: var(--surface-sunken); }
+.pim-input-group__reveal:focus-visible { outline: none; color: var(--text-muted); box-shadow: var(--ring); }
+.pim-input-group__reveal svg { width: 16px; height: 16px; }
+/* Edge/IE'nin yerleşik şifre göster + temizle düğmeleri: kendi kontrolümüzle çakışmasın */
+.pim-input::-ms-reveal, .pim-input::-ms-clear { display: none; }
 
 /* select chevron */
 .pim-select-wrap { position: relative; display: block; }

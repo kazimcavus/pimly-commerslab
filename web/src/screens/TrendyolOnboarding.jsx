@@ -211,7 +211,7 @@ export function TrendyolOnboarding({ onNavigate, onToast }) {
                 <Input mono value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
               </Field>
               <Field label="API Secret" required>
-                <Input mono type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} />
+                <Input mono type="password" reveal value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} />
               </Field>
             </div>
             <div className="hstack" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>
