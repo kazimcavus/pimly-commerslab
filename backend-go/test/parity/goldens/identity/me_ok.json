@@ -1,0 +1,15 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "tenant": {
+      "id": "«uuid»",
+      "name": "Acme"
+    },
+    "user": {
+      "email": "owner@acme.test",
+      "id": "«uuid»",
+      "name": "Acme Owner"
+    }
+  }
+}

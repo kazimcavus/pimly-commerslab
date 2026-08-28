@@ -20,6 +20,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	catalogapi "pimly.commerslab/backend-go/internal/modules/catalog/api"
+	catalogapp "pimly.commerslab/backend-go/internal/modules/catalog/application"
+	cataloginfra "pimly.commerslab/backend-go/internal/modules/catalog/infrastructure"
 	identityapi "pimly.commerslab/backend-go/internal/modules/identity/api"
 	identityapp "pimly.commerslab/backend-go/internal/modules/identity/application"
 	identityinfra "pimly.commerslab/backend-go/internal/modules/identity/infrastructure"
@@ -117,7 +120,11 @@ func run() error {
 		}
 	}
 
-	router := buildRouter(cfg, health, identityHandlers)
+	catalogHandlers := catalogapi.Handlers{
+		Brands: catalogapp.NewBrandHandlers(cataloginfra.NewBrandRepository(pool)),
+	}
+
+	router := buildRouter(cfg, health, identityHandlers, catalogHandlers)
 	server := &http.Server{
 		Addr:              cfg.Server.Addr,
 		Handler:           router,
@@ -148,8 +155,14 @@ func run() error {
 
 // buildRouter, middleware zincirini ve uçları kurar. Modül rotaları ilgili
 // fazlarda buraya eklenir (.NET Program.cs'teki Map*Endpoints sırası korunur).
-func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identityapi.Handlers) http.Handler {
+func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identityapi.Handlers, catalogHandlers catalogapi.Handlers) http.Handler {
 	r := chi.NewRouter()
+
+	// Eşleşmeyen rotalar .NET gibi gövdesiz 404 döner (chi'nin varsayılan
+	// "404 page not found" metni kablo formatını bozar).
+	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
 
 	// Sağlık ve metrik uçları middleware zincirinin dışındadır (loglanmaz, izlenmez).
 	r.Method(http.MethodGet, "/healthz", health.LivenessHandler())
@@ -171,6 +184,7 @@ func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identit
 		// birlikte; diğer modüller fazlar ilerledikçe eklenir.
 		authMiddleware := httpx.JWTAuth(cfg.Identity.Jwt.Secret)
 		identityapi.Mount(api, identityHandlers, authMiddleware)
+		catalogapi.Mount(api, catalogHandlers, authMiddleware)
 	})
 
 	// Gelen istekler için OTel enstrümantasyonu; sağlık/metrik/medya yolları hariç.

@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "code": "PRT-01",
+    "id": "«uuid»",
+    "name": "«string»"
+  }
+}

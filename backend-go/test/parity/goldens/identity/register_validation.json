@@ -1,0 +1,24 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "One or more validation errors occurred.",
+    "errors": {
+      "email": [
+        {
+          "code": "EmailValidator",
+          "message": "Email is not valid."
+        }
+      ],
+      "password": [
+        {
+          "code": "MinimumLengthValidator",
+          "message": "Password must be at least 8 characters."
+        }
+      ]
+    },
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

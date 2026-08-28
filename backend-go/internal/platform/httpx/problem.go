@@ -14,16 +14,6 @@ import (
 	"pimly.commerslab/backend-go/internal/sharedkernel"
 )
 
-// problemTypes, HTTP durum kodlarını ASP.NET Core'un ProblemDetails "type"
-// bağlantılarına eşler; kablo formatı paritesi için birebir aynıdır.
-var problemTypes = map[int]string{
-	http.StatusBadRequest:          "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-	http.StatusUnauthorized:        "https://tools.ietf.org/html/rfc9110#section-15.5.2",
-	http.StatusNotFound:            "https://tools.ietf.org/html/rfc9110#section-15.5.5",
-	http.StatusConflict:            "https://tools.ietf.org/html/rfc9110#section-15.5.10",
-	http.StatusInternalServerError: "https://tools.ietf.org/html/rfc9110#section-15.6.1",
-}
-
 // StatusForErrorCode, üst düzey hata kodunu HTTP durum koduna eşler
 // (.NET ProblemDetailsFactory.MapStatusCode karşılığı).
 func StatusForErrorCode(code string) int {
@@ -49,11 +39,11 @@ type fieldError struct {
 	Message string `json:"message"`
 }
 
-// problemBody, RFC 7807 gövdesinin kablo biçimidir. Alan sırası ve adları
-// .NET ProblemDetails çıktısıyla uyumludur; errors yalnızca doğrulama
-// hatalarında bulunur.
+// problemBody, RFC 7807 gövdesinin kablo biçimidir ve .NET çıktısıyla birebir
+// aynıdır (parite golden'larıyla doğrulanmıştır): "type" alanı YOKTUR ve içerik
+// türü application/json'dır — .NET'in LoggingProblemResult'ı böyle üretir.
+// errors yalnızca doğrulama hatalarında bulunur.
 type problemBody struct {
-	Type    string                  `json:"type"`
 	Title   string                  `json:"title"`
 	Status  int                     `json:"status"`
 	Detail  string                  `json:"detail"`
@@ -68,7 +58,6 @@ type problemBody struct {
 func WriteProblem(w http.ResponseWriter, r *http.Request, derr *sharedkernel.Error) {
 	status := StatusForErrorCode(derr.Code)
 	body := problemBody{
-		Type:    problemTypes[status],
 		Title:   derr.Code,
 		Status:  status,
 		Detail:  derr.Message,
@@ -82,7 +71,7 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, derr *sharedkernel.Err
 	}
 
 	logFailure(r, status, derr)
-	writeJSON(w, status, "application/problem+json", body)
+	writeJSON(w, status, "application/json; charset=utf-8", body)
 }
 
 // logFailure, başarısız isteği Promtail'in beklediği alan adlarıyla loglar.

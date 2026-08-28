@@ -1,0 +1,28 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "One or more validation errors occurred.",
+    "errors": {
+      "email": [
+        {
+          "code": "required",
+          "message": "Email is required."
+        },
+        {
+          "code": "EmailValidator",
+          "message": "Email is not valid."
+        }
+      ],
+      "password": [
+        {
+          "code": "required",
+          "message": "Password is required."
+        }
+      ]
+    },
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

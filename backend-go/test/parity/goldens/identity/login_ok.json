@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "expires_at": "«datetime»",
+    "tenant": {
+      "id": "«uuid»",
+      "name": "Acme"
+    },
+    "token": "«jwt»",
+    "user": {
+      "email": "owner@acme.test",
+      "id": "«uuid»",
+      "name": "Acme Owner"
+    }
+  }
+}
