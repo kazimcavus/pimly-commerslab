@@ -1,0 +1,10 @@
+{
+  "status": 409,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Variant value label must be unique within the type.",
+    "status": 409,
+    "title": "conflict",
+    "trace_id": "«string»"
+  }
+}

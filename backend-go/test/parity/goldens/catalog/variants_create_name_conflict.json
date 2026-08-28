@@ -1,0 +1,10 @@
+{
+  "status": 409,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Variant type name already exists.",
+    "status": 409,
+    "title": "conflict",
+    "trace_id": "«string»"
+  }
+}

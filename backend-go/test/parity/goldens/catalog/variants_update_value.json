@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "color": "#CC0000",
+    "id": "«uuid»",
+    "image_url": null,
+    "key": "KOYU_KIRMIZI",
+    "label": "Koyu Kırmızı",
+    "sort_order": 1,
+    "variant_type_id": "«uuid»"
+  }
+}

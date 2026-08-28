@@ -1,0 +1,14 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "color": "#FF0000",
+    "id": "«uuid»",
+    "image_url": null,
+    "key": "KIRMIZI",
+    "label": "Kırmızı",
+    "sort_order": 1,
+    "variant_type_id": "«uuid»"
+  },
+  "location": "/api/v1/catalog/variant-values/«uuid»"
+}

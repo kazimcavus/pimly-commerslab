@@ -1,0 +1,21 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "items": [
+      {
+        "color": "#FF0000",
+        "id": "«uuid»",
+        "image_url": null,
+        "key": "KIRMIZI",
+        "label": "Kırmızı",
+        "sort_order": 1,
+        "variant_type_id": "«uuid»"
+      }
+    ],
+    "page": 1,
+    "page_size": 20,
+    "total_count": 1,
+    "total_pages": 1
+  }
+}

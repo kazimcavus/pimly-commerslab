@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "id": "«uuid»",
+    "key": "«string»",
+    "name": "«string»",
+    "selection_style": "color",
+    "slicer": false,
+    "sort_order": 5
+  }
+}

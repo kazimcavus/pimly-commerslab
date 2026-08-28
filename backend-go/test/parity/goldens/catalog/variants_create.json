@@ -1,0 +1,13 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "id": "«uuid»",
+    "key": "«string»",
+    "name": "«string»",
+    "selection_style": "color",
+    "slicer": false,
+    "sort_order": 5
+  },
+  "location": "/api/v1/catalog/variants/«uuid»"
+}
