@@ -1,0 +1,18 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "One or more validation errors occurred.",
+    "errors": {
+      "products[0].items[0].barcode": [
+        {
+          "code": "PredicateValidator",
+          "message": "Barcode must be numeric."
+        }
+      ]
+    },
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

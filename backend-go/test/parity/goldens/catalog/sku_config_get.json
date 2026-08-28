@@ -1,0 +1,55 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "counter_next_value": "«number»",
+    "enabled": true,
+    "segments": [
+      {
+        "digits": 2,
+        "label": "Yıl",
+        "source": null,
+        "start": null,
+        "type": "year",
+        "value": null,
+        "width": null
+      },
+      {
+        "digits": null,
+        "label": "Sezon",
+        "source": null,
+        "start": null,
+        "type": "fixed",
+        "value": "Y",
+        "width": null
+      },
+      {
+        "digits": null,
+        "label": "",
+        "source": null,
+        "start": null,
+        "type": "manual",
+        "value": null,
+        "width": null
+      },
+      {
+        "digits": null,
+        "label": "",
+        "source": "code",
+        "start": null,
+        "type": "color",
+        "value": null,
+        "width": null
+      },
+      {
+        "digits": null,
+        "label": "",
+        "source": "code",
+        "start": null,
+        "type": "size",
+        "value": null,
+        "width": null
+      }
+    ]
+  }
+}

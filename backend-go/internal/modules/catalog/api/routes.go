@@ -16,10 +16,12 @@ import (
 // Handlers, Catalog rotalarının ihtiyaç duyduğu kullanım senaryosu
 // handler'larını taşır; fazlar ilerledikçe alanlar eklenir.
 type Handlers struct {
-	Brands     *application.BrandHandlers
-	Categories *application.CategoryHandlers
-	Attributes *application.AttributeHandlers
-	Variants   *application.VariantHandlers
+	Brands       *application.BrandHandlers
+	Categories   *application.CategoryHandlers
+	Attributes   *application.AttributeHandlers
+	Variants     *application.VariantHandlers
+	Products     *application.ProductHandlers
+	SkuGenerator *application.SkuGeneratorHandlers
 }
 
 // Mount, Catalog rotalarını verilen router'a kaydeder; authMiddleware tüm
@@ -31,5 +33,7 @@ func Mount(r chi.Router, h Handlers, authMiddleware func(http.Handler) http.Hand
 		mountBrandRoutes(g, h.Brands)
 		mountAttributeRoutes(g, h.Attributes)
 		mountVariantRoutes(g, h.Variants)
+		mountProductRoutes(g, h.Products)
+		mountSkuGeneratorRoutes(g, h.SkuGenerator)
 	})
 }

@@ -1,0 +1,16 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "attribute_values": [],
+    "axis_value": null,
+    "axis_value_entry_id": null,
+    "barcode": "«string»",
+    "gtin": "8690123456789",
+    "id": "«uuid»",
+    "mpn": "MP-PRT",
+    "product_id": "«uuid»",
+    "sku": null,
+    "variant_values": []
+  }
+}

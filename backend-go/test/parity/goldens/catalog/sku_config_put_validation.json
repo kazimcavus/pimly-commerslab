@@ -1,0 +1,10 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "At least one segment is required when the SKU generator is enabled.",
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

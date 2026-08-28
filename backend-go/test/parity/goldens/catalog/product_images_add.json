@@ -1,0 +1,13 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "alt_text": "kapak",
+    "id": "«uuid»",
+    "is_primary": true,
+    "sort_order": 1,
+    "url": "«string»",
+    "variant_value_id": null
+  },
+  "location": "/api/v1/catalog/product-images/«uuid»"
+}

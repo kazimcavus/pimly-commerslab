@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "alt_text": null,
+    "id": "«uuid»",
+    "is_primary": false,
+    "sort_order": 2,
+    "url": "«string»",
+    "variant_value_id": null
+  }
+}

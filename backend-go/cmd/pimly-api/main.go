@@ -121,11 +121,20 @@ func run() error {
 	}
 
 	attributeRepo := cataloginfra.NewAttributeRepository(pool)
+	brandRepo := cataloginfra.NewBrandRepository(pool)
+	categoryRepo := cataloginfra.NewCategoryRepository(pool)
+	variantRepo := cataloginfra.NewVariantRepository(pool)
+	skuGeneratorHandlers := catalogapp.NewSkuGeneratorHandlers(
+		cataloginfra.NewSkuConfigRepository(pool), cataloginfra.NewSkuCounterAllocator(pool))
 	catalogHandlers := catalogapi.Handlers{
-		Brands:     catalogapp.NewBrandHandlers(cataloginfra.NewBrandRepository(pool)),
-		Categories: catalogapp.NewCategoryHandlers(cataloginfra.NewCategoryRepository(pool), attributeRepo),
+		Brands:     catalogapp.NewBrandHandlers(brandRepo),
+		Categories: catalogapp.NewCategoryHandlers(categoryRepo, attributeRepo),
 		Attributes: catalogapp.NewAttributeHandlers(attributeRepo),
-		Variants:   catalogapp.NewVariantHandlers(cataloginfra.NewVariantRepository(pool), cfg.Media.AllowedUrlPrefix),
+		Variants:   catalogapp.NewVariantHandlers(variantRepo, cfg.Media.AllowedUrlPrefix),
+		Products: catalogapp.NewProductHandlers(
+			cataloginfra.NewProductRepository(pool), categoryRepo, brandRepo,
+			variantRepo, attributeRepo, skuGeneratorHandlers, cfg.Media.AllowedUrlPrefix),
+		SkuGenerator: skuGeneratorHandlers,
 	}
 
 	router := buildRouter(cfg, health, identityHandlers, catalogHandlers)

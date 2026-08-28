@@ -91,6 +91,7 @@ type Runner struct {
 	Mode       string // "capture" | "verify"
 	GoldensDir string
 	Token      string
+	TenantID   string
 	client     *http.Client
 }
 
@@ -128,12 +129,16 @@ func (r *Runner) Login(email, password string) error {
 		return fmt.Errorf("parity: koşucu girişi başarısız (%d): %s", snap.Status, snap.Body)
 	}
 	var body struct {
-		Token string `json:"token"`
+		Token  string `json:"token"`
+		Tenant struct {
+			ID string `json:"id"`
+		} `json:"tenant"`
 	}
 	if err := json.Unmarshal(snap.Body, &body); err != nil {
 		return err
 	}
 	r.Token = body.Token
+	r.TenantID = body.Tenant.ID
 	return nil
 }
 
