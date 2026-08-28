@@ -25,7 +25,7 @@ internal sealed class ProductPublicationBackgroundService(
         {
             logger.LogInformation(
                 "Product publication worker started for tenants: {TenantIds}.",
-                string.Join(", ", tenantFilter));
+                tenantFilter.Length > 0 ? string.Join(", ", tenantFilter) : "(all)");
         }
 
         while (!stoppingToken.IsCancellationRequested)

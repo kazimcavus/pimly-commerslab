@@ -47,12 +47,10 @@ public static class ProductPublicationsWorkerServiceCollectionExtensions
         services.AddScoped<AmbientTenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<AmbientTenantContext>());
 
-        // TenantIds zorunlu: worker hangi tenant'lara hizmet ettiğini açıkça bildirmeden başlayamaz.
+        // TenantIds opsiyonel: boş liste tüm tenant'ların run'larının claim edilmesi demektir;
+        // tenant-izole instance çalıştırmak isteyen dağıtımlar listeyi doldurur.
         services.AddOptions<ProductPublicationsWorkerOptions>()
             .Bind(configuration.GetSection(ProductPublicationsWorkerOptions.SectionName))
-            .Validate(
-                options => options.TenantIds.Count > 0,
-                "ProductPublications:TenantIds boş olamaz; worker'ın hizmet edeceği tenant'lar açıkça belirtilmelidir.")
             .Validate(
                 options => options.TenantIds.All(id => id != Guid.Empty),
                 "ProductPublications:TenantIds boş GUID içeremez.")

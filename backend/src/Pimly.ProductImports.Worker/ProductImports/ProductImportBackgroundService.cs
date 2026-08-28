@@ -10,8 +10,8 @@ namespace Pimly.ProductImports.Worker.ProductImports;
 /// Ürün import kuyruğunu işleyen arka plan servisi. İki scope'lu pompa deseni kullanır:
 /// tenant'sız scope kuyruğu claim eder (FOR UPDATE SKIP LOCKED); ikinci scope'ta ambient tenant,
 /// run'ın tenant'ına set edilip işleme yapılır — Catalog yazmaları tenant'ı buradan alır.
-/// Yalnızca konfigüre edilen tenant'ların (<see cref="ProductImportsWorkerOptions.TenantIds"/>)
-/// run'ları claim edilir; böylece worker instance'ları tenant bazında izole çalıştırılabilir.
+/// <see cref="ProductImportsWorkerOptions.TenantIds"/> doluysa yalnızca o tenant'ların run'ları
+/// claim edilir (tenant-izole instance); boşsa kuyruk tüm tenant'lar için ortak işlenir.
 /// </summary>
 internal sealed class ProductImportBackgroundService(
     IServiceScopeFactory scopeFactory,
@@ -27,7 +27,7 @@ internal sealed class ProductImportBackgroundService(
         {
             logger.LogInformation(
                 "Product import worker started for tenants: {TenantIds}.",
-                string.Join(", ", tenantFilter));
+                tenantFilter.Length > 0 ? string.Join(", ", tenantFilter) : "(all)");
         }
 
         while (!stoppingToken.IsCancellationRequested)

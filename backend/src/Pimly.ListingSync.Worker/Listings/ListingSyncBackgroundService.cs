@@ -31,7 +31,7 @@ internal sealed class ListingSyncBackgroundService(
         {
             logger.LogInformation(
                 "Listing sync worker started for tenants: {TenantIds}.",
-                string.Join(", ", tenantFilter));
+                tenantFilter.Length > 0 ? string.Join(", ", tenantFilter) : "(all)");
         }
 
         while (!stoppingToken.IsCancellationRequested)
