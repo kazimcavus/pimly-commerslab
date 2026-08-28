@@ -1,0 +1,10 @@
+{
+  "status": 409,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Attribute is already assigned to this category.",
+    "status": 409,
+    "title": "conflict",
+    "trace_id": "«string»"
+  }
+}

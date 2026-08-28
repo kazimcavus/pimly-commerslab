@@ -1,0 +1,10 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Category cannot be its own parent.",
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

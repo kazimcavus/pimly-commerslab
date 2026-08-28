@@ -1,0 +1,10 @@
+{
+  "status": 409,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Attribute value name must be unique within the attribute.",
+    "status": 409,
+    "title": "conflict",
+    "trace_id": "«string»"
+  }
+}

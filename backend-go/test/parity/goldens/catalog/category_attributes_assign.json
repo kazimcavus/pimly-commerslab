@@ -1,0 +1,14 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "attribute_id": "«uuid»",
+    "category_attribute_id": "«uuid»",
+    "key": "«string»",
+    "name": "«string»",
+    "required": true,
+    "scope": "slicer",
+    "sort_order": 3
+  },
+  "location": "/api/v1/catalog/category-attributes/«uuid»"
+}

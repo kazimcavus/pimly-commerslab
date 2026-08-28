@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "attribute_id": "«uuid»",
+    "category_attribute_id": "«uuid»",
+    "key": "«string»",
+    "name": "«string»",
+    "required": true,
+    "scope": "item",
+    "sort_order": 2
+  }
+}

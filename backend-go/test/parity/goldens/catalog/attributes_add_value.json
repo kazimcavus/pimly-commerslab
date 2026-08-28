@@ -1,0 +1,10 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "attribute_id": "«uuid»",
+    "id": "«uuid»",
+    "name": "Parity Value A"
+  },
+  "location": "/api/v1/catalog/attribute-values/«uuid»"
+}

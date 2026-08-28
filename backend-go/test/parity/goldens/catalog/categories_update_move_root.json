@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "code": "C2",
+    "id": "«uuid»",
+    "name": "«string»",
+    "parent_id": null
+  }
+}

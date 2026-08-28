@@ -16,7 +16,9 @@ import (
 // Handlers, Catalog rotalarının ihtiyaç duyduğu kullanım senaryosu
 // handler'larını taşır; fazlar ilerledikçe alanlar eklenir.
 type Handlers struct {
-	Brands *application.BrandHandlers
+	Brands     *application.BrandHandlers
+	Categories *application.CategoryHandlers
+	Attributes *application.AttributeHandlers
 }
 
 // Mount, Catalog rotalarını verilen router'a kaydeder; authMiddleware tüm
@@ -24,6 +26,8 @@ type Handlers struct {
 func Mount(r chi.Router, h Handlers, authMiddleware func(http.Handler) http.Handler) {
 	r.Route("/api/v1/catalog", func(g chi.Router) {
 		g.Use(authMiddleware)
+		mountCategoryRoutes(g, h.Categories)
 		mountBrandRoutes(g, h.Brands)
+		mountAttributeRoutes(g, h.Attributes)
 	})
 }

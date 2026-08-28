@@ -120,8 +120,11 @@ func run() error {
 		}
 	}
 
+	attributeRepo := cataloginfra.NewAttributeRepository(pool)
 	catalogHandlers := catalogapi.Handlers{
-		Brands: catalogapp.NewBrandHandlers(cataloginfra.NewBrandRepository(pool)),
+		Brands:     catalogapp.NewBrandHandlers(cataloginfra.NewBrandRepository(pool)),
+		Categories: catalogapp.NewCategoryHandlers(cataloginfra.NewCategoryRepository(pool), attributeRepo),
+		Attributes: catalogapp.NewAttributeHandlers(attributeRepo),
 	}
 
 	router := buildRouter(cfg, health, identityHandlers, catalogHandlers)

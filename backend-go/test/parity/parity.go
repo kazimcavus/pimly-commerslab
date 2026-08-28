@@ -45,6 +45,10 @@ const (
 	// MaskAnyNumber, herhangi bir JSON sayısı bekler (iki backend'in
 	// veritabanlarında farklı birikmiş kayıt sayıları için: total_count gibi).
 	MaskAnyNumber = "number"
+
+	// MaskNullable, null veya dizgi kabul eder (veritabanı içeriğine göre
+	// değişebilen opsiyonel alanlar için: code, parent_id gibi).
+	MaskNullable = "nullable"
 )
 
 var (
@@ -358,6 +362,11 @@ func maskValue(node any, mask, path string) (any, error) {
 			return nil, fmt.Errorf("%s: sayı bekleniyordu, %v geldi", path, node)
 		}
 		return "«number»", nil
+	case MaskNullable:
+		if node != nil && !isString {
+			return nil, fmt.Errorf("%s: null veya dizgi bekleniyordu, %v geldi", path, node)
+		}
+		return "«nullable»", nil
 	default:
 		return nil, fmt.Errorf("%s: bilinmeyen mask türü %q", path, mask)
 	}

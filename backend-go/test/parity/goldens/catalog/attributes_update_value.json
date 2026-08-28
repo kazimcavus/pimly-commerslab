@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "attribute_id": "«uuid»",
+    "id": "«uuid»",
+    "name": "Parity Value B"
+  }
+}

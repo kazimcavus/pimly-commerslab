@@ -1,0 +1,21 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "items": [
+      {
+        "attribute_id": "«uuid»",
+        "category_attribute_id": "«uuid»",
+        "key": "«string»",
+        "name": "«string»",
+        "required": true,
+        "scope": "slicer",
+        "sort_order": 3
+      }
+    ],
+    "page": 1,
+    "page_size": 20,
+    "total_count": 1,
+    "total_pages": 1
+  }
+}

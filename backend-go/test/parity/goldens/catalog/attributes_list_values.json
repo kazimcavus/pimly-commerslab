@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "items": [
+      {
+        "attribute_id": "«uuid»",
+        "id": "«uuid»",
+        "name": "Parity Value A"
+      }
+    ],
+    "page": 1,
+    "page_size": 20,
+    "total_count": 1,
+    "total_pages": 1
+  }
+}

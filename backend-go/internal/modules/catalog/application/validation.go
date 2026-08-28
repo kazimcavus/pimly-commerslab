@@ -7,13 +7,19 @@ package application
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"pimly.commerslab/backend-go/internal/sharedkernel"
 )
 
 // Alan uzunluk sınırları (.NET CatalogValidationRules sabitleri).
 const (
-	BrandNameMaxLength = 500
-	BrandCodeMaxLength = 100
+	CategoryNameMaxLength       = 500
+	CategoryCodeMaxLength       = 100
+	BrandNameMaxLength          = 500
+	BrandCodeMaxLength          = 100
+	AttributeNameMaxLength      = 500
+	AttributeValueNameMaxLength = 200
 )
 
 // fieldErrors, doğrulama hatalarını biriktiren yardımcı türdür; kurallar
@@ -39,6 +45,16 @@ func (f *fieldErrors) maxLength(field, display, value string, limit int) {
 		f.errs = append(f.errs, sharedkernel.ValidationError{
 			Field: field, Code: sharedkernel.ValidationCodeMaxLength,
 			Message: fmt.Sprintf("%s must not exceed %d characters.", display, limit)})
+	}
+}
+
+// requiredID, boş GUID'i "invalid_id" koduyla işaretler
+// (.NET RequiredId kuralı; mesaj: "{Field} must be a valid identifier.").
+func (f *fieldErrors) requiredID(field, display string, value uuid.UUID) {
+	if value == uuid.Nil {
+		f.errs = append(f.errs, sharedkernel.ValidationError{
+			Field: field, Code: sharedkernel.ValidationCodeInvalidID,
+			Message: fmt.Sprintf("%s must be a valid identifier.", display)})
 	}
 }
 

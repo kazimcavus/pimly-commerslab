@@ -1,0 +1,10 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "id": "«uuid»",
+    "key": "«string»",
+    "name": "«string»"
+  },
+  "location": "/api/v1/catalog/attributes/«uuid»"
+}

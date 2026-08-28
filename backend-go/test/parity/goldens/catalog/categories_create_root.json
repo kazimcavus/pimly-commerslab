@@ -1,0 +1,11 @@
+{
+  "status": 201,
+  "content_type": "application/json",
+  "body": {
+    "code": "PRT-CAT",
+    "id": "«uuid»",
+    "name": "«string»",
+    "parent_id": null
+  },
+  "location": "/api/v1/catalog/categories/«uuid»"
+}
