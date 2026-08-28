@@ -27,6 +27,9 @@ import (
 	identityapp "pimly.commerslab/backend-go/internal/modules/identity/application"
 	identityinfra "pimly.commerslab/backend-go/internal/modules/identity/infrastructure"
 	inventoryapi "pimly.commerslab/backend-go/internal/modules/inventory/api"
+	mediaapi "pimly.commerslab/backend-go/internal/modules/media/api"
+	mediaapp "pimly.commerslab/backend-go/internal/modules/media/application"
+	mediainfra "pimly.commerslab/backend-go/internal/modules/media/infrastructure"
 	inventoryapp "pimly.commerslab/backend-go/internal/modules/inventory/application"
 	inventoryinfra "pimly.commerslab/backend-go/internal/modules/inventory/infrastructure"
 	pricingapi "pimly.commerslab/backend-go/internal/modules/pricing/api"
@@ -155,7 +158,10 @@ func run() error {
 	stockHandlers := inventoryapp.NewStockHandlers(
 		inventoryinfra.NewStockLevelRepository(pool), inventoryinfra.NewCatalogItemGateway(pool))
 
-	router := buildRouter(cfg, health, identityHandlers, catalogHandlers, pricingHandlers, stockHandlers)
+	uploadHandlers := mediaapp.NewUploadHandlers(
+		mediainfra.NewLocalBlobStorage(cfg.Media.StoragePath), cfg.Media.PublicBaseUrl)
+
+	router := buildRouter(cfg, health, identityHandlers, catalogHandlers, pricingHandlers, stockHandlers, uploadHandlers)
 	server := &http.Server{
 		Addr:              cfg.Server.Addr,
 		Handler:           router,
@@ -186,7 +192,7 @@ func run() error {
 
 // buildRouter, middleware zincirini ve uçları kurar. Modül rotaları ilgili
 // fazlarda buraya eklenir (.NET Program.cs'teki Map*Endpoints sırası korunur).
-func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identityapi.Handlers, catalogHandlers catalogapi.Handlers, pricingHandlers *pricingapp.PricingHandlers, stockHandlers *inventoryapp.StockHandlers) http.Handler {
+func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identityapi.Handlers, catalogHandlers catalogapi.Handlers, pricingHandlers *pricingapp.PricingHandlers, stockHandlers *inventoryapp.StockHandlers, uploadHandlers *mediaapp.UploadHandlers) http.Handler {
 	r := chi.NewRouter()
 
 	// Eşleşmeyen rotalar .NET gibi gövdesiz 404 döner (chi'nin varsayılan
@@ -218,6 +224,7 @@ func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identit
 		catalogapi.Mount(api, catalogHandlers, authMiddleware)
 		pricingapi.Mount(api, pricingHandlers, authMiddleware)
 		inventoryapi.Mount(api, stockHandlers, authMiddleware)
+		mediaapi.Mount(api, uploadHandlers, authMiddleware)
 	})
 
 	// Gelen istekler için OTel enstrümantasyonu; sağlık/metrik/medya yolları hariç.

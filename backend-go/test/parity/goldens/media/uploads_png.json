@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "content_type": "image/png",
+    "size_bytes": 67,
+    "url": "«string»"
+  }
+}

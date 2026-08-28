@@ -1,0 +1,10 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Unsupported or invalid image format.",
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

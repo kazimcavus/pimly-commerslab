@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -68,6 +69,12 @@ type Case struct {
 
 	// Body, JSON gövdesidir; nil ise gövdesiz gönderilir.
 	Body any
+
+	// FileBytes doluysa istek multipart/form-data olarak gönderilir:
+	// FileField (varsayılan "file") alanında FileName adıyla bu içerik yollanır.
+	FileBytes []byte
+	FileField string
+	FileName  string
 
 	// Auth true ise koşucunun oturum token'ı Authorization başlığına eklenir.
 	Auth bool
@@ -194,13 +201,35 @@ func (r *Runner) compareOrCapture(c Case, snap Snapshot) error {
 // send, senaryonun HTTP isteğini gönderir ve ham anlık görüntüyü döner.
 func (r *Runner) send(c Case) (Snapshot, error) {
 	var bodyReader *bytes.Reader
-	if c.Body != nil {
+	contentType := ""
+	switch {
+	case c.FileBytes != nil:
+		field := c.FileField
+		if field == "" {
+			field = "file"
+		}
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+		part, err := writer.CreateFormFile(field, c.FileName)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		if _, err := part.Write(c.FileBytes); err != nil {
+			return Snapshot{}, err
+		}
+		if err := writer.Close(); err != nil {
+			return Snapshot{}, err
+		}
+		bodyReader = bytes.NewReader(buf.Bytes())
+		contentType = writer.FormDataContentType()
+	case c.Body != nil:
 		raw, err := json.Marshal(c.Body)
 		if err != nil {
 			return Snapshot{}, err
 		}
 		bodyReader = bytes.NewReader(raw)
-	} else {
+		contentType = "application/json"
+	default:
 		bodyReader = bytes.NewReader(nil)
 	}
 
@@ -208,8 +237,8 @@ func (r *Runner) send(c Case) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
-	if c.Body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	if c.Auth {
 		req.Header.Set("Authorization", "Bearer "+r.Token)
