@@ -1,0 +1,71 @@
+# Pimly Go backend örnek yapılandırması.
+# Bölüm adları .NET appsettings.json ile birebir aynıdır; ortam değişkenleri
+# çift alt çizgiyle aynı alanları ezer (ör. Identity__Jwt__Secret).
+# Dosya yolu PIMLY_CONFIG ile değiştirilebilir; varsayılan ./config.yaml.
+
+Server:
+  Addr: ":7000"
+
+ConnectionStrings:
+  Database: "Host=localhost;Port=5432;Database=pimly;Username=pimly;Password=pimly"
+  Identity: "Host=localhost;Port=5432;Database=pimly;Username=pimly;Password=pimly"
+
+Observability:
+  Enabled: true
+  ServiceName: "pimly-api"
+  ServiceVersion: "1.0.0"
+  MetricsPath: "/metrics"
+  ExcludePathsFromRequestLogging:
+    - "/healthz"
+    - "/ready"
+    - "/metrics"
+    - "/media"
+  Tracing:
+    Enabled: true
+    OtlpEndpoint: "http://localhost:4317"
+    SamplingRatio: 1.0
+
+Catalog:
+  AutoMigrate: true
+
+Channels:
+  AutoMigrate: true
+  UseStubTaxonomyClient: false
+  WorkerPollIntervalSeconds: 5
+  TrendyolApiBaseUrl: "https://apigw.trendyol.com"
+  ImportPageSize: 200
+  ImportMaxImagesPerProduct: 8
+  TaxonomySyncSchedule:
+    Enabled: true
+    CheckIntervalSeconds: 60
+    TimesUtc: ["00:00", "08:00", "16:00"]
+
+Identity:
+  AutoMigrate: true
+  Jwt:
+    Secret: "change-me-in-production"
+    ExpirationHours: 24
+
+Media:
+  StoragePath: "./storage/media"
+  PublicBaseUrl: ""
+  AllowedUrlPrefix: "/media/"
+
+# Kuyruk worker'ları: TenantIds boş = tüm tenant'lar.
+ProductImports:
+  PollIntervalSeconds: 5
+  TenantIds: []
+
+ProductPublications:
+  PollIntervalSeconds: 5
+  TenantIds: []
+
+ListingSync:
+  PollIntervalSeconds: 30
+  TenantIds: []
+
+# Outbox dispatcher (Go dönemi eklentisi: backoff + dead-letter).
+Outbox:
+  PollIntervalSeconds: 5
+  BatchSize: 50
+  MaxAttempts: 10

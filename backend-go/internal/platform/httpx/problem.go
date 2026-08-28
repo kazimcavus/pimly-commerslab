@@ -1,0 +1,117 @@
+// Package httpx, HTTP katmanının ortak yapı taşlarını içerir: RFC 7807
+// ProblemDetails üretimi, JSON okuma/yazma yardımcıları, sayfalama sorgu
+// çözümü ve middleware zinciri (trace kimliği, panik kurtarma, istek loglama).
+// .NET tarafındaki Pimly.AspNetCore projesinin karşılığıdır; ürettiği yanıt
+// gövdeleri parite testleriyle .NET çıktısına karşı doğrulanır.
+package httpx
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"strings"
+
+	"pimly.commerslab/backend-go/internal/sharedkernel"
+)
+
+// problemTypes, HTTP durum kodlarını ASP.NET Core'un ProblemDetails "type"
+// bağlantılarına eşler; kablo formatı paritesi için birebir aynıdır.
+var problemTypes = map[int]string{
+	http.StatusBadRequest:          "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+	http.StatusUnauthorized:        "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+	http.StatusNotFound:            "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+	http.StatusConflict:            "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+	http.StatusInternalServerError: "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+}
+
+// StatusForErrorCode, üst düzey hata kodunu HTTP durum koduna eşler
+// (.NET ProblemDetailsFactory.MapStatusCode karşılığı).
+func StatusForErrorCode(code string) int {
+	switch code {
+	case sharedkernel.ErrorCodeValidation:
+		return http.StatusBadRequest
+	case sharedkernel.ErrorCodeNotFound:
+		return http.StatusNotFound
+	case sharedkernel.ErrorCodeConflict:
+		return http.StatusConflict
+	case sharedkernel.ErrorCodeUnauthorized:
+		return http.StatusUnauthorized
+	case sharedkernel.ErrorCodeInternal:
+		return http.StatusInternalServerError
+	default:
+		return http.StatusBadRequest
+	}
+}
+
+// fieldError, errors sözlüğündeki tek bir alan hatasının kablo biçimidir.
+type fieldError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// problemBody, RFC 7807 gövdesinin kablo biçimidir. Alan sırası ve adları
+// .NET ProblemDetails çıktısıyla uyumludur; errors yalnızca doğrulama
+// hatalarında bulunur.
+type problemBody struct {
+	Type    string                  `json:"type"`
+	Title   string                  `json:"title"`
+	Status  int                     `json:"status"`
+	Detail  string                  `json:"detail"`
+	TraceID string                  `json:"trace_id"`
+	Errors  map[string][]fieldError `json:"errors,omitempty"`
+}
+
+// WriteProblem, domain hatasını ProblemDetails yanıtı olarak yazar ve
+// istemci hatalarını (4xx) Warning, sunucu hatalarını (5xx) Error seviyesinde
+// loglar (.NET ApiFailureLogger karşılığı). traceID, TraceIDMiddleware'in
+// isteğe eklediği kimliktir.
+func WriteProblem(w http.ResponseWriter, r *http.Request, derr *sharedkernel.Error) {
+	status := StatusForErrorCode(derr.Code)
+	body := problemBody{
+		Type:    problemTypes[status],
+		Title:   derr.Code,
+		Status:  status,
+		Detail:  derr.Message,
+		TraceID: TraceIDFromContext(r.Context()),
+	}
+	if len(derr.ValidationErrors) > 0 {
+		body.Errors = make(map[string][]fieldError)
+		for _, ve := range derr.ValidationErrors {
+			body.Errors[ve.Field] = append(body.Errors[ve.Field], fieldError{Code: ve.Code, Message: ve.Message})
+		}
+	}
+
+	logFailure(r, status, derr)
+	writeJSON(w, status, "application/problem+json", body)
+}
+
+// logFailure, başarısız isteği Promtail'in beklediği alan adlarıyla loglar.
+func logFailure(r *http.Request, status int, derr *sharedkernel.Error) {
+	level := slog.LevelWarn
+	if status >= http.StatusInternalServerError {
+		level = slog.LevelError
+	}
+	attrs := []any{
+		slog.String("RequestMethod", r.Method),
+		slog.String("RequestPath", r.URL.Path),
+		slog.Int("StatusCode", status),
+		slog.String("ErrorCode", derr.Code),
+		slog.String("UserId", UserIDFromContext(r.Context())),
+	}
+	if len(derr.ValidationErrors) > 0 {
+		fields := make([]string, 0, len(derr.ValidationErrors))
+		for _, ve := range derr.ValidationErrors {
+			fields = append(fields, ve.Field)
+		}
+		attrs = append(attrs, slog.String("ValidationFields", strings.Join(fields, ",")))
+	}
+	slog.Default().Log(r.Context(), level,
+		"Request {RequestMethod} {RequestPath} failed with {StatusCode}.", attrs...)
+}
+
+// writeJSON, gövdeyi verilen içerik türüyle serileştirip yazar.
+func writeJSON(w http.ResponseWriter, status int, contentType string, body any) {
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
+}

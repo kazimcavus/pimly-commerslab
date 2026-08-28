@@ -1,0 +1,8 @@
+# Derleme çıktıları
+bin/
+
+# Yerel yapılandırma (gizli anahtarlar burada olabilir; config.example.yaml şablondur)
+config.yaml
+
+# Yerel medya deposu
+storage/
