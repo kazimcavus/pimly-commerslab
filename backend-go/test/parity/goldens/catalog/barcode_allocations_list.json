@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "items": [
+      {
+        "allocated_at": "«datetime»",
+        "barcode": "«string»",
+        "id": "«uuid»"
+      },
+      {
+        "allocated_at": "«datetime»",
+        "barcode": "«string»",
+        "id": "«uuid»"
+      }
+    ],
+    "page": 1,
+    "page_size": 2,
+    "total_count": "«number»",
+    "total_pages": "«number»"
+  }
+}

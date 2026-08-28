@@ -22,6 +22,8 @@ type Handlers struct {
 	Variants     *application.VariantHandlers
 	Products     *application.ProductHandlers
 	SkuGenerator *application.SkuGeneratorHandlers
+	Barcodes     *application.BarcodeHandlers
+	Settings     *application.CatalogSettingsHandlers
 }
 
 // Mount, Catalog rotalarını verilen router'a kaydeder; authMiddleware tüm
@@ -35,5 +37,7 @@ func Mount(r chi.Router, h Handlers, authMiddleware func(http.Handler) http.Hand
 		mountVariantRoutes(g, h.Variants)
 		mountProductRoutes(g, h.Products)
 		mountSkuGeneratorRoutes(g, h.SkuGenerator)
+		mountBarcodeRoutes(g, h.Barcodes)
+		mountSettingsRoutes(g, h.Settings)
 	})
 }

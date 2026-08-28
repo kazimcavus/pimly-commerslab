@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "client_allocation_required": true,
+    "next_preview": "«string»",
+    "next_value": "«number»"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Slicer name position must be 'suffix' or 'prefix'.",
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

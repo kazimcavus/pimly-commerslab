@@ -135,6 +135,8 @@ func run() error {
 			cataloginfra.NewProductRepository(pool), categoryRepo, brandRepo,
 			variantRepo, attributeRepo, skuGeneratorHandlers, cfg.Media.AllowedUrlPrefix),
 		SkuGenerator: skuGeneratorHandlers,
+		Barcodes:     catalogapp.NewBarcodeHandlers(cataloginfra.NewBarcodeRepository(pool)),
+		Settings:     catalogapp.NewCatalogSettingsHandlers(cataloginfra.NewCatalogSettingsRepository(pool)),
 	}
 
 	router := buildRouter(cfg, health, identityHandlers, catalogHandlers)
