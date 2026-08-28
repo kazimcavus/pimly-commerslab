@@ -33,14 +33,24 @@ const (
 	// EventProductContentChanged: ürünün pazaryerine giden içeriği değişti;
 	// Channels ilgili listing'leri content-dirty işaretler.
 	EventProductContentChanged = "catalog.product_content_changed.v1"
+
+	// EventStockLevelChanged: kalemin stok miktarı değişti; Channels ilgili
+	// listing'leri offer-dirty işaretler (Inventory yayar).
+	EventStockLevelChanged = "inventory.stock_level_changed.v1"
+
+	// EventChannelPriceChanged: kalemin bir pazaryerindeki fiyatı değişti;
+	// Channels o pazaryerinin listing'ini offer-dirty işaretler (Pricing yayar).
+	EventChannelPriceChanged = "pricing.channel_price_changed.v1"
 )
 
 // LegacyNames, .NET CLR FullName → kararlı ad eşlemesidir; dispatcher eski
 // satırları bu tabloyla çözer.
 var LegacyNames = map[string]string{
-	"Catalog.Domain.Products.Events.ProductItemCreated":    EventProductItemCreated,
-	"Catalog.Domain.Products.Events.ProductItemDeleted":    EventProductItemDeleted,
-	"Catalog.Domain.Products.Events.ProductContentChanged": EventProductContentChanged,
+	"Catalog.Domain.Products.Events.ProductItemCreated":      EventProductItemCreated,
+	"Catalog.Domain.Products.Events.ProductItemDeleted":      EventProductItemDeleted,
+	"Catalog.Domain.Products.Events.ProductContentChanged":   EventProductContentChanged,
+	"Inventory.Domain.StockLevels.Events.StockLevelChanged":  EventStockLevelChanged,
+	"Pricing.Domain.ChannelPrices.Events.ChannelPriceChanged": EventChannelPriceChanged,
 }
 
 // Event, outbox'a yazılabilir bir bütünleşme olayıdır. Name kararlı olay adını
@@ -80,6 +90,27 @@ type ProductContentChanged struct {
 
 // EventName, kararlı olay adını döner.
 func (ProductContentChanged) EventName() string { return EventProductContentChanged }
+
+// StockLevelChanged, stok miktarı değişikliği olayıdır. Yalnızca kimlik taşır,
+// miktar taşımaz: gönderim anında güncel stok okunur; sıra bozulsa da doğru kalır.
+type StockLevelChanged struct {
+	ProductItemID uuid.UUID `json:"product_item_id"`
+	OccurredOnUtc time.Time `json:"occurred_on_utc"`
+}
+
+// EventName, kararlı olay adını döner.
+func (StockLevelChanged) EventName() string { return EventStockLevelChanged }
+
+// ChannelPriceChanged, kanal fiyatı değişikliği olayıdır; kirlilik yalnızca
+// ilgili pazaryerinin listing'ine yazılacağı için pazaryeri kodu da taşınır.
+type ChannelPriceChanged struct {
+	ProductItemID   uuid.UUID `json:"product_item_id"`
+	MarketplaceCode string    `json:"marketplace_code"`
+	OccurredOnUtc   time.Time `json:"occurred_on_utc"`
+}
+
+// EventName, kararlı olay adını döner.
+func (ChannelPriceChanged) EventName() string { return EventChannelPriceChanged }
 
 // Write, olayları verilen şemanın outbox_messages tablosuna, çağıranın
 // transaction'ı içinde yazar (.NET OutboxWriter.WriteOutboxMessages karşılığı).

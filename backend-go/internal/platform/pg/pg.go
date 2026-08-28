@@ -65,6 +65,10 @@ func ConnURL(dotnetConnString string) (string, error) {
 	if values["ssl mode"] == "" && values["sslmode"] == "" {
 		query.Set("sslmode", "disable")
 	}
+	// Oturum saat dilimi UTC: timestamptz kolonları her zaman UTC olarak okunur,
+	// böylece JSON yanıtlarındaki zaman damgaları .NET gibi UTC ofsetiyle döner
+	// (sunucunun yerel saat dilimi kabloya sızmaz).
+	query.Set("options", "-c timezone=UTC")
 	u.RawQuery = query.Encode()
 	return u.String(), nil
 }

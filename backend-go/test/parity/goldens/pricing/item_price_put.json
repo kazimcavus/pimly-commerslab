@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "amount": 123.4,
+    "currency": "TRY",
+    "definition_name": "«string»",
+    "id": "«uuid»",
+    "price_definition_id": "«uuid»",
+    "product_item_id": "«uuid»",
+    "updated_at": "«datetime»"
+  }
+}

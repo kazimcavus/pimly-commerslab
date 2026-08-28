@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "product_item_id": "«uuid»",
+    "quantity": 25,
+    "updated_at": "«datetime»"
+  }
+}

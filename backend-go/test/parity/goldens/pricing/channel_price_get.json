@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "amount": 459.9,
+    "compare_at_amount": 649,
+    "currency": "TRY",
+    "marketplace": "TY",
+    "product_item_id": "«uuid»",
+    "updated_at": "«datetime»"
+  }
+}

@@ -12,13 +12,22 @@ func TestMarketplaceFromCode_KnownCode_Succeeds(t *testing.T) {
 	}
 }
 
-func TestMarketplaceFromCode_UnknownCode_Fails(t *testing.T) {
+func TestMarketplaceFromCode_UnknownCode_ReturnsNotFound(t *testing.T) {
+	// .NET Marketplace.FromCode bilinmeyen kod için NotFound döner (parite
+	// golden'ı pricing/channel_price_unknown_marketplace ile doğrulanmıştır).
 	result := MarketplaceFromCode("XX")
 	if !result.IsFailure() {
-		t.Fatal("bilinmeyen kod doğrulama hatası üretmeliydi")
+		t.Fatal("bilinmeyen kod hata üretmeliydi")
 	}
-	if result.Err().Code != ErrorCodeValidation {
-		t.Fatalf("hata kodu %q bekleniyordu, %q geldi", ErrorCodeValidation, result.Err().Code)
+	if result.Err().Code != ErrorCodeNotFound {
+		t.Fatalf("hata kodu %q bekleniyordu, %q geldi", ErrorCodeNotFound, result.Err().Code)
+	}
+}
+
+func TestMarketplaceFromCode_LowercaseCode_IsNormalized(t *testing.T) {
+	result := MarketplaceFromCode(" ty ")
+	if result.IsFailure() {
+		t.Fatalf("küçük harfli kod normalize edilmeliydi: %v", result.Err())
 	}
 }
 

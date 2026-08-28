@@ -1,0 +1,18 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "One or more validation errors occurred.",
+    "errors": {
+      "name": [
+        {
+          "code": "required",
+          "message": "Name is required."
+        }
+      ]
+    },
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}

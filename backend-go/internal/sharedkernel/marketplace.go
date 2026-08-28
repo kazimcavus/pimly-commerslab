@@ -1,6 +1,6 @@
 package sharedkernel
 
-import "fmt"
+import "strings"
 
 // Marketplace, desteklenen pazaryerlerini temsil eden kapalı kümeli değer
 // nesnesidir. .NET SharedKernel.Marketplace karşılığı; bugün tek üye vardır:
@@ -31,14 +31,17 @@ func (m Marketplace) Name() string { return m.name }
 // IsZero, değerin doldurulmamış (geçersiz) olup olmadığını döner.
 func (m Marketplace) IsZero() bool { return m.code == "" }
 
-// MarketplaceFromCode, kullanıcı girdisinden pazaryeri çözer; bilinmeyen kod
-// doğrulama hatası üretir (.NET Marketplace.FromCode karşılığı).
+// MarketplaceFromCode, kullanıcı girdisinden pazaryeri çözer
+// (.NET Marketplace.FromCode karşılığı): kod normalize edilir (kırp + büyük
+// harf), boş kod doğrulama hatası, bilinmeyen kod not_found üretir.
 func MarketplaceFromCode(code string) ResultOf[Marketplace] {
-	if m, ok := marketplaceRegistry[code]; ok {
+	if strings.TrimSpace(code) == "" {
+		return FailOf[Marketplace](NewValidationError("Marketplace code is required."))
+	}
+	if m, ok := marketplaceRegistry[strings.ToUpper(strings.TrimSpace(code))]; ok {
 		return OkOf(m)
 	}
-	return FailOf[Marketplace](NewValidationError(
-		fmt.Sprintf("Unknown marketplace code '%s'.", code)))
+	return FailOf[Marketplace](NewNotFoundError("Marketplace not found."))
 }
 
 // MarketplaceFromPersistence, veritabanından okunan kodu çözer; bilinmeyen kod

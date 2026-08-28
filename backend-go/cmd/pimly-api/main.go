@@ -26,6 +26,12 @@ import (
 	identityapi "pimly.commerslab/backend-go/internal/modules/identity/api"
 	identityapp "pimly.commerslab/backend-go/internal/modules/identity/application"
 	identityinfra "pimly.commerslab/backend-go/internal/modules/identity/infrastructure"
+	inventoryapi "pimly.commerslab/backend-go/internal/modules/inventory/api"
+	inventoryapp "pimly.commerslab/backend-go/internal/modules/inventory/application"
+	inventoryinfra "pimly.commerslab/backend-go/internal/modules/inventory/infrastructure"
+	pricingapi "pimly.commerslab/backend-go/internal/modules/pricing/api"
+	pricingapp "pimly.commerslab/backend-go/internal/modules/pricing/application"
+	pricinginfra "pimly.commerslab/backend-go/internal/modules/pricing/infrastructure"
 	"pimly.commerslab/backend-go/internal/platform/clog"
 	"pimly.commerslab/backend-go/internal/platform/config"
 	"pimly.commerslab/backend-go/internal/platform/httpx"
@@ -42,6 +48,11 @@ func main() {
 
 // run, host'un tüm yaşam döngüsünü yönetir; hata dönerse süreç 1 koduyla çıkar.
 func run() error {
+	// Süreç UTC'de çalışır: pgx timestamptz değerlerini yerel saat dilimine
+	// çevirir; yerel = UTC olduğunda JSON'daki zaman damgaları .NET gibi UTC
+	// ofsetiyle yazılır (sunucunun makine saat dilimi kabloya sızmaz).
+	time.Local = time.UTC
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -139,7 +150,12 @@ func run() error {
 		Settings:     catalogapp.NewCatalogSettingsHandlers(cataloginfra.NewCatalogSettingsRepository(pool)),
 	}
 
-	router := buildRouter(cfg, health, identityHandlers, catalogHandlers)
+	pricingHandlers := pricingapp.NewPricingHandlers(
+		pricinginfra.NewPricingRepository(pool), pricinginfra.NewCatalogItemGateway(pool))
+	stockHandlers := inventoryapp.NewStockHandlers(
+		inventoryinfra.NewStockLevelRepository(pool), inventoryinfra.NewCatalogItemGateway(pool))
+
+	router := buildRouter(cfg, health, identityHandlers, catalogHandlers, pricingHandlers, stockHandlers)
 	server := &http.Server{
 		Addr:              cfg.Server.Addr,
 		Handler:           router,
@@ -170,7 +186,7 @@ func run() error {
 
 // buildRouter, middleware zincirini ve uçları kurar. Modül rotaları ilgili
 // fazlarda buraya eklenir (.NET Program.cs'teki Map*Endpoints sırası korunur).
-func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identityapi.Handlers, catalogHandlers catalogapi.Handlers) http.Handler {
+func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identityapi.Handlers, catalogHandlers catalogapi.Handlers, pricingHandlers *pricingapp.PricingHandlers, stockHandlers *inventoryapp.StockHandlers) http.Handler {
 	r := chi.NewRouter()
 
 	// Eşleşmeyen rotalar .NET gibi gövdesiz 404 döner (chi'nin varsayılan
@@ -200,6 +216,8 @@ func buildRouter(cfg config.Config, health *obs.Health, identityHandlers identit
 		authMiddleware := httpx.JWTAuth(cfg.Identity.Jwt.Secret)
 		identityapi.Mount(api, identityHandlers, authMiddleware)
 		catalogapi.Mount(api, catalogHandlers, authMiddleware)
+		pricingapi.Mount(api, pricingHandlers, authMiddleware)
+		inventoryapi.Mount(api, stockHandlers, authMiddleware)
 	})
 
 	// Gelen istekler için OTel enstrümantasyonu; sağlık/metrik/medya yolları hariç.
