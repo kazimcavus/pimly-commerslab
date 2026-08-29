@@ -248,8 +248,7 @@ func (c *Client) sendJSON(ctx context.Context, method string, class EndpointClas
 			return sharedkernel.NewFailureError("Trendyol request failed: " + err.Error())
 		}
 
-		func() { defer resp.Body.Close() }()
-		responseBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+		responseBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 		resp.Body.Close()
 		if readErr != nil {
 			return sharedkernel.NewFailureError("Trendyol response could not be read: " + readErr.Error())
