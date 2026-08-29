@@ -104,6 +104,12 @@ type ChannelsConfig struct {
 	ImportPageSize            int                        `yaml:"ImportPageSize"`
 	ImportMaxImagesPerProduct int                        `yaml:"ImportMaxImagesPerProduct"`
 	TaxonomySyncSchedule      TaxonomySyncScheduleConfig `yaml:"TaxonomySyncSchedule"`
+
+	// MarketplaceCode, bu worker örneğinin sorumlu olduğu kanaldır. Worker'lar
+	// kanal başına çalıştırılır: aynı binary, farklı kod. Böylece Trendyol'un
+	// hız sınırına takılması Shopify işlerini bekletmez ve yeni bir kanal
+	// eklemek çalışan kanalların koduna dokunmadan bir servis eklemek olur.
+	MarketplaceCode string `yaml:"MarketplaceCode"`
 }
 
 // TaxonomySyncScheduleConfig, zamanlanmış taksonomi senkronunun ayarlarını taşır.
@@ -147,6 +153,17 @@ type WorkerQueueConfig struct {
 type ListingSyncConfig struct {
 	PollIntervalSeconds int      `yaml:"PollIntervalSeconds"`
 	TenantIds           []string `yaml:"TenantIds"`
+
+	// Concurrency, aynı anda işlenecek kapsam (tenant, pazaryeri) sayısıdır.
+	// Kapsamlar arası paralellik güvenlidir: pazaryeri hız sınırları satıcı
+	// başına ayrıdır. Her eşzamanlı kapsam bir veritabanı bağlantısı tutar
+	// (kapsam kilidi için), o yüzden havuz boyutunun altında kalmalıdır.
+	Concurrency int `yaml:"Concurrency"`
+
+	// ScopeLockEnabled, kapsam kilidini açar. Birden fazla worker örneği
+	// çalıştırılacaksa ZORUNLUDUR: kilit olmadan iki örnek aynı kirli satırları
+	// okur ve pazaryerine çift gönderim yapar.
+	ScopeLockEnabled bool `yaml:"ScopeLockEnabled"`
 }
 
 // OutboxConfig, outbox dispatcher'ının Go dönemi ayarlarını taşır.
@@ -187,6 +204,7 @@ func Defaults(serviceName string) Config {
 		},
 		Catalog: CatalogConfig{AutoMigrate: true},
 		Channels: ChannelsConfig{
+			MarketplaceCode:           "TY",
 			AutoMigrate:               true,
 			UseStubTaxonomyClient:     false,
 			WorkerPollIntervalSeconds: 5,
@@ -210,7 +228,7 @@ func Defaults(serviceName string) Config {
 		},
 		ProductImports:      WorkerQueueConfig{PollIntervalSeconds: 5},
 		ProductPublications: WorkerQueueConfig{PollIntervalSeconds: 5},
-		ListingSync:         ListingSyncConfig{PollIntervalSeconds: 30},
+		ListingSync:         ListingSyncConfig{PollIntervalSeconds: 30, Concurrency: 4, ScopeLockEnabled: true},
 		Outbox:              OutboxConfig{PollIntervalSeconds: 5, BatchSize: 50, MaxAttempts: 10},
 	}
 }

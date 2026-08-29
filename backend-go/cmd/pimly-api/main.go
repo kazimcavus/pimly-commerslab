@@ -48,7 +48,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("API başlatılamadı.", slog.Any("Error", err))
+		slog.Error("API başlatılamadı.", slog.String("Error", err.Error()))
 		os.Exit(1)
 	}
 }

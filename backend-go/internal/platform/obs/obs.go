@@ -117,8 +117,14 @@ func SetupTracing(ctx context.Context, cfg config.ObservabilityConfig) (func(con
 		return nil, fmt.Errorf("obs: OTLP ihracatçısı kurulamadı: %w", err)
 	}
 
-	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(
-		semconv.SchemaURL,
+	// Kendi özniteliklerimiz ŞEMASIZ kaynak olarak verilir. resource.Default()
+	// SDK'nın kendi semconv sürümünü taşır (bugün 1.43.0); buraya elle bir
+	// SchemaURL yazılırsa iki taraf farklı sürüm gösterdiğinde Merge
+	// "conflicting Schema URL" hatası verir ve süreç hiç açılmaz. Şemasız
+	// kaynak karşı tarafın şemasını devralır, yani SDK yükseltmesi bunu bir
+	// daha kıramaz. service.name/service.version anahtarları zaten semconv
+	// sürümleri arasında değişmiyor.
+	res, err := resource.Merge(resource.Default(), resource.NewSchemaless(
 		semconv.ServiceName(cfg.ServiceName),
 		semconv.ServiceVersion(cfg.ServiceVersion),
 	))

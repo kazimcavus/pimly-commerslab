@@ -84,7 +84,7 @@ func run() error {
 	catalogSources := &catalogListingSourceAdapter{gateway: catalogGateway}
 
 	resolver := listingsync.NewClientResolver()
-	code := "TY"
+	code := cfg.Channels.MarketplaceCode
 	if cfg.Channels.UseStubTaxonomyClient {
 		resolver.RegisterListing(code, trendyol.StubListingClient{})
 		slog.Warn("Product publications worker stub istemciyle çalışıyor; Trendyol'a HİÇBİR yazma isteği gönderilmeyecek.")

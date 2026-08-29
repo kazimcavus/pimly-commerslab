@@ -74,7 +74,7 @@ func run() error {
 	catalogSources := &catalogListingSourceAdapter{gateway: channelsinfra.NewCatalogGateway(pool)}
 
 	resolver := listingsync.NewClientResolver()
-	code := "TY"
+	code := cfg.Channels.MarketplaceCode
 	if cfg.Channels.UseStubTaxonomyClient {
 		resolver.RegisterOffer(code, trendyol.StubOfferClient{})
 		resolver.RegisterListing(code, trendyol.StubListingClient{})
@@ -89,7 +89,15 @@ func run() error {
 	assembler := listingsync.NewAssembler(store)
 	offerSyncer := listingsync.NewOfferSyncer(store, pricingGateway, inventoryGateway, resolver)
 	contentSyncer := listingsync.NewContentSyncer(store, catalogSources, pricingGateway, inventoryGateway, assembler, resolver)
-	runner := listingsync.NewRunner(store, offerSyncer, contentSyncer)
+	runner := listingsync.NewRunner(store, offerSyncer, contentSyncer).
+		WithConcurrency(cfg.ListingSync.Concurrency).
+		WithMarketplaces(code)
+	if cfg.ListingSync.ScopeLockEnabled {
+		runner = runner.WithScopeLocker(channelsinfra.NewScopeLocker(pool))
+	} else {
+		slog.Warn("Kapsam kilidi KAPALI; bu worker'dan yalnızca TEK örnek çalıştırılmalı, " +
+			"aksi halde pazaryerine çift gönderim olur.")
+	}
 
 	tenantFilter, err := parseTenantFilter(cfg.ListingSync.TenantIds)
 	if err != nil {

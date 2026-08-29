@@ -32,6 +32,9 @@ x-go-common: &go-common
     Identity__Jwt__Secret: "${JWT_SECRET}"
     Channels__TrendyolApiBaseUrl: "${TRENDYOL_API_BASE_URL:-https://apigw.trendyol.com}"
     Channels__UseStubTaxonomyClient: "${CHANNELS_USE_STUB_CLIENTS:-true}"
+    Channels__MarketplaceCode: "${MARKETPLACE_CODE:-TY}"
+    ListingSync__Concurrency: "${LISTING_SYNC_CONCURRENCY:-4}"
+    ListingSync__ScopeLockEnabled: "${LISTING_SYNC_SCOPE_LOCK:-true}"
     Observability__Tracing__Enabled: "${TRACING_ENABLED:-false}"
     Observability__Tracing__OtlpEndpoint: "http://tempo:4317"
 
