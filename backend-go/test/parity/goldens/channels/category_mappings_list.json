@@ -1,0 +1,48 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "items": [
+      {
+        "catalog_category": {
+          "code": "«nullable»",
+          "id": "«uuid»",
+          "name": "«string»"
+        },
+        "catalog_category_id": "«uuid»",
+        "external_category": {
+          "external_id": "«string»",
+          "is_leaf": true,
+          "name": "«string»",
+          "path": "«string»",
+          "synced_at": "«datetime»"
+        },
+        "external_id": "«string»",
+        "id": "«uuid»",
+        "marketplace_code": "TY"
+      },
+      {
+        "catalog_category": {
+          "code": "«nullable»",
+          "id": "«uuid»",
+          "name": "«string»"
+        },
+        "catalog_category_id": "«uuid»",
+        "external_category": {
+          "external_id": "«string»",
+          "is_leaf": true,
+          "name": "«string»",
+          "path": "«string»",
+          "synced_at": "«datetime»"
+        },
+        "external_id": "«string»",
+        "id": "«uuid»",
+        "marketplace_code": "TY"
+      }
+    ],
+    "page": 1,
+    "page_size": 2,
+    "total_count": "«number»",
+    "total_pages": "«number»"
+  }
+}

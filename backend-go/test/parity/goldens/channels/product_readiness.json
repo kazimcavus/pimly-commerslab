@@ -1,0 +1,18 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "channels": [
+      {
+        "category_mapped": true,
+        "items_missing_barcode": "«number»",
+        "marketplace_code": "TY",
+        "marketplace_name": "Trendyol",
+        "missing_attributes": [],
+        "ready": true,
+        "total_items": "«number»"
+      }
+    ],
+    "product_id": "«uuid»"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": [
+    {
+      "external_id": "1790",
+      "id": "«uuid»",
+      "is_leaf": true,
+      "name": "Oyun Halısı",
+      "parent_external_id": "1785",
+      "path": "Anne \u0026 Bebek \u0026 Çocuk \u003e Oyuncak \u003e Bebek \u0026 Okul Öncesi Oyuncaklar \u003e Oyun Halısı",
+      "synced_at": "«datetime»"
+    },
+    {
+      "external_id": "426",
+      "id": "«uuid»",
+      "is_leaf": true,
+      "name": "Halı Saha Ayakkabısı",
+      "parent_external_id": "420",
+      "path": "Ayakkabı \u003e Spor Ayakkabı \u003e Halı Saha Ayakkabısı",
+      "synced_at": "«datetime»"
+    },
+    {
+      "external_id": "3492",
+      "id": "«uuid»",
+      "is_leaf": true,
+      "name": "Halı Yıkama Makinesi",
+      "parent_external_id": "873",
+      "path": "Elektronik \u003e Elektrikli Ev Aletleri \u003e Süpürge \u0026 Ütü \u003e Süpürge \u003e Halı Yıkama Makinesi",
+      "synced_at": "«datetime»"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "items": [],
+    "page": 1,
+    "page_size": 20,
+    "total_count": "«number»",
+    "total_pages": "«number»"
+  }
+}

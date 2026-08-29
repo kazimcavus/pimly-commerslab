@@ -1,0 +1,19 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": [
+    {
+      "completed_at": "«nullable»",
+      "created_at": "«datetime»",
+      "failed_products": "«number»",
+      "id": "«uuid»",
+      "imported_products": "«number»",
+      "marketplace_code": "TY",
+      "processed_products": "«number»",
+      "skipped_products": "«number»",
+      "started_at": "«nullable»",
+      "status": "«string»",
+      "total_products": "«number»"
+    }
+  ]
+}

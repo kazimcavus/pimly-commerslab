@@ -1,0 +1,10 @@
+{
+  "status": 404,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Marketplace not found.",
+    "status": 404,
+    "title": "not_found",
+    "trace_id": "«string»"
+  }
+}

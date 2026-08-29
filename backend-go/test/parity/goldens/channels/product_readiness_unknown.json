@@ -1,0 +1,10 @@
+{
+  "status": 404,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Ürün bulunamadı veya satılabilir kalemi yok.",
+    "status": 404,
+    "title": "not_found",
+    "trace_id": "«string»"
+  }
+}

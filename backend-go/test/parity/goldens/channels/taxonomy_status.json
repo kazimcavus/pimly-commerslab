@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "active_sync_run_id": "«nullable»",
+    "cached_category_count": "«number»",
+    "is_sync_active": false,
+    "last_completed_at": "«nullable»",
+    "last_completed_run": {
+      "completed_at": "«datetime»",
+      "created_at": "«datetime»",
+      "error_message": "«nullable»",
+      "id": "«uuid»",
+      "marketplace_code": "TY",
+      "processed_count": "«number»",
+      "started_at": "«datetime»",
+      "status": "completed",
+      "total_estimate": "«number»"
+    },
+    "marketplace_code": "TY"
+  }
+}

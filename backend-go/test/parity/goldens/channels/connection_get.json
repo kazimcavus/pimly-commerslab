@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "api_key_hint": "«nullable»",
+    "has_api_key": true,
+    "has_api_secret": true,
+    "id": "«uuid»",
+    "is_enabled": true,
+    "marketplace_code": "TY",
+    "seller_id": "«nullable»"
+  }
+}

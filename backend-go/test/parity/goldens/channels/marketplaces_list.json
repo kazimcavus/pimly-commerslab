@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": [
+    {
+      "code": "TY",
+      "is_active": true,
+      "is_configured": true,
+      "name": "Trendyol"
+    }
+  ]
+}

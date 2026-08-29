@@ -1,0 +1,10 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "detail": "Source type must be catalog_attribute or catalog_variant.",
+    "status": 400,
+    "title": "validation",
+    "trace_id": "«string»"
+  }
+}
