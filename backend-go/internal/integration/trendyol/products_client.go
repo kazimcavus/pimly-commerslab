@@ -177,7 +177,7 @@ func (StubProductsClient) FetchProductsPage(_ context.Context, _ *application.Ma
 	return sharedkernel.OkOf(productimports.MarketplaceProductPage{
 		TotalElements: 1, TotalPages: 1, Page: 0, Size: size,
 		Items: []productimports.MarketplaceProductNode{{
-			Barcode: "STUB-0001", Title: "Stub Tişört", ProductMainID: "STUB-MODEL-1",
+			Barcode: "8690000000001", Title: "Stub Tişört", ProductMainID: "STUB-MODEL-1",
 			Quantity: 5, ListPrice: "199.90", SalePrice: "149.90",
 			ExternalCategoryID: "3", Approved: true,
 			Attributes: []productimports.MarketplaceProductAttributeNode{{
