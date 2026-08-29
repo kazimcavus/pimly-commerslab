@@ -113,6 +113,121 @@ func (r *Repository) HasTaxonomyRunSince(ctx context.Context, marketplaceCode st
 	return exists, err
 }
 
+// ClaimNextPendingImportRun, sıradaki pending ürün import işini claim edip
+// running durumuna alır; kuyruk boşsa nil döner (.NET
+// ProductImportRunRepository.TryClaimNextPendingAsync portu). tenantFilter
+// doluysa yalnızca o tenant'ların işleri claim edilir (tenant-izole instance);
+// boşsa kuyruk tüm tenant'lar için ortak işlenir.
+func (r *Repository) ClaimNextPendingImportRun(ctx context.Context, tenantFilter []uuid.UUID) (*domain.ProductImportRun, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("channels: import claim işlemi başlatılamadı: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// .NET'teki iki sorgu varyantı: filtresiz ortak kuyruk / tenant listesiyle
+	// sınırlı kuyruk. İkisi de FOR UPDATE SKIP LOCKED ile yarışa dayanıklıdır.
+	var row pgx.Row
+	if len(tenantFilter) == 0 {
+		row = tx.QueryRow(ctx,
+			`SELECT id FROM channels.product_import_runs
+			 WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`)
+	} else {
+		row = tx.QueryRow(ctx,
+			`SELECT id FROM channels.product_import_runs
+			 WHERE status = 'pending' AND tenant_id = ANY($1)
+			 ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, tenantFilter)
+	}
+	var id uuid.UUID
+	err = row.Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("channels: import işi claim edilemedi: %w", err)
+	}
+
+	run, err := scanImportRun(tx.QueryRow(ctx,
+		`SELECT `+importRunColumns+` FROM channels.product_import_runs WHERE id = $1`, id))
+	if err != nil || run == nil {
+		return nil, err
+	}
+	if markResult := run.MarkRunning(time.Now().UTC()); markResult.IsFailure() {
+		return nil, nil
+	}
+	if err := updateImportRunTx(ctx, tx, run); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return run, nil
+}
+
+// updateImportRunTx, iş satırını verilen transaction'da günceller (hatalar hariç).
+func updateImportRunTx(ctx context.Context, tx pgx.Tx, run *domain.ProductImportRun) error {
+	_, err := tx.Exec(ctx,
+		`UPDATE channels.product_import_runs SET status = $2, started_at = $3, completed_at = $4,
+		   total_products = $5, processed_products = $6, imported_products = $7,
+		   skipped_products = $8, failed_products = $9, error_message = $10
+		 WHERE id = $1`,
+		run.ID, string(run.Status), run.StartedAt, run.CompletedAt, run.TotalProducts,
+		run.ProcessedProducts, run.ImportedProducts, run.SkippedProducts,
+		run.FailedProducts, run.ErrorMessage)
+	if err != nil {
+		return fmt.Errorf("channels: import işi güncellenemedi: %w", err)
+	}
+	return nil
+}
+
+// UpdateImportRun, iş kaydını ve birikmiş hata satırlarını kalıcılaştırır.
+// Hatalar append-only'dir: bellekte üretilen kimlikler ON CONFLICT DO NOTHING
+// ile eklenir, mevcut satırlar değişmez (.NET ChannelsDbContext'in Added
+// düzeltmesinin karşılığı).
+func (r *Repository) UpdateImportRun(ctx context.Context, run *domain.ProductImportRun) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("channels: import güncelleme işlemi başlatılamadı: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if err := updateImportRunTx(ctx, tx, run); err != nil {
+		return err
+	}
+	for _, importError := range run.Errors {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO channels.product_import_run_errors
+			   (id, product_import_run_id, product_main_id, barcode, message)
+			 VALUES ($1, $2, $3, $4, $5)
+			 ON CONFLICT (id) DO NOTHING`,
+			importError.ID, run.ID, importError.ProductMainID,
+			importError.Barcode, importError.Message); err != nil {
+			return fmt.Errorf("channels: import hatası yazılamadı: %w", err)
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+// GetCategoryMappingByExternalID, harici kategori kimliğiyle tenant'ın kategori
+// eşlemesini döner; yoksa nil (.NET GetByExternalIdAsync portu — import
+// dedup'ının ilk adımı).
+func (r *Repository) GetCategoryMappingByExternalID(ctx context.Context, tenantID uuid.UUID, marketplaceCode, externalID string) (*domain.CategoryChannelMapping, error) {
+	var m domain.CategoryChannelMapping
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, catalog_category_id, marketplace_code, external_id
+		 FROM channels.category_channel_mappings
+		 WHERE tenant_id = $1 AND marketplace_code = $2 AND external_id = $3
+		 LIMIT 1`, tenantID, marketplaceCode, externalID).
+		Scan(&m.ID, &m.CatalogCategoryID, &m.MarketplaceCode, &m.ExternalID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("channels: kategori eşlemesi okunamadı: %w", err)
+	}
+	return &m, nil
+}
+
 // UpsertExternalCategoriesBatch, düzleştirilmiş kategori partisini
 // (marketplace_code, external_id) doğal anahtarıyla ekler/günceller.
 func (r *Repository) UpsertExternalCategoriesBatch(ctx context.Context, marketplaceCode string, nodes []trendyol.CategoryNode, syncedAt time.Time) error {

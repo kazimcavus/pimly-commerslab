@@ -180,6 +180,62 @@ func (r *ListingRepository) Upsert(ctx context.Context, l *domain.ProductListing
 	return nil
 }
 
+// ListByProductItems, kalemlerin bu pazaryerindeki mevcut listelemelerini döner
+// (.NET ListByProductItemsAsync portu; import backfill denetiminde kullanılır).
+func (r *ListingRepository) ListByProductItems(ctx context.Context, tenantID uuid.UUID, marketplaceCode string, productItemIDs []uuid.UUID) ([]*domain.ProductListing, error) {
+	if len(productItemIDs) == 0 {
+		return []*domain.ProductListing{}, nil
+	}
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+listingColumns+` FROM channels.product_listings
+		 WHERE tenant_id = $1 AND marketplace_code = $2 AND product_item_id = ANY($3)`,
+		tenantID, marketplaceCode, productItemIDs)
+	if err != nil {
+		return nil, fmt.Errorf("channels: listelemeler okunamadı: %w", err)
+	}
+	defer rows.Close()
+
+	items := []*domain.ProductListing{}
+	for rows.Next() {
+		listing, err := scanListing(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, listing)
+	}
+	return items, rows.Err()
+}
+
+// AddRange, yeni listeleme kayıtlarını tek transaction'da ekler; doğal anahtar
+// çakışmasında satır atlanır (eşzamanlı tohumlama idempotent kalır).
+func (r *ListingRepository) AddRange(ctx context.Context, listings []*domain.ProductListing) error {
+	if len(listings) == 0 {
+		return nil
+	}
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("channels: listeleme ekleme işlemi başlatılamadı: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	for _, l := range listings {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO channels.product_listings
+			   (id, tenant_id, marketplace_code, product_item_id, status, external_listing_id,
+			    submission_reference, content_hash, offer_hash, content_dirty_at, offer_dirty_at,
+			    last_submitted_at, last_confirmed_at, rejection_reason, sync_attempts, next_attempt_at)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+			 ON CONFLICT (tenant_id, marketplace_code, product_item_id) DO NOTHING`,
+			l.ID, l.TenantID, l.MarketplaceCode, l.ProductItemID, string(l.Status),
+			l.ExternalListingID, l.SubmissionReference, l.ContentHash, l.OfferHash,
+			l.ContentDirtyAt, l.OfferDirtyAt, l.LastSubmittedAt, l.LastConfirmedAt,
+			l.RejectionReason, l.SyncAttempts, l.NextAttemptAt); err != nil {
+			return fmt.Errorf("channels: listeleme eklenemedi: %w", err)
+		}
+	}
+	return tx.Commit(ctx)
+}
+
 // Update, mevcut listelemeyi kimliğiyle kalıcılaştırır.
 func (r *ListingRepository) Update(ctx context.Context, l *domain.ProductListing) error {
 	_, err := r.pool.Exec(ctx,
