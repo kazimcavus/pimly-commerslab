@@ -131,6 +131,10 @@ type PricingRepository interface {
 	ListChannelPrices(ctx context.Context, tenantID, productItemID uuid.UUID) ([]*ChannelPrice, error)
 	GetChannelPrice(ctx context.Context, tenantID, productItemID uuid.UUID, marketplaceCode string) (*ChannelPrice, error)
 	UpsertChannelPrice(ctx context.Context, tenantID uuid.UUID, price *ChannelPrice, raiseEvent bool) error
+
+	// ListChannelPricesByMarketplace, tenant'ın bir pazaryerindeki tüm kanal
+	// fiyatlarını döner (listing-sync worker'ı için).
+	ListChannelPricesByMarketplace(ctx context.Context, tenantID uuid.UUID, marketplaceCode string) ([]*ChannelPrice, error)
 }
 
 // ItemPriceRow, kalem fiyatının tanım adıyla birlikte okunmuş hâlidir.
@@ -146,7 +150,9 @@ type CatalogItemGateway interface {
 
 // --- doğrulama yardımcıları ---
 
-type fieldErrors struct{ errs []sharedkernel.ValidationError }
+type fieldErrors struct {
+	errs []sharedkernel.ValidationError
+}
 
 func (f *fieldErrors) add(field, code, message string) {
 	f.errs = append(f.errs, sharedkernel.ValidationError{Field: field, Code: code, Message: message})

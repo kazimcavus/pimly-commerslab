@@ -612,11 +612,11 @@ func (p *Processor) buildBatchInput(
 	}
 
 	return sharedkernel.OkOf(CatalogProductBatchInput{
-		GroupID:    uuid.New(),
-		CategoryID: setup.catalogCategoryID,
-		ModelCode:  group.ModelCode,
-		Name:       group.Name,
-		Status:     "active",
+		GroupID:         uuid.New(),
+		CategoryID:      setup.catalogCategoryID,
+		ModelCode:       group.ModelCode,
+		Name:            group.Name,
+		Status:          "active",
 		AttributeValues: attributeSelections,
 		Variants:        axisInputs,
 		Items:           itemInputs,

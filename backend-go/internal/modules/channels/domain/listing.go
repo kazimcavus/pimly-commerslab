@@ -60,6 +60,14 @@ type ProductListing struct {
 	NextAttemptAt       *time.Time
 }
 
+// ListingSyncScope, gönderim bekleyen bir (tenant, pazaryeri) çiftidir
+// (.NET ListingSyncScope karşılığı; listing-sync worker'ının keşif adımı bu
+// kapsamları tenant bağlamı olmadan tarar).
+type ListingSyncScope struct {
+	TenantID        uuid.UUID
+	MarketplaceCode string
+}
+
 // truncate, değeri kırpar ve sınıra indirger; boş değer nil olur.
 func truncate(value string, maxLength int) *string {
 	trimmed := strings.TrimSpace(value)

@@ -81,10 +81,7 @@ func (r *ListingRepository) MarkDirtyByItem(ctx context.Context, tx pgx.Tx, prod
 
 // ListDirtyScopes, gönderim bekleyen (tenant, pazaryeri) çiftlerini keşfeder;
 // backoff penceresi dolmamış satırlar kapsam dışıdır (.NET ListDirtyScopesAsync).
-func (r *ListingRepository) ListDirtyScopes(ctx context.Context, tenantFilter []uuid.UUID, now time.Time) ([]struct {
-	TenantID        uuid.UUID
-	MarketplaceCode string
-}, error) {
+func (r *ListingRepository) ListDirtyScopes(ctx context.Context, tenantFilter []uuid.UUID, now time.Time) ([]domain.ListingSyncScope, error) {
 	sql := `SELECT DISTINCT tenant_id, marketplace_code FROM channels.product_listings
 	        WHERE (content_dirty_at IS NOT NULL OR offer_dirty_at IS NOT NULL)
 	          AND (next_attempt_at IS NULL OR next_attempt_at <= $1)`
@@ -99,15 +96,9 @@ func (r *ListingRepository) ListDirtyScopes(ctx context.Context, tenantFilter []
 	}
 	defer rows.Close()
 
-	scopes := []struct {
-		TenantID        uuid.UUID
-		MarketplaceCode string
-	}{}
+	scopes := []domain.ListingSyncScope{}
 	for rows.Next() {
-		var scope struct {
-			TenantID        uuid.UUID
-			MarketplaceCode string
-		}
+		var scope domain.ListingSyncScope
 		if err := rows.Scan(&scope.TenantID, &scope.MarketplaceCode); err != nil {
 			return nil, err
 		}
@@ -124,7 +115,7 @@ func (r *ListingRepository) ListDirty(ctx context.Context, tenantID uuid.UUID, m
 		 WHERE tenant_id = $1 AND marketplace_code = $2
 		   AND (content_dirty_at IS NOT NULL OR offer_dirty_at IS NOT NULL)
 		   AND (next_attempt_at IS NULL OR next_attempt_at <= $3)
-		 ORDER BY offer_dirty_at NULLS LAST, content_dirty_at NULLS LAST
+		 ORDER BY COALESCE(offer_dirty_at, content_dirty_at) ASC
 		 LIMIT $4`, tenantID, marketplaceCode, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("channels: kirli listelemeler okunamadı: %w", err)

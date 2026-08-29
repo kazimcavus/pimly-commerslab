@@ -295,6 +295,32 @@ func (r *PricingRepository) ListChannelPrices(ctx context.Context, tenantID, pro
 	return items, rows.Err()
 }
 
+// ListChannelPricesByMarketplace, tenant'ın bir pazaryerindeki tüm kanal
+// fiyatlarını kalem kimliğine göre sıralı döner (.NET
+// ListChannelPricesForMarketplaceHandler → ChannelPriceRepository.
+// ListByMarketplaceAsync portu; listing-sync worker'ının teklif senkronunda
+// kaynak olarak kullanılır).
+func (r *PricingRepository) ListChannelPricesByMarketplace(ctx context.Context, tenantID uuid.UUID, marketplaceCode string) ([]*application.ChannelPrice, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+channelPriceColumns+` FROM pricing.channel_prices
+		 WHERE tenant_id = $1 AND marketplace_code = $2 ORDER BY product_item_id`,
+		tenantID, marketplaceCode)
+	if err != nil {
+		return nil, fmt.Errorf("pricing: pazaryeri kanal fiyatları listelenemedi: %w", err)
+	}
+	defer rows.Close()
+
+	items := []*application.ChannelPrice{}
+	for rows.Next() {
+		price, err := scanChannelPrice(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, price)
+	}
+	return items, rows.Err()
+}
+
 // GetChannelPrice, kalemin bir pazaryerindeki fiyatını döner; yoksa nil.
 func (r *PricingRepository) GetChannelPrice(ctx context.Context, tenantID, productItemID uuid.UUID, marketplaceCode string) (*application.ChannelPrice, error) {
 	return scanChannelPrice(r.pool.QueryRow(ctx,

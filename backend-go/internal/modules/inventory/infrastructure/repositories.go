@@ -43,6 +43,33 @@ func (r *StockLevelRepository) GetByItem(ctx context.Context, tenantID, productI
 	return &s, nil
 }
 
+// GetQuantitiesByItems, verilen kalemlerin stok miktarlarını toplu döner
+// (.NET IInventoryStockGateway.GetQuantitiesAsync → IStockLevelRepository.
+// ListByItemsAsync portu). Kaydı olmayan kalemler sonuçta yer almaz; çağıran
+// taraf eksik kalemi 0 sayar (kalem tükenmiş kabul edilir).
+func (r *StockLevelRepository) GetQuantitiesByItems(ctx context.Context, tenantID uuid.UUID, productItemIDs []uuid.UUID) (map[uuid.UUID]int, error) {
+	result := map[uuid.UUID]int{}
+	if len(productItemIDs) == 0 {
+		return result, nil
+	}
+	rows, err := r.pool.Query(ctx,
+		`SELECT product_item_id, quantity FROM inventory.stock_levels
+		 WHERE tenant_id = $1 AND product_item_id = ANY($2)`, tenantID, productItemIDs)
+	if err != nil {
+		return nil, fmt.Errorf("inventory: stok miktarları okunamadı: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var itemID uuid.UUID
+		var quantity int
+		if err := rows.Scan(&itemID, &quantity); err != nil {
+			return nil, err
+		}
+		result[itemID] = quantity
+	}
+	return result, rows.Err()
+}
+
 // Add, yeni stok kaydını (ve gerekiyorsa değişim olayını) tek transaction'da ekler.
 func (r *StockLevelRepository) Add(ctx context.Context, tenantID uuid.UUID, s *application.StockLevel, raiseEvent bool) error {
 	return r.write(ctx, tenantID, s, raiseEvent,

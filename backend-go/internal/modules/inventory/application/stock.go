@@ -43,6 +43,10 @@ type StockLevelRepository interface {
 
 	// Update, stok kaydını kalıcılaştırır; raiseEvent true ise değişim olayı yazılır.
 	Update(ctx context.Context, tenantID uuid.UUID, stock *StockLevel, raiseEvent bool) error
+
+	// GetQuantitiesByItems, verilen kalemlerin stok miktarlarını toplu döner
+	// (listing-sync worker'ı için); kaydı olmayan kalemler haritada yer almaz.
+	GetQuantitiesByItems(ctx context.Context, tenantID uuid.UUID, productItemIDs []uuid.UUID) (map[uuid.UUID]int, error)
 }
 
 // CatalogItemGateway, kalemin Catalog'da var olduğunu doğrulayan ACL portudur

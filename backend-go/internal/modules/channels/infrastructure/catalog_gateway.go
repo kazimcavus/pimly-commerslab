@@ -140,11 +140,11 @@ type gatewayVariantValue struct {
 // slicer değeri çözümü ve ürün+kalem seçimlerinin birleşimi dahil.
 func (g *CatalogGateway) GetListingSourcesByProduct(ctx context.Context, tenantID, productID uuid.UUID) ([]application.CatalogListingSource, error) {
 	var (
-		categoryID                     uuid.UUID
-		title, modelCode               string
-		description, slicerValue       *string
-		brandID                        *uuid.UUID
-		productAttrJSON                []byte
+		categoryID               uuid.UUID
+		title, modelCode         string
+		description, slicerValue *string
+		brandID                  *uuid.UUID
+		productAttrJSON          []byte
 	)
 	err := g.pool.QueryRow(ctx,
 		`SELECT category_id, title, description, product_sku, slicer_value, brand_id, attribute_values
@@ -283,4 +283,212 @@ func (g *CatalogGateway) GetListingSourcesByProduct(ctx context.Context, tenantI
 		})
 	}
 	return sources, itemRows.Err()
+}
+
+// GetListingSourcesByItems, verilen kalem kimliklerinin pazaryerine giden
+// içerik kaynaklarını döner (.NET ICatalogListingSourceGateway.GetAsync
+// portu; ürünler arası kalemler tek toplu sorguyla çözülür — listing-sync
+// worker'ının içerik senkronunda kullanılır). Bulunmayan kalemler sonuçta yer
+// almaz.
+func (g *CatalogGateway) GetListingSourcesByItems(ctx context.Context, tenantID uuid.UUID, itemIDs []uuid.UUID) ([]application.CatalogListingSource, error) {
+	if len(itemIDs) == 0 {
+		return []application.CatalogListingSource{}, nil
+	}
+
+	rows, err := g.pool.Query(ctx,
+		`SELECT pi.id, pi.barcode, pi.sku, pi.attribute_values, pi.variant_values,
+		        p.id, p.category_id, p.title, p.description, p.product_sku,
+		        p.slicer_value, p.brand_id, p.attribute_values
+		 FROM catalog.product_items pi
+		 JOIN catalog.products p ON p.id = pi.product_id
+		 WHERE pi.tenant_id = $1 AND pi.id = ANY($2)`, tenantID, itemIDs)
+	if err != nil {
+		return nil, fmt.Errorf("channels: kalem içerik kaynakları okunamadı: %w", err)
+	}
+
+	type rawItem struct {
+		itemID                    uuid.UUID
+		barcode                   string
+		sku                       *string
+		itemAttrJSON, itemVarJSON []byte
+		productID, categoryID     uuid.UUID
+		title, modelCode          string
+		description, slicerValue  *string
+		brandID                   *uuid.UUID
+		productAttrJSON           []byte
+	}
+	raw := []rawItem{}
+	brandIDSet := map[uuid.UUID]struct{}{}
+	productIDSet := map[uuid.UUID]struct{}{}
+	for rows.Next() {
+		var r rawItem
+		if err := rows.Scan(&r.itemID, &r.barcode, &r.sku, &r.itemAttrJSON, &r.itemVarJSON,
+			&r.productID, &r.categoryID, &r.title, &r.description, &r.modelCode,
+			&r.slicerValue, &r.brandID, &r.productAttrJSON); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		raw = append(raw, r)
+		if r.brandID != nil {
+			brandIDSet[*r.brandID] = struct{}{}
+		}
+		productIDSet[r.productID] = struct{}{}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(raw) == 0 {
+		return []application.CatalogListingSource{}, nil
+	}
+
+	// Marka adları/kodları tek sorguda önbelleklenir.
+	brandNames := map[uuid.UUID][2]*string{} // [name, code]
+	if len(brandIDSet) > 0 {
+		brandIDs := make([]uuid.UUID, 0, len(brandIDSet))
+		for id := range brandIDSet {
+			brandIDs = append(brandIDs, id)
+		}
+		brandRows, err := g.pool.Query(ctx,
+			`SELECT id, name, code FROM catalog.brands WHERE tenant_id = $1 AND id = ANY($2)`,
+			tenantID, brandIDs)
+		if err != nil {
+			return nil, fmt.Errorf("channels: markalar okunamadı: %w", err)
+		}
+		for brandRows.Next() {
+			var id uuid.UUID
+			var name, code *string
+			if err := brandRows.Scan(&id, &name, &code); err != nil {
+				brandRows.Close()
+				return nil, err
+			}
+			brandNames[id] = [2]*string{name, code}
+		}
+		brandRows.Close()
+		if err := brandRows.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Görseller: ürün başına birincil önce, sonra sıraya göre; tek sorguda çekilir.
+	productIDs := make([]uuid.UUID, 0, len(productIDSet))
+	for id := range productIDSet {
+		productIDs = append(productIDs, id)
+	}
+	imagesByProduct := map[uuid.UUID][]string{}
+	imageRows, err := g.pool.Query(ctx,
+		`SELECT product_id, url FROM catalog.product_images
+		 WHERE product_id = ANY($1) ORDER BY product_id, is_primary DESC, sort_order`, productIDs)
+	if err != nil {
+		return nil, fmt.Errorf("channels: ürün görselleri okunamadı: %w", err)
+	}
+	for imageRows.Next() {
+		var productID uuid.UUID
+		var url string
+		if err := imageRows.Scan(&productID, &url); err != nil {
+			imageRows.Close()
+			return nil, err
+		}
+		imagesByProduct[productID] = append(imagesByProduct[productID], url)
+	}
+	imageRows.Close()
+	if err := imageRows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Tenant başına en fazla bir slicer ekseni olabilir; tüm değerleri tek
+	// sorguda çekip etikete göre (duyarsız) çözülür.
+	type slicerValue struct {
+		variantID, valueID uuid.UUID
+		label              string
+	}
+	slicerByLabel := map[string]slicerValue{}
+	slicerRows, err := g.pool.Query(ctx,
+		`SELECT v.id, vv.id, vv.label FROM catalog.variants v
+		 JOIN catalog.variant_values vv ON vv.variant_id = v.id
+		 WHERE v.tenant_id = $1 AND v.slicer = TRUE`, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("channels: slicer değerleri okunamadı: %w", err)
+	}
+	for slicerRows.Next() {
+		var sv slicerValue
+		if err := slicerRows.Scan(&sv.variantID, &sv.valueID, &sv.label); err != nil {
+			slicerRows.Close()
+			return nil, err
+		}
+		slicerByLabel[strings.ToLower(sv.label)] = sv
+	}
+	slicerRows.Close()
+	if err := slicerRows.Err(); err != nil {
+		return nil, err
+	}
+
+	sources := make([]application.CatalogListingSource, 0, len(raw))
+	for _, r := range raw {
+		var productAttrs []gatewayAttrValue
+		if err := json.Unmarshal(r.productAttrJSON, &productAttrs); err != nil {
+			return nil, fmt.Errorf("channels: ürün özellik belgesi çözümlenemedi: %w", err)
+		}
+		var itemAttrs []gatewayAttrValue
+		var itemVars []gatewayVariantValue
+		if err := json.Unmarshal(r.itemAttrJSON, &itemAttrs); err != nil {
+			return nil, fmt.Errorf("channels: kalem özellik belgesi çözümlenemedi: %w", err)
+		}
+		if err := json.Unmarshal(r.itemVarJSON, &itemVars); err != nil {
+			return nil, fmt.Errorf("channels: kalem eksen belgesi çözümlenemedi: %w", err)
+		}
+
+		var brandName, brandCode *string
+		if r.brandID != nil {
+			if pair, ok := brandNames[*r.brandID]; ok {
+				brandName, brandCode = pair[0], pair[1]
+			}
+		}
+
+		// Ürün + kalem seçimleri birleştirilir; kalem seçimi ürününkini ezer,
+		// slicer seçimi varyant seçimi olarak eklenir (.NET BuildSelections).
+		type selectionKey struct {
+			isVariant bool
+			sourceID  uuid.UUID
+		}
+		byKey := map[selectionKey]application.CatalogListingSelection{}
+		var order []selectionKey
+		put := func(selection application.CatalogListingSelection) {
+			key := selectionKey{selection.IsVariant, selection.SourceID}
+			if _, exists := byKey[key]; !exists {
+				order = append(order, key)
+			}
+			byKey[key] = selection
+		}
+		if r.slicerValue != nil && strings.TrimSpace(*r.slicerValue) != "" {
+			if sv, ok := slicerByLabel[strings.ToLower(strings.TrimSpace(*r.slicerValue))]; ok {
+				put(application.CatalogListingSelection{
+					IsVariant: true, SourceID: sv.variantID, ValueID: sv.valueID, ValueLabel: sv.label})
+			}
+		}
+		for _, attr := range productAttrs {
+			put(application.CatalogListingSelection{
+				IsVariant: false, SourceID: attr.Attribute.ID, ValueID: attr.ID, ValueLabel: attr.Name})
+		}
+		for _, attr := range itemAttrs {
+			put(application.CatalogListingSelection{
+				IsVariant: false, SourceID: attr.Attribute.ID, ValueID: attr.ID, ValueLabel: attr.Name})
+		}
+		for _, variant := range itemVars {
+			put(application.CatalogListingSelection{
+				IsVariant: true, SourceID: variant.Variant.ID, ValueID: variant.ID, ValueLabel: variant.Name})
+		}
+		selections := make([]application.CatalogListingSelection, len(order))
+		for i, key := range order {
+			selections[i] = byKey[key]
+		}
+
+		sources = append(sources, application.CatalogListingSource{
+			ProductItemID: r.itemID, ProductID: r.productID, CategoryID: r.categoryID,
+			Title: r.title, Description: r.description, BrandName: brandName,
+			BrandExternalCode: brandCode, ModelCode: r.modelCode, Barcode: r.barcode, Sku: r.sku,
+			Attributes: selections, ImageURLs: imagesByProduct[r.productID],
+		})
+	}
+	return sources, nil
 }
