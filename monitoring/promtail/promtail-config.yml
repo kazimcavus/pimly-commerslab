@@ -19,8 +19,12 @@ scrape_configs:
         target_label: container
       - source_labels: ['__meta_docker_container_log_stream']
         target_label: stream
+      # .NET API host'u (pimly-api) ve tüm Go servisleri (pimly-go-api,
+      # pimly-go-*-worker) toplanır. Go binary'leri aynı CLEF alanlarını
+      # (@t/@l/@mt/@tr) ürettiği için aşağıdaki pipeline değişmeden çalışır;
+      # worker'lar .NET döneminde hiç loglanmıyordu, Go'da ilk kez görünür olur.
       - source_labels: ['__meta_docker_container_name']
-        regex: '/pimly-api'
+        regex: '/(pimly-api|pimly-go-.*)'
         action: keep
     pipeline_stages:
       - docker: {}

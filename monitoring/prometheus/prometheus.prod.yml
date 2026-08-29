@@ -1,0 +1,43 @@
+# Pimly production Prometheus yapılandırması: 6 Go servisinin tamamı kazınır.
+# Yerel geliştirmede prometheus.yml kullanılır (host.docker.internal:7000);
+# production'da servisler aynı docker ağında olduğu için container adlarıyla
+# doğrudan erişilir.
+#
+# .NET döneminde yalnızca API'nin metriği vardı; Go'da 5 worker da /metrics
+# sunar (outbox kuyruk sayaçları, iş süreleri, Go runtime metrikleri).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: pimly-go-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['pimly-go-api:7000']
+        labels:
+          app: pimly-api
+          environment: production
+
+  - job_name: pimly-go-workers
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['pimly-go-outbox-worker:7001']
+        labels:
+          app: pimly-outbox-worker
+          environment: production
+      - targets: ['pimly-go-taxonomy-sync-worker:7002']
+        labels:
+          app: pimly-taxonomy-sync-worker
+          environment: production
+      - targets: ['pimly-go-product-imports-worker:7003']
+        labels:
+          app: pimly-product-imports-worker
+          environment: production
+      - targets: ['pimly-go-listing-sync-worker:7004']
+        labels:
+          app: pimly-listing-sync-worker
+          environment: production
+      - targets: ['pimly-go-product-publications-worker:7005']
+        labels:
+          app: pimly-product-publications-worker
+          environment: production

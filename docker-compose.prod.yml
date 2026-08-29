@@ -1,0 +1,190 @@
+# Pimly production dağıtımı: Postgres + 6 Go servisi (api + 5 worker) + Caddy.
+# İzleme yığını için docker-compose.monitoring.yml ile birlikte kullanılır.
+#
+# Kullanım (VPS'te):
+#   cp .env.prod.example .env.prod  &&  nano .env.prod     # sırları doldur
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# İzlemeyle birlikte:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml \
+#     --env-file .env.prod --profile monitoring up -d --build
+#
+# Kaynak beklentisi: 6 Go süreci toplam ~150-250 MB (GOMEMLIMIT ile sınırlı),
+# boşta CPU sıfıra yakın. Her servis /healthz /ready /metrics sunar.
+#
+# ÖNEMLİ — ilk kurulumda Trendyol'a yazma: Channels__UseStubTaxonomyClient=true
+# ile başlatılırsa listing-sync ve publications worker'ları pazaryerine HİÇBİR
+# yazma isteği göndermez (stub istemciler). Gerçek mağazaya yazmaya hazır
+# olduğunuzda .env.prod içindeki CHANNELS_USE_STUB_CLIENTS değerini false yapın.
+
+x-go-common: &go-common
+  restart: unless-stopped
+  stop_grace_period: 30s
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - pimly
+  environment: &go-env
+    PIMLY_ENVIRONMENT: Production
+    ConnectionStrings__Database: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    ConnectionStrings__Identity: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    Identity__Jwt__Secret: "${JWT_SECRET}"
+    Channels__TrendyolApiBaseUrl: "${TRENDYOL_API_BASE_URL:-https://apigw.trendyol.com}"
+    Channels__UseStubTaxonomyClient: "${CHANNELS_USE_STUB_CLIENTS:-true}"
+    Observability__Tracing__Enabled: "${TRACING_ENABLED:-false}"
+    Observability__Tracing__OtlpEndpoint: "http://tempo:4317"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pimly-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pimly_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pimly
+
+  # --- API host: migration'ları uygular, 88 HTTP ucunu ve /media'yı sunar ---
+  pimly-go-api:
+    <<: *go-common
+    build:
+      context: ./backend-go
+      args:
+        BINARY: pimly-api
+    container_name: pimly-go-api
+    environment:
+      <<: *go-env
+      Observability__ServiceName: pimly-api
+      Server__Addr: ":7000"
+      Media__StoragePath: "/data/media"
+      Media__PublicBaseUrl: "${PUBLIC_BASE_URL}"
+      GOMEMLIMIT: 128MiB
+    volumes:
+      - pimly_media:/data/media
+    expose:
+      - "7000"
+
+  # --- Worker'lar: her biri kendi metrik portunda /healthz /ready /metrics sunar ---
+  pimly-go-outbox-worker:
+    <<: *go-common
+    build:
+      context: ./backend-go
+      args:
+        BINARY: pimly-outbox-worker
+    container_name: pimly-go-outbox-worker
+    environment:
+      <<: *go-env
+      Observability__ServiceName: pimly-outbox-worker
+      Server__Addr: ":7001"
+      GOMEMLIMIT: 64MiB
+    expose:
+      - "7001"
+
+  pimly-go-taxonomy-sync-worker:
+    <<: *go-common
+    build:
+      context: ./backend-go
+      args:
+        BINARY: pimly-taxonomy-sync-worker
+    container_name: pimly-go-taxonomy-sync-worker
+    environment:
+      <<: *go-env
+      Observability__ServiceName: pimly-taxonomy-sync-worker
+      Server__Addr: ":7002"
+      GOMEMLIMIT: 64MiB
+    expose:
+      - "7002"
+
+  # Görselleri medya deposuna indirdiği için media volume'una yazar.
+  pimly-go-product-imports-worker:
+    <<: *go-common
+    build:
+      context: ./backend-go
+      args:
+        BINARY: pimly-product-imports-worker
+    container_name: pimly-go-product-imports-worker
+    environment:
+      <<: *go-env
+      Observability__ServiceName: pimly-product-imports-worker
+      Server__Addr: ":7003"
+      Media__StoragePath: "/data/media"
+      Media__PublicBaseUrl: "${PUBLIC_BASE_URL}"
+      GOMEMLIMIT: 128MiB
+    volumes:
+      - pimly_media:/data/media
+    expose:
+      - "7003"
+
+  # UYARI: CHANNELS_USE_STUB_CLIENTS=false iken pazaryerine GERÇEK fiyat/stok
+  # ve ürün kartı yazar.
+  pimly-go-listing-sync-worker:
+    <<: *go-common
+    build:
+      context: ./backend-go
+      args:
+        BINARY: pimly-listing-sync-worker
+    container_name: pimly-go-listing-sync-worker
+    environment:
+      <<: *go-env
+      Observability__ServiceName: pimly-listing-sync-worker
+      Server__Addr: ":7004"
+      GOMEMLIMIT: 64MiB
+    expose:
+      - "7004"
+
+  # UYARI: CHANNELS_USE_STUB_CLIENTS=false iken pazaryerinde GERÇEK yeni ürün
+  # kartı açar.
+  pimly-go-product-publications-worker:
+    <<: *go-common
+    build:
+      context: ./backend-go
+      args:
+        BINARY: pimly-product-publications-worker
+    container_name: pimly-go-product-publications-worker
+    environment:
+      <<: *go-env
+      Observability__ServiceName: pimly-product-publications-worker
+      Server__Addr: ":7005"
+      GOMEMLIMIT: 64MiB
+    expose:
+      - "7005"
+
+  # --- Caddy: TLS sonlandırma, /api → Go API, geri kalan → React SPA ---
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: pimly-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PIMLY_DOMAIN: ${PIMLY_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web/dist:/srv/web:ro
+      - pimly_caddy_data:/data
+      - pimly_caddy_config:/config
+    depends_on:
+      - pimly-go-api
+    networks:
+      - pimly
+
+networks:
+  pimly:
+    name: pimly
+
+volumes:
+  pimly_pgdata:
+  pimly_media:
+  pimly_caddy_data:
+  pimly_caddy_config:

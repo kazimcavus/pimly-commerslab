@@ -1,0 +1,48 @@
+# Pimly ters vekil yapılandırması.
+#
+# Tek origin modeli: React SPA ve API aynı alan adından sunulur, böylece
+# frontend'in VITE_API_BASE'i boş kalabilir (göreli /api/v1/... çağrıları) ve
+# CORS'a hiç gerek olmaz. /media de aynı origin'den geldiği için <img> etiketleri
+# kimlik doğrulama başlığı taşımadan görselleri yükleyebilir.
+#
+# TLS: Caddy, PIMLY_DOMAIN için Let's Encrypt sertifikasını otomatik alır ve
+# yeniler (80/443 portları açık ve DNS A kaydı bu sunucuya işaret ediyor olmalı).
+# Yerel denemede PIMLY_DOMAIN=localhost verilirse Caddy kendi imzaladığı
+# sertifikayı kullanır.
+
+{$PIMLY_DOMAIN} {
+	encode zstd gzip
+
+	# API: kimlik doğrulamalı uçlar. Go API'si kendi ProblemDetails gövdesini
+	# ürettiği için Caddy hata sayfası eklemez.
+	handle /api/* {
+		reverse_proxy pimly-go-api:7000
+	}
+
+	# Medya: kimlik doğrulamasız statik dosya sunumu (yollar tahmin edilemez
+	# GUID'lerden oluşur). Go API'si dosyaları diskten servis eder.
+	handle /media/* {
+		reverse_proxy pimly-go-api:7000
+	}
+
+	# Sağlık ucu: yük dengeleyici/uptime kontrolü için dışarı açılır.
+	handle /healthz {
+		reverse_proxy pimly-go-api:7000
+	}
+
+	# React SPA: derlenmiş dist/ klasörü. Bilinmeyen yollar index.html'e düşer
+	# (client-side routing).
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# NOT: /metrics ve /ready uçları BİLİNÇLİ olarak dışarı açılmaz — Prometheus
+# bunları docker ağı üzerinden doğrudan container'lardan toplar.

@@ -1,6 +1,7 @@
 # Secrets
 .env
 .env.*
+!.env.prod.example
 
 # .NET
 [Bb]in/
