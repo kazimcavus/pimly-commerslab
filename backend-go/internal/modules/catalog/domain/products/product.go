@@ -134,6 +134,11 @@ type Product struct {
 	Name        string
 	Description *string
 	Status      Status
+
+	// VatRate, ürünün KDV oranıdır ("20.00" gibi tam ondalık metin — kod
+	// tabanının kuralı gereği ondalıklar float tutulmaz). nil ise tenant
+	// varsayılanı (catalog_settings.default_vat_rate) geçerlidir.
+	VatRate *string
 	AttributeValues []AttributeValue
 	Variants        []VariantRef
 	Items           []*ProductItem
@@ -246,9 +251,9 @@ func NewProduct(
 	return sharedkernel.OkOf(product)
 }
 
-// UpdateDetails, ürün ad/durum/kategori/marka/açıklama ve (verilmişse) özellik
-// değerlerini günceller; içerik değişikliği olayı yayar.
-func (p *Product) UpdateDetails(categoryID uuid.UUID, name string, status Status, attributeValues []AttributeValue, brandID *uuid.UUID, description *string) sharedkernel.Result {
+// UpdateDetails, ürün ad/durum/kategori/marka/açıklama/KDV oranını ve
+// (verilmişse) özellik değerlerini günceller; içerik değişikliği olayı yayar.
+func (p *Product) UpdateDetails(categoryID uuid.UUID, name string, status Status, attributeValues []AttributeValue, brandID *uuid.UUID, description, vatRate *string) sharedkernel.Result {
 	if categoryID == uuid.Nil {
 		return sharedkernel.Fail(sharedkernel.NewValidationError("Category id is required."))
 	}
@@ -260,6 +265,7 @@ func (p *Product) UpdateDetails(categoryID uuid.UUID, name string, status Status
 	p.Status = status
 	p.BrandID = brandID
 	p.Description = trimToNil(description)
+	p.VatRate = trimToNil(vatRate)
 	if attributeValues != nil {
 		p.AttributeValues = attributeValues
 	}

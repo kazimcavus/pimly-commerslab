@@ -30,6 +30,12 @@ type MarketplaceConnectionDto struct {
 	HasApiSecret    bool      `json:"has_api_secret"`
 	ApiKeyHint      *string   `json:"api_key_hint"`
 	IsEnabled       bool      `json:"is_enabled"`
+
+	// Ayarlar gizli değildir; maskelenmeden döner.
+	DisplayName        *string               `json:"display_name"`
+	ExternalLocationID *string               `json:"external_location_id"`
+	PricesIncludeVat   bool                  `json:"prices_include_vat"`
+	ExclusionRules     domain.ExclusionRules `json:"exclusion_rules"`
 }
 
 // connectionToDto, bağlantıyı maskeli DTO'ya çevirir.
@@ -46,6 +52,10 @@ func connectionToDto(c *domain.MarketplaceConnection) MarketplaceConnectionDto {
 		ID: c.ID, MarketplaceCode: c.MarketplaceCode, SellerID: c.SellerID,
 		HasApiKey: c.ApiKey != "", HasApiSecret: c.ApiSecret != nil,
 		ApiKeyHint: hint, IsEnabled: c.IsEnabled,
+		DisplayName:        c.Settings.DisplayName,
+		ExternalLocationID: c.Settings.ExternalLocationID,
+		PricesIncludeVat:   c.Settings.PricesIncludeVat,
+		ExclusionRules:     c.Settings.ExclusionRules,
 	}
 }
 

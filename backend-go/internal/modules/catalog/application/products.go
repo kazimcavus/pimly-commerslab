@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -86,6 +88,7 @@ type ProductDto struct {
 	BrandID         *uuid.UUID                 `json:"brand_id"`
 	BrandName       *string                    `json:"brand_name"`
 	Description     *string                    `json:"description"`
+	VatRate         *string                    `json:"vat_rate"`
 }
 
 // CreateProductsBatchResultDto, toplu oluşturma yanıtıdır.
@@ -151,7 +154,7 @@ func productToDto(p *products.Product, brandName *string) ProductDto {
 		Name: p.Name, Status: string(p.Status), AttributeValues: attrValues,
 		Variants: variantDtos, Items: items, Images: images,
 		GroupCode: p.GroupCode, SlicerValue: p.SlicerValue, BrandID: p.BrandID,
-		BrandName: brandName, Description: p.Description,
+		BrandName: brandName, Description: p.Description, VatRate: p.VatRate,
 	}
 }
 
@@ -293,6 +296,9 @@ type UpdateProductCommand struct {
 	Attributes  []AttributeValueInput // nil = koru
 	BrandID     *uuid.UUID
 	Description *string
+
+	// VatRate, KDV oranıdır ("20.00"); nil bırakılırsa tenant varsayılanı geçerli olur.
+	VatRate *string
 }
 
 // --- doğrulama ---
@@ -308,6 +314,32 @@ func isNumericBarcode(value string) bool {
 		}
 	}
 	return true
+}
+
+// vatRatePattern, KDV oranının kabul edilen biçimidir: en fazla üç tam ve iki
+// ondalık hane ("20", "20.0", "8.25"). Ondalıklar float'a çevrilmeden metin
+// olarak taşınır (kod tabanının kuralı).
+var vatRatePattern = regexp.MustCompile(`^\d{1,3}(\.\d{1,2})?$`)
+
+// validateVatRate, KDV oranını biçim ve 0-100 aralığı açısından doğrular;
+// nil ya da boş değer geçerlidir (tenant varsayılanına düşülür).
+func validateVatRate(f *fieldErrors, field string, value *string) {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return
+	}
+	trimmed := strings.TrimSpace(*value)
+	if !vatRatePattern.MatchString(trimmed) {
+		f.errs = append(f.errs, sharedkernel.ValidationError{
+			Field: field, Code: sharedkernel.ValidationCodeInvalidFormat,
+			Message: "Vat rate must be a decimal with at most two fraction digits."})
+		return
+	}
+	rate, err := strconv.ParseFloat(trimmed, 64)
+	if err != nil || rate < 0 || rate > 100 {
+		f.errs = append(f.errs, sharedkernel.ValidationError{
+			Field: field, Code: sharedkernel.ValidationCodeInvalidFormat,
+			Message: "Vat rate must be between 0 and 100."})
+	}
 }
 
 // validateProductStatus, durum alanı kurallarını uygular (.NET ProductStatus kuralı).
@@ -605,6 +637,7 @@ func (h *ProductHandlers) Update(ctx context.Context, tenantID uuid.UUID, cmd Up
 	f.required("name", "Name", cmd.Name)
 	f.maxLength("name", "Name", cmd.Name, ProductNameMaxLength)
 	validateProductStatus(&f, "status", cmd.Status)
+	validateVatRate(&f, "vat_rate", cmd.VatRate)
 	if verr := f.failure(); verr != nil {
 		return sharedkernel.FailOf[ProductDto](verr)
 	}
@@ -661,7 +694,7 @@ func (h *ProductHandlers) Update(ctx context.Context, tenantID uuid.UUID, cmd Up
 	}
 
 	status, _ := products.ParseStatus(cmd.Status)
-	if updateResult := product.UpdateDetails(cmd.CategoryID, cmd.Name, status, attributeValues, cmd.BrandID, cmd.Description); updateResult.IsFailure() {
+	if updateResult := product.UpdateDetails(cmd.CategoryID, cmd.Name, status, attributeValues, cmd.BrandID, cmd.Description, cmd.VatRate); updateResult.IsFailure() {
 		return sharedkernel.FailOf[ProductDto](updateResult.Err())
 	}
 	if err := h.products.Update(ctx, tenantID, product); err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"pimly.commerslab/backend-go/internal/modules/channels/application"
+	"pimly.commerslab/backend-go/internal/modules/channels/domain"
 	"pimly.commerslab/backend-go/internal/platform/httpx"
 	"pimly.commerslab/backend-go/internal/sharedkernel/tenancy"
 )
@@ -50,19 +51,41 @@ func Mount(r chi.Router, h *application.Handlers, authMiddleware func(http.Handl
 		})
 
 		g.Put("/marketplaces/{code}/connection", func(w http.ResponseWriter, r *http.Request) {
+			// settings alanları gönderilmezse (nil) mevcut ayarlar korunur;
+			// yeni bağlantıda varsayılanlar uygulanır.
+			type settingsRequest struct {
+				DisplayName        *string                `json:"display_name"`
+				ExternalLocationID *string                `json:"external_location_id"`
+				PricesIncludeVat   *bool                  `json:"prices_include_vat"`
+				ExclusionRules     *domain.ExclusionRules `json:"exclusion_rules"`
+			}
 			type upsertRequest struct {
-				SellerID  *string `json:"seller_id"`
-				ApiKey    string  `json:"api_key"`
-				ApiSecret *string `json:"api_secret"`
-				IsEnabled bool    `json:"is_enabled"`
+				SellerID  *string          `json:"seller_id"`
+				ApiKey    string           `json:"api_key"`
+				ApiSecret *string          `json:"api_secret"`
+				IsEnabled bool             `json:"is_enabled"`
+				Settings  *settingsRequest `json:"settings"`
 			}
 			body, derr := httpx.DecodeJSON[upsertRequest](r)
 			if derr != nil {
 				httpx.WriteProblem(w, r, derr)
 				return
 			}
+			var settings *domain.ConnectionSettings
+			if body.Settings != nil {
+				resolved := domain.DefaultConnectionSettings()
+				resolved.DisplayName = body.Settings.DisplayName
+				resolved.ExternalLocationID = body.Settings.ExternalLocationID
+				if body.Settings.PricesIncludeVat != nil {
+					resolved.PricesIncludeVat = *body.Settings.PricesIncludeVat
+				}
+				if body.Settings.ExclusionRules != nil {
+					resolved.ExclusionRules = *body.Settings.ExclusionRules
+				}
+				settings = &resolved
+			}
 			httpx.WriteOK(w, r, h.UpsertConnection(r.Context(), tenancy.MustFromContext(r.Context()),
-				chi.URLParam(r, "code"), body.SellerID, body.ApiKey, body.ApiSecret, body.IsEnabled))
+				chi.URLParam(r, "code"), body.SellerID, body.ApiKey, body.ApiSecret, body.IsEnabled, settings))
 		})
 
 		g.Get("/marketplaces/{code}/taxonomy/status", func(w http.ResponseWriter, r *http.Request) {

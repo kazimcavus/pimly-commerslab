@@ -86,6 +86,7 @@ type updateProductRequest struct {
 	AttributeValues *[]application.AttributeValueInput `json:"attribute_values"`
 	BrandID         *uuid.UUID                         `json:"brand_id"`
 	Description     *string                            `json:"description"`
+	VatRate         *string                            `json:"vat_rate"`
 }
 
 // itemsToInputs, kablo kalemlerini komut girdilerine çevirir.
@@ -188,6 +189,7 @@ func mountProductRoutes(g chi.Router, h *application.ProductHandlers) {
 		result := h.Update(r.Context(), tenancy.MustFromContext(r.Context()), application.UpdateProductCommand{
 			ID: id, CategoryID: body.CategoryID, Name: body.Name, Status: body.Status,
 			Attributes: attributeValues, BrandID: body.BrandID, Description: body.Description,
+			VatRate: body.VatRate,
 		})
 		httpx.WriteOK(w, r, result)
 	})

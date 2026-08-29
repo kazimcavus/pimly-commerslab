@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,9 +18,22 @@ import (
 	"pimly.commerslab/backend-go/internal/outbox"
 )
 
+// DefaultLocationCode, tenant'ın otomatik açılan ana deposunun kodudur.
+const DefaultLocationCode = "MAIN"
+
 // StockLevelRepository, inventory.stock_levels tablosunun pgx uygulamasıdır.
+//
+// Stok artık lokasyon başına tutulur (Shopify çok lokasyonlu çalışır). Dışarıya
+// açık sözleşme değişmedi: tek lokasyonlu kullanımda yazma/okuma tenant'ın
+// varsayılan deposuna gider, kanala gönderilen miktar ise tüm depoların
+// TOPLAMIDIR — böylece ikinci depo eklendiğinde davranış kendiliğinden doğru olur.
 type StockLevelRepository struct {
 	pool *pgxpool.Pool
+
+	// defaultLocations, tenant → varsayılan lokasyon kimliği önbelleğidir.
+	// Varsayılan lokasyon bir kez oluşup değişmediği için (kısmi benzersiz
+	// indeks garanti eder) önbellek bayatlayamaz.
+	defaultLocations sync.Map
 }
 
 // NewStockLevelRepository, verilen havuzla stok deposunu oluşturur.
@@ -27,12 +41,42 @@ func NewStockLevelRepository(pool *pgxpool.Pool) *StockLevelRepository {
 	return &StockLevelRepository{pool: pool}
 }
 
-// GetByItem, kalemin stok kaydını döner; yoksa nil.
+// DefaultLocationID, tenant'ın varsayılan deposunu döner; yoksa oluşturur.
+// Eşzamanlı çağrılarda ON CONFLICT sayesinde tek satır kalır.
+func (r *StockLevelRepository) DefaultLocationID(ctx context.Context, tenantID uuid.UUID) (uuid.UUID, error) {
+	if cached, ok := r.defaultLocations.Load(tenantID); ok {
+		return cached.(uuid.UUID), nil
+	}
+
+	if _, err := r.pool.Exec(ctx,
+		`INSERT INTO inventory.locations (id, tenant_id, code, name, is_default)
+		 VALUES ($1, $2, $3, 'Ana Depo', true)
+		 ON CONFLICT (tenant_id, code) DO NOTHING`,
+		uuid.New(), tenantID, DefaultLocationCode); err != nil {
+		return uuid.Nil, fmt.Errorf("inventory: varsayılan depo oluşturulamadı: %w", err)
+	}
+
+	var id uuid.UUID
+	if err := r.pool.QueryRow(ctx,
+		`SELECT id FROM inventory.locations WHERE tenant_id = $1 AND is_default`, tenantID).
+		Scan(&id); err != nil {
+		return uuid.Nil, fmt.Errorf("inventory: varsayılan depo okunamadı: %w", err)
+	}
+	r.defaultLocations.Store(tenantID, id)
+	return id, nil
+}
+
+// GetByItem, kalemin varsayılan depodaki stok kaydını döner; yoksa nil.
 func (r *StockLevelRepository) GetByItem(ctx context.Context, tenantID, productItemID uuid.UUID) (*application.StockLevel, error) {
+	locationID, err := r.DefaultLocationID(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
 	var s application.StockLevel
-	err := r.pool.QueryRow(ctx,
+	err = r.pool.QueryRow(ctx,
 		`SELECT id, product_item_id, quantity, updated_at FROM inventory.stock_levels
-		 WHERE tenant_id = $1 AND product_item_id = $2`, tenantID, productItemID).
+		 WHERE tenant_id = $1 AND product_item_id = $2 AND location_id = $3`,
+		tenantID, productItemID, locationID).
 		Scan(&s.ID, &s.ProductItemID, &s.Quantity, &s.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -52,9 +96,12 @@ func (r *StockLevelRepository) GetQuantitiesByItems(ctx context.Context, tenantI
 	if len(productItemIDs) == 0 {
 		return result, nil
 	}
+	// Kanala gönderilen miktar tüm depoların toplamıdır. Bugün tek depo var,
+	// yani sonuç değişmiyor; ikinci depo eklendiğinde doğru davranış kendiliğinden gelir.
 	rows, err := r.pool.Query(ctx,
-		`SELECT product_item_id, quantity FROM inventory.stock_levels
-		 WHERE tenant_id = $1 AND product_item_id = ANY($2)`, tenantID, productItemIDs)
+		`SELECT product_item_id, SUM(quantity)::int FROM inventory.stock_levels
+		 WHERE tenant_id = $1 AND product_item_id = ANY($2)
+		 GROUP BY product_item_id`, tenantID, productItemIDs)
 	if err != nil {
 		return nil, fmt.Errorf("inventory: stok miktarları okunamadı: %w", err)
 	}
@@ -70,12 +117,17 @@ func (r *StockLevelRepository) GetQuantitiesByItems(ctx context.Context, tenantI
 	return result, rows.Err()
 }
 
-// Add, yeni stok kaydını (ve gerekiyorsa değişim olayını) tek transaction'da ekler.
+// Add, yeni stok kaydını (ve gerekiyorsa değişim olayını) tek transaction'da
+// tenant'ın varsayılan deposuna ekler.
 func (r *StockLevelRepository) Add(ctx context.Context, tenantID uuid.UUID, s *application.StockLevel, raiseEvent bool) error {
+	locationID, err := r.DefaultLocationID(ctx, tenantID)
+	if err != nil {
+		return err
+	}
 	return r.write(ctx, tenantID, s, raiseEvent,
-		`INSERT INTO inventory.stock_levels (id, product_item_id, quantity, updated_at, tenant_id)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		s.ID, s.ProductItemID, s.Quantity, s.UpdatedAt, tenantID)
+		`INSERT INTO inventory.stock_levels (id, product_item_id, quantity, updated_at, tenant_id, location_id)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		s.ID, s.ProductItemID, s.Quantity, s.UpdatedAt, tenantID, locationID)
 }
 
 // Update, stok kaydını (ve gerekiyorsa değişim olayını) tek transaction'da kalıcılaştırır.

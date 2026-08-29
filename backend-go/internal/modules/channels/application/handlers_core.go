@@ -58,8 +58,10 @@ func (h *Handlers) GetConnection(ctx context.Context, tenantID uuid.UUID, code s
 	return sharedkernel.OkOf(connectionToDto(connection))
 }
 
-// UpsertConnection, bağlantı kimlik bilgilerini oluşturur/günceller.
-func (h *Handlers) UpsertConnection(ctx context.Context, tenantID uuid.UUID, code string, sellerID *string, apiKey string, apiSecret *string, isEnabled bool) sharedkernel.ResultOf[MarketplaceConnectionDto] {
+// UpsertConnection, bağlantı kimlik bilgilerini ve ayarlarını oluşturur/günceller.
+// settings nil ise: yeni bağlantıda varsayılanlar kullanılır, mevcut bağlantıda
+// ayarlar olduğu gibi korunur (kısmi güncelleme).
+func (h *Handlers) UpsertConnection(ctx context.Context, tenantID uuid.UUID, code string, sellerID *string, apiKey string, apiSecret *string, isEnabled bool, settings *domain.ConnectionSettings) sharedkernel.ResultOf[MarketplaceConnectionDto] {
 	marketplace := resolveMarketplace(code)
 	if marketplace.IsFailure() {
 		return sharedkernel.FailOf[MarketplaceConnectionDto](marketplace.Err())
@@ -70,7 +72,11 @@ func (h *Handlers) UpsertConnection(ctx context.Context, tenantID uuid.UUID, cod
 		return sharedkernel.FailOf[MarketplaceConnectionDto](sharedkernel.NewInternalError(err.Error()))
 	}
 	if existing == nil {
-		createResult := domain.NewMarketplaceConnection(marketplace.Value().Code(), sellerID, apiKey, apiSecret, isEnabled)
+		effective := domain.DefaultConnectionSettings()
+		if settings != nil {
+			effective = *settings
+		}
+		createResult := domain.NewMarketplaceConnection(marketplace.Value().Code(), sellerID, apiKey, apiSecret, isEnabled, effective)
 		if createResult.IsFailure() {
 			return sharedkernel.FailOf[MarketplaceConnectionDto](createResult.Err())
 		}
@@ -80,7 +86,11 @@ func (h *Handlers) UpsertConnection(ctx context.Context, tenantID uuid.UUID, cod
 		return sharedkernel.OkOf(connectionToDto(createResult.Value()))
 	}
 
-	if updateResult := existing.Update(sellerID, apiKey, apiSecret, isEnabled); updateResult.IsFailure() {
+	effective := existing.Settings
+	if settings != nil {
+		effective = *settings
+	}
+	if updateResult := existing.Update(sellerID, apiKey, apiSecret, isEnabled, effective); updateResult.IsFailure() {
 		return sharedkernel.FailOf[MarketplaceConnectionDto](updateResult.Err())
 	}
 	if err := h.repo.UpdateConnection(ctx, tenantID, existing); err != nil {

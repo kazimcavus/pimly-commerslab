@@ -5,6 +5,7 @@ package infrastructure
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -34,16 +35,24 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 // GetConnection, tenant'ın pazaryeri bağlantısını döner; yoksa nil.
 func (r *Repository) GetConnection(ctx context.Context, tenantID uuid.UUID, marketplaceCode string) (*domain.MarketplaceConnection, error) {
 	var c domain.MarketplaceConnection
+	var exclusionRules []byte
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, marketplace_code, seller_id, api_key, api_secret, is_enabled
+		`SELECT id, marketplace_code, seller_id, api_key, api_secret, is_enabled,
+		        display_name, external_location_id, prices_include_vat, exclusion_rules
 		 FROM channels.marketplace_connections
 		 WHERE tenant_id = $1 AND marketplace_code = $2`, tenantID, marketplaceCode).
-		Scan(&c.ID, &c.MarketplaceCode, &c.SellerID, &c.ApiKey, &c.ApiSecret, &c.IsEnabled)
+		Scan(&c.ID, &c.MarketplaceCode, &c.SellerID, &c.ApiKey, &c.ApiSecret, &c.IsEnabled,
+			&c.Settings.DisplayName, &c.Settings.ExternalLocationID, &c.Settings.PricesIncludeVat, &exclusionRules)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("channels: bağlantı okunamadı: %w", err)
+	}
+	if len(exclusionRules) > 0 {
+		if err := json.Unmarshal(exclusionRules, &c.Settings.ExclusionRules); err != nil {
+			return nil, fmt.Errorf("channels: kapsam dışı kuralları çözümlenemedi: %w", err)
+		}
 	}
 	return &c, nil
 }
@@ -70,11 +79,17 @@ func (r *Repository) GetConfiguredMarketplaceCodes(ctx context.Context, tenantID
 
 // AddConnection, yeni bağlantıyı ekler.
 func (r *Repository) AddConnection(ctx context.Context, tenantID uuid.UUID, c *domain.MarketplaceConnection) error {
-	_, err := r.pool.Exec(ctx,
+	exclusionRules, err := json.Marshal(c.Settings.ExclusionRules)
+	if err != nil {
+		return fmt.Errorf("channels: kapsam dışı kuralları yazılamadı: %w", err)
+	}
+	_, err = r.pool.Exec(ctx,
 		`INSERT INTO channels.marketplace_connections
-		   (id, tenant_id, marketplace_code, seller_id, api_key, api_secret, is_enabled)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		c.ID, tenantID, c.MarketplaceCode, c.SellerID, c.ApiKey, c.ApiSecret, c.IsEnabled)
+		   (id, tenant_id, marketplace_code, seller_id, api_key, api_secret, is_enabled,
+		    display_name, external_location_id, prices_include_vat, exclusion_rules)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		c.ID, tenantID, c.MarketplaceCode, c.SellerID, c.ApiKey, c.ApiSecret, c.IsEnabled,
+		c.Settings.DisplayName, c.Settings.ExternalLocationID, c.Settings.PricesIncludeVat, exclusionRules)
 	if err != nil {
 		return fmt.Errorf("channels: bağlantı eklenemedi: %w", err)
 	}
@@ -83,11 +98,18 @@ func (r *Repository) AddConnection(ctx context.Context, tenantID uuid.UUID, c *d
 
 // UpdateConnection, bağlantıyı kalıcılaştırır.
 func (r *Repository) UpdateConnection(ctx context.Context, tenantID uuid.UUID, c *domain.MarketplaceConnection) error {
-	_, err := r.pool.Exec(ctx,
+	exclusionRules, err := json.Marshal(c.Settings.ExclusionRules)
+	if err != nil {
+		return fmt.Errorf("channels: kapsam dışı kuralları yazılamadı: %w", err)
+	}
+	_, err = r.pool.Exec(ctx,
 		`UPDATE channels.marketplace_connections
-		 SET seller_id = $3, api_key = $4, api_secret = $5, is_enabled = $6
+		 SET seller_id = $3, api_key = $4, api_secret = $5, is_enabled = $6,
+		     display_name = $7, external_location_id = $8, prices_include_vat = $9,
+		     exclusion_rules = $10
 		 WHERE tenant_id = $1 AND id = $2`,
-		tenantID, c.ID, c.SellerID, c.ApiKey, c.ApiSecret, c.IsEnabled)
+		tenantID, c.ID, c.SellerID, c.ApiKey, c.ApiSecret, c.IsEnabled,
+		c.Settings.DisplayName, c.Settings.ExternalLocationID, c.Settings.PricesIncludeVat, exclusionRules)
 	if err != nil {
 		return fmt.Errorf("channels: bağlantı güncellenemedi: %w", err)
 	}

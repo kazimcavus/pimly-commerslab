@@ -32,7 +32,7 @@ func NewProductRepository(pool *pgxpool.Pool) *ProductRepository {
 }
 
 const productColumns = `id, group_id, product_sku, title, status, attribute_values, variants,
-	category_id, group_code, slicer_value, brand_id, description`
+	category_id, group_code, slicer_value, brand_id, description, vat_rate`
 
 // scanProduct, tek ürün satırını okur (kalem/görseller ayrı yüklenir).
 func scanProduct(row pgx.Row) (*products.Product, error) {
@@ -40,7 +40,7 @@ func scanProduct(row pgx.Row) (*products.Product, error) {
 	var attributeValues, variantRefs []byte
 	var status string
 	err := row.Scan(&p.ID, &p.GroupID, &p.ModelCode, &p.Name, &status, &attributeValues, &variantRefs,
-		&p.CategoryID, &p.GroupCode, &p.SlicerValue, &p.BrandID, &p.Description)
+		&p.CategoryID, &p.GroupCode, &p.SlicerValue, &p.BrandID, &p.Description, &p.VatRate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -244,10 +244,10 @@ func insertProduct(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, p *produc
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO catalog.products
 		   (id, group_id, product_sku, title, status, attribute_values, variants,
-		    tenant_id, category_id, group_code, slicer_value, brand_id, description)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+		    tenant_id, category_id, group_code, slicer_value, brand_id, description, vat_rate)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
 		p.ID, p.GroupID, p.ModelCode, p.Name, string(p.Status), attributeValues, variantRefs,
-		tenantID, p.CategoryID, p.GroupCode, p.SlicerValue, p.BrandID, p.Description); err != nil {
+		tenantID, p.CategoryID, p.GroupCode, p.SlicerValue, p.BrandID, p.Description, p.VatRate); err != nil {
 		return fmt.Errorf("catalog: ürün eklenemedi: %w", err)
 	}
 	if err := upsertProductChildren(ctx, tx, tenantID, p, false); err != nil {
@@ -345,11 +345,11 @@ func (r *ProductRepository) Update(ctx context.Context, tenantID uuid.UUID, p *p
 	if _, err := tx.Exec(ctx,
 		`UPDATE catalog.products SET group_id = $3, product_sku = $4, title = $5, status = $6,
 		   attribute_values = $7, variants = $8, category_id = $9, group_code = $10,
-		   slicer_value = $11, brand_id = $12, description = $13
+		   slicer_value = $11, brand_id = $12, description = $13, vat_rate = $14
 		 WHERE tenant_id = $1 AND id = $2`,
 		tenantID, p.ID, p.GroupID, p.ModelCode, p.Name, string(p.Status),
 		attributeValues, variantRefs, p.CategoryID, p.GroupCode, p.SlicerValue,
-		p.BrandID, p.Description); err != nil {
+		p.BrandID, p.Description, p.VatRate); err != nil {
 		return fmt.Errorf("catalog: ürün güncellenemedi: %w", err)
 	}
 	if err := upsertProductChildren(ctx, tx, tenantID, p, true); err != nil {

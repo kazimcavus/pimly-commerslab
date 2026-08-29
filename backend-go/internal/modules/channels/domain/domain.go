@@ -34,22 +34,25 @@ type MarketplaceConnection struct {
 	ApiKey          string
 	ApiSecret       *string
 	IsEnabled       bool
+
+	// Settings, kimlik bilgisi dışındaki bağlantı ayarlarıdır.
+	Settings ConnectionSettings
 }
 
 // NewMarketplaceConnection, doğrulanmış yeni bağlantı oluşturur.
-func NewMarketplaceConnection(marketplaceCode string, sellerID *string, apiKey string, apiSecret *string, isEnabled bool) sharedkernel.ResultOf[*MarketplaceConnection] {
+func NewMarketplaceConnection(marketplaceCode string, sellerID *string, apiKey string, apiSecret *string, isEnabled bool, settings ConnectionSettings) sharedkernel.ResultOf[*MarketplaceConnection] {
 	if strings.TrimSpace(apiKey) == "" {
 		return sharedkernel.FailOf[*MarketplaceConnection](sharedkernel.NewValidationError("Api key is required."))
 	}
 	return sharedkernel.OkOf(&MarketplaceConnection{
 		ID: uuid.New(), MarketplaceCode: marketplaceCode,
 		SellerID: trimToNil(sellerID), ApiKey: strings.TrimSpace(apiKey),
-		ApiSecret: trimToNil(apiSecret), IsEnabled: isEnabled,
+		ApiSecret: trimToNil(apiSecret), IsEnabled: isEnabled, Settings: settings,
 	})
 }
 
 // Update, bağlantı kimlik bilgilerini günceller.
-func (c *MarketplaceConnection) Update(sellerID *string, apiKey string, apiSecret *string, isEnabled bool) sharedkernel.Result {
+func (c *MarketplaceConnection) Update(sellerID *string, apiKey string, apiSecret *string, isEnabled bool, settings ConnectionSettings) sharedkernel.Result {
 	if strings.TrimSpace(apiKey) == "" {
 		return sharedkernel.Fail(sharedkernel.NewValidationError("Api key is required."))
 	}
@@ -57,6 +60,7 @@ func (c *MarketplaceConnection) Update(sellerID *string, apiKey string, apiSecre
 	c.ApiKey = strings.TrimSpace(apiKey)
 	c.ApiSecret = trimToNil(apiSecret)
 	c.IsEnabled = isEnabled
+	c.Settings = settings
 	return sharedkernel.Ok()
 }
 
