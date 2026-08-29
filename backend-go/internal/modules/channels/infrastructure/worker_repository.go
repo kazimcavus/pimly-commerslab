@@ -228,6 +228,95 @@ func (r *Repository) GetCategoryMappingByExternalID(ctx context.Context, tenantI
 	return &m, nil
 }
 
+// ClaimNextPendingPublicationRun, sıradaki pending ürün yayın işini claim edip
+// running durumuna alır; kuyruk boşsa nil döner (.NET
+// ProductPublicationRunRepository.TryClaimNextPendingAsync portu). tenantFilter
+// doluysa yalnızca o tenant'ların işleri claim edilir; boşsa kuyruk tüm
+// tenant'lar için ortak işlenir.
+func (r *Repository) ClaimNextPendingPublicationRun(ctx context.Context, tenantFilter []uuid.UUID) (*domain.ProductPublicationRun, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("channels: yayın claim işlemi başlatılamadı: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var row pgx.Row
+	if len(tenantFilter) == 0 {
+		row = tx.QueryRow(ctx,
+			`SELECT id FROM channels.product_publication_runs
+			 WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`)
+	} else {
+		row = tx.QueryRow(ctx,
+			`SELECT id FROM channels.product_publication_runs
+			 WHERE status = 'pending' AND tenant_id = ANY($1)
+			 ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, tenantFilter)
+	}
+	var id uuid.UUID
+	err = row.Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("channels: yayın işi claim edilemedi: %w", err)
+	}
+
+	run, err := scanPublicationRun(tx.QueryRow(ctx,
+		`SELECT `+publicationRunColumns+` FROM channels.product_publication_runs WHERE id = $1`, id))
+	if err != nil || run == nil {
+		return nil, err
+	}
+	if markResult := run.MarkRunning(time.Now().UTC()); markResult.IsFailure() {
+		return nil, nil
+	}
+	if err := updatePublicationRunTx(ctx, tx, run); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return run, nil
+}
+
+// updatePublicationRunTx, iş satırını verilen transaction'da günceller (hatalar hariç).
+func updatePublicationRunTx(ctx context.Context, tx pgx.Tx, run *domain.ProductPublicationRun) error {
+	_, err := tx.Exec(ctx,
+		`UPDATE channels.product_publication_runs SET status = $2, started_at = $3, completed_at = $4,
+		   total_items = $5, processed_items = $6, published_items = $7, failed_items = $8, error_message = $9
+		 WHERE id = $1`,
+		run.ID, string(run.Status), run.StartedAt, run.CompletedAt, run.TotalItems,
+		run.ProcessedItems, run.PublishedItems, run.FailedItems, run.ErrorMessage)
+	if err != nil {
+		return fmt.Errorf("channels: yayın işi güncellenemedi: %w", err)
+	}
+	return nil
+}
+
+// UpdatePublicationRun, iş kaydını ve birikmiş hata satırlarını kalıcılaştırır.
+// Hatalar append-only'dir: bellekte üretilen kimlikler ON CONFLICT DO NOTHING
+// ile eklenir, mevcut satırlar değişmez.
+func (r *Repository) UpdatePublicationRun(ctx context.Context, run *domain.ProductPublicationRun) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("channels: yayın güncelleme işlemi başlatılamadı: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if err := updatePublicationRunTx(ctx, tx, run); err != nil {
+		return err
+	}
+	for _, publicationError := range run.Errors {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO channels.product_publication_run_errors
+			   (id, product_publication_run_id, product_item_id, message)
+			 VALUES ($1, $2, $3, $4)
+			 ON CONFLICT (id) DO NOTHING`,
+			publicationError.ID, run.ID, publicationError.ProductItemID, publicationError.Message); err != nil {
+			return fmt.Errorf("channels: yayın hatası yazılamadı: %w", err)
+		}
+	}
+	return tx.Commit(ctx)
+}
+
 // UpsertExternalCategoriesBatch, düzleştirilmiş kategori partisini
 // (marketplace_code, external_id) doğal anahtarıyla ekler/günceller.
 func (r *Repository) UpsertExternalCategoriesBatch(ctx context.Context, marketplaceCode string, nodes []trendyol.CategoryNode, syncedAt time.Time) error {

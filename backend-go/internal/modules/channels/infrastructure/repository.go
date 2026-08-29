@@ -553,6 +553,30 @@ func (r *Repository) ResolveExternalCategoryID(ctx context.Context, tenantID uui
 }
 
 // ListCategoryMappings, eşlemeleri sayfalanmış döner ve toplam sayıyı verir.
+// ListMappedCategoryIDs, tenant'ın bir pazaryerinde eşlediği tüm catalog
+// kategori kimliklerini döner (.NET ProcessPublicationHandler.
+// ListMappedCategoryIdsAsync'in sayfalama olmadan tek sorguya indirgenmiş
+// karşılığı — worker içi kullanım, kablo sözleşmesi değil).
+func (r *Repository) ListMappedCategoryIDs(ctx context.Context, tenantID uuid.UUID, marketplaceCode string) ([]uuid.UUID, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT DISTINCT catalog_category_id FROM channels.category_channel_mappings
+		 WHERE tenant_id = $1 AND marketplace_code = $2`, tenantID, marketplaceCode)
+	if err != nil {
+		return nil, fmt.Errorf("channels: eşlenmiş kategoriler okunamadı: %w", err)
+	}
+	defer rows.Close()
+
+	ids := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *Repository) ListCategoryMappings(ctx context.Context, tenantID uuid.UUID, marketplaceCode string, catalogCategoryID *uuid.UUID, p sharedkernel.Pagination) ([]*domain.CategoryChannelMapping, int, error) {
 	where := `WHERE tenant_id = $1 AND marketplace_code = $2`
 	args := []any{tenantID, marketplaceCode}

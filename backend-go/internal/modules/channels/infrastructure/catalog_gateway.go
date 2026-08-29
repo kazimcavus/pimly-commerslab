@@ -290,6 +290,33 @@ func (g *CatalogGateway) GetListingSourcesByProduct(ctx context.Context, tenantI
 // portu; ürünler arası kalemler tek toplu sorguyla çözülür — listing-sync
 // worker'ının içerik senkronunda kullanılır). Bulunmayan kalemler sonuçta yer
 // almaz.
+// ListItemIDsByCategories, verilen catalog kategorilerindeki tüm satılabilir
+// kalem kimliklerini döner (.NET ListItemIdsByCategoriesAsync portu; yayın
+// worker'ının kapsam keşfinde kullanılır).
+func (g *CatalogGateway) ListItemIDsByCategories(ctx context.Context, tenantID uuid.UUID, categoryIDs []uuid.UUID) ([]uuid.UUID, error) {
+	if len(categoryIDs) == 0 {
+		return []uuid.UUID{}, nil
+	}
+	rows, err := g.pool.Query(ctx,
+		`SELECT pi.id FROM catalog.product_items pi
+		 JOIN catalog.products p ON p.id = pi.product_id
+		 WHERE pi.tenant_id = $1 AND p.category_id = ANY($2)`, tenantID, categoryIDs)
+	if err != nil {
+		return nil, fmt.Errorf("channels: kategori kalemleri okunamadı: %w", err)
+	}
+	defer rows.Close()
+
+	ids := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (g *CatalogGateway) GetListingSourcesByItems(ctx context.Context, tenantID uuid.UUID, itemIDs []uuid.UUID) ([]application.CatalogListingSource, error) {
 	if len(itemIDs) == 0 {
 		return []application.CatalogListingSource{}, nil

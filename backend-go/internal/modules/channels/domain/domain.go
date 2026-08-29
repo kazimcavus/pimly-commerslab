@@ -392,6 +392,12 @@ type ProductPublicationRun struct {
 	Errors          []ProductPublicationError
 }
 
+// PublicationMaxErrors, bir yayın işinde saklanan en fazla hata kaydı sayısıdır.
+const PublicationMaxErrors = 500
+
+// PublicationErrorMessageMaxLength, hata mesajının azami uzunluğudur.
+const PublicationErrorMessageMaxLength = 1000
+
 // NewProductPublicationRun, pending durumda yeni yayın işi oluşturur.
 func NewProductPublicationRun(tenantID uuid.UUID, marketplaceCode string, createdAt time.Time) sharedkernel.ResultOf[*ProductPublicationRun] {
 	if tenantID == uuid.Nil {
@@ -401,4 +407,74 @@ func NewProductPublicationRun(tenantID uuid.UUID, marketplaceCode string, create
 		ID: uuid.New(), TenantID: tenantID, MarketplaceCode: marketplaceCode,
 		Status: PublicationPending, CreatedAt: createdAt,
 	})
+}
+
+// MarkRunning, işi running durumuna alır.
+func (r *ProductPublicationRun) MarkRunning(startedAt time.Time) sharedkernel.Result {
+	if r.Status != PublicationPending {
+		return sharedkernel.Fail(sharedkernel.NewConflictError("Only pending publication runs can be started."))
+	}
+	r.Status = PublicationRunning
+	r.StartedAt = &startedAt
+	return sharedkernel.Ok()
+}
+
+// UpdateProgress, ilerleme sayaçlarını günceller.
+func (r *ProductPublicationRun) UpdateProgress(processed, published, failed int, total *int) {
+	r.ProcessedItems = processed
+	r.PublishedItems = published
+	r.FailedItems = failed
+	r.TotalItems = total
+}
+
+// AddError, kalem bazlı hata kaydı ekler; sınır aşıldıysa eklemez ve false döner.
+func (r *ProductPublicationRun) AddError(productItemID uuid.UUID, message string) bool {
+	if len(r.Errors) >= PublicationMaxErrors {
+		return false
+	}
+	normalized := strings.TrimSpace(message)
+	if normalized == "" {
+		normalized = "Publication failed."
+	}
+	if len([]rune(normalized)) > PublicationErrorMessageMaxLength {
+		normalized = string([]rune(normalized)[:PublicationErrorMessageMaxLength])
+	}
+	r.Errors = append(r.Errors, ProductPublicationError{
+		ID: uuid.New(), ProductItemID: productItemID, Message: normalized})
+	return true
+}
+
+// MarkCompleted, işi tamamlar; hata alan kalem varsa completed_with_errors olur.
+func (r *ProductPublicationRun) MarkCompleted(completedAt time.Time) sharedkernel.Result {
+	if r.Status != PublicationRunning {
+		return sharedkernel.Fail(sharedkernel.NewConflictError("Only running publication runs can be completed."))
+	}
+	if r.FailedItems > 0 {
+		r.Status = PublicationCompletedWithErrors
+	} else {
+		r.Status = PublicationCompleted
+	}
+	r.CompletedAt = &completedAt
+	r.ErrorMessage = nil
+	return sharedkernel.Ok()
+}
+
+// MarkFailed, işi altyapı hatasıyla sonlandırır.
+func (r *ProductPublicationRun) MarkFailed(completedAt time.Time, errorMessage string) sharedkernel.Result {
+	if r.Status != PublicationRunning {
+		return sharedkernel.Fail(sharedkernel.NewConflictError("Only running publication runs can be marked as failed."))
+	}
+	r.Status = PublicationFailed
+	r.CompletedAt = &completedAt
+	message := strings.TrimSpace(errorMessage)
+	if message == "" {
+		message = "Publication failed."
+	}
+	r.ErrorMessage = &message
+	return sharedkernel.Ok()
+}
+
+// IsActive, işin aktif (pending ya da running) olup olmadığını döner.
+func (r *ProductPublicationRun) IsActive() bool {
+	return r.Status == PublicationPending || r.Status == PublicationRunning
 }
